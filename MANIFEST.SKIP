@@ -1,4 +1,5 @@
 \bRCS\b
+\.svn\b
 ^MANIFEST\.
 ^Makefile$
 ~$
