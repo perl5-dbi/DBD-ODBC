@@ -1,8 +1,9 @@
 #perl -w
 use DBI;
 
-my $DSN = 'driver=Microsoft Access Driver (*.mdb);dbq=\\\\cheese\\g$\\perltest.mdb';
-my $dbh = DBI->connect("dbi:ODBC:$DSN", '','') 
+# my $DSN = 'driver=Microsoft Access Driver (*.mdb);dbq=\\\\cheese\\g$\\perltest.mdb'; 
+my $DSN = 'Driver={SQL Server};SERVER=SQL1;';
+my $dbh = DBI->connect("dbi:ODBC:$DSN",undef,undef,{RaiseError=>1})
 	or die "$DBI::errstr\n";
 
 
@@ -15,9 +16,9 @@ my %InfoTests = (
 );
 
 foreach $SQLInfo (sort keys %InfoTests) {
-	$ret = 0;
-	$ret = $dbh->func($InfoTests{$SQLInfo}, GetInfo);
-	print "$SQLInfo ($InfoTests{$SQLInfo}):\t$ret\n";
+   $ret = 0;
+   $ret = $dbh->func($InfoTests{$SQLInfo}, GetInfo);
+   print "$SQLInfo ($InfoTests{$SQLInfo}):\t$ret\n";
 }
 
 $dbh->disconnect;

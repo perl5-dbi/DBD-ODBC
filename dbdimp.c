@@ -112,10 +112,7 @@ static void odbc_clear_result_set(SV *sth, imp_sth_t *imp_sth)
     char *key;
     I32 keylen;
     SV *inner = 0;
-    // MAGIC *mg;
 
-    //SV *ohv;
-    // SV *orv;
     Safefree(imp_sth->fbh);
     Safefree(imp_sth->ColNames);
     Safefree(imp_sth->RowBuffer);
@@ -248,7 +245,7 @@ int
     imp_sth->eod = -1;
 
     if (!dbd_describe(sth, imp_sth)) {
-        /* SQLFreeStmt(imp_sth->hstmt, SQL_DROP); *//* TBD: 3.0 update */
+        /* SQLFreeStmt(imp_sth->hstmt, SQL_DROP); */ /* TBD: 3.0 update */
 	SQLFreeHandle(SQL_HANDLE_STMT, imp_sth->hstmt);
 	imp_sth->hstmt = SQL_NULL_HSTMT;
 	return 0; /* dbd_describe already called dbd_error()	*/
@@ -341,7 +338,7 @@ int dbd_db_execdirect( SV *dbh,
       }
    }
    ret = SQLFreeHandle(SQL_HANDLE_STMT,stmt);
-   /* ret = SQLFreeStmt(stmt, SQL_DROP); *//* TBD: 3.0 update */
+   /* ret = SQLFreeStmt(stmt, SQL_DROP); */ /* TBD: 3.0 update */
    if (!SQL_ok(ret)) {
       dbd_error2( dbh, ret, "Statement destruction error", imp_dbh->henv, imp_dbh->hdbc, stmt );
    }
@@ -387,6 +384,19 @@ int dsnHasDriverOrDSN(char *dsn) {
       cp++;
    }
    return (strncmp(upper_dsn, "DSN=", 4) == 0 || strncmp(upper_dsn, "DRIVER=", 7) == 0);
+}
+
+int dsnHasUIDorPWD(char *dsn) {
+
+    char upper_dsn[512];
+    char *cp = upper_dsn;
+    strncpy(upper_dsn, dsn, sizeof(upper_dsn)-1);
+    upper_dsn[sizeof(upper_dsn)-1] = '\0';
+    while (*cp != '\0') {
+	*cp = toupper(*cp);
+	cp++;
+    }
+    return (strstr(upper_dsn, "UID=") != 0 || strstr(upper_dsn, "PWD=") != 0);
 }
 
 /*------------------------------------------------------------
@@ -479,14 +489,21 @@ SV   *attr;
      * SQLDriverConnect handles/maps/fixes db connections and can optionally
      * add a dialog box to the application.  
      */
-    if (strlen(dbname) > SQL_MAX_DSN_LENGTH || dsnHasDriverOrDSN(dbname)) {
-       sprintf(dbname_local, "%s;UID=%s;PWD=%s", dbname, uid, pwd);
+    if (strlen(dbname) > SQL_MAX_DSN_LENGTH || dsnHasDriverOrDSN(dbname) && !dsnHasUIDorPWD(dbname)) {
+       sprintf(dbname_local, "%s;UID=%s;PWD=%s;", dbname, uid, pwd);
+       uid=NULL;
+       pwd=NULL;
        dbname = dbname_local;
        /* strcpy(dbname_local, dbname); */
     }
 
-    if (DBIc_DEBUGIV(imp_dbh) >= 2)
-       PerlIO_printf(DBIc_LOGPIO(imp_dbh), "Driver connect '%s', '%s', '%s'\n", dbname_local, uid, pwd);
+    /*
+     * PerlIO_printf(DBIc_LOGPIO(imp_dbh), "Driver connect %s uid=%s, pwd=%s, %d.\n", dbname_local, uid ? uid : "(null)", pwd ? pwd : "(null)",
+		 DBIc_DEBUGIV(imp_dbh));
+     */
+
+    if (DBIc_DEBUGIV(imp_dbh) >= 8)
+       PerlIO_printf(DBIc_LOGPIO(imp_dbh), "Driver connect '%s', '%s', '%s'\n", dbname, uid, pwd);
 
     rc = SQLDriverConnect(imp_dbh->hdbc,
 			  0, /* no hwnd */
@@ -1204,7 +1221,7 @@ char *table_type;
     dbd_error(sth, rc, "st_tables/SQLTables");
     if (!SQL_ok(rc)) {
         SQLFreeHandle(SQL_HANDLE_STMT,imp_sth->hstmt);
-	/* SQLFreeStmt(imp_sth->hstmt, SQL_DROP);*//* TBD: 3.0 update */
+	/* SQLFreeStmt(imp_sth->hstmt, SQL_DROP);*/ /* TBD: 3.0 update */
 	imp_sth->hstmt = SQL_NULL_HSTMT;
 	return 0;
     }
@@ -1265,7 +1282,7 @@ char *table;
     
    if (!SQL_ok(rc)) {
       SQLFreeHandle(SQL_HANDLE_STMT,imp_sth->hstmt);
-      /* SQLFreeStmt(imp_sth->hstmt, SQL_DROP);*//* TBD: 3.0 update */
+      /* SQLFreeStmt(imp_sth->hstmt, SQL_DROP);*/ /* TBD: 3.0 update */
       imp_sth->hstmt = SQL_NULL_HSTMT;
       return 0;
    }
@@ -1337,7 +1354,7 @@ SV *attribs;
        if (!SQL_ok(rc)) {
 	  dbd_error(sth, rc, "st_prepare/SQLPrepare");
 	  SQLFreeHandle(SQL_HANDLE_STMT,imp_sth->hstmt);
-	  /* SQLFreeStmt(imp_sth->hstmt, SQL_DROP);*//* TBD: 3.0 update */
+	  /* SQLFreeStmt(imp_sth->hstmt, SQL_DROP);*/ /* TBD: 3.0 update */
 	  imp_sth->hstmt = SQL_NULL_HSTMT;
 	  return 0;
        }
@@ -2301,7 +2318,7 @@ imp_sth_t *imp_sth;
     if (imp_dbh->hdbc != SQL_NULL_HDBC && !dirty) {
 
        rc = SQLFreeHandle(SQL_HANDLE_STMT,imp_sth->hstmt);
-       /* rc = SQLFreeStmt(imp_sth->hstmt, SQL_DROP);*//* TBD: 3.0 update */
+       /* rc = SQLFreeStmt(imp_sth->hstmt, SQL_DROP);*/ /* TBD: 3.0 update */
 
        if (DBIc_DEBUGIV(imp_sth) >= 5) {
 	  PerlIO_printf(DBIc_LOGPIO(imp_dbh), "   SQLFreeStmt called, returned %d.\n", rc);
@@ -3800,7 +3817,7 @@ int ftype;
     dbd_error(sth, rc, "odbc_get_type_info/SQLGetTypeInfo");
     if (!SQL_ok(rc)) {
         SQLFreeHandle(SQL_HANDLE_STMT,imp_sth->hstmt);
-	/* SQLFreeStmt(imp_sth->hstmt, SQL_DROP);*//* TBD: 3.0 update */
+	/* SQLFreeStmt(imp_sth->hstmt, SQL_DROP);*/ /* TBD: 3.0 update */
 	imp_sth->hstmt = SQL_NULL_HSTMT;
 	return 0;
     }
@@ -3966,7 +3983,7 @@ char *column;
 
     if (!SQL_ok(rc)) {
         SQLFreeHandle(SQL_HANDLE_STMT,imp_sth->hstmt);
-	/* SQLFreeStmt(imp_sth->hstmt, SQL_DROP);*//* TBD: 3.0 update */
+	/* SQLFreeStmt(imp_sth->hstmt, SQL_DROP);*/ /* TBD: 3.0 update */
 	imp_sth->hstmt = SQL_NULL_HSTMT;
 	return 0;
     }

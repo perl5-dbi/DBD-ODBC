@@ -2,7 +2,7 @@
 $| = 1;
 
 
-my $tests = 25;
+my $tests = 26;
 # to help ActiveState's build process along by behaving (somewhat) if a dsn is not provided
 BEGIN {
    unless (defined $ENV{DBI_DSN}) {
@@ -141,7 +141,7 @@ while (@row = $sth->fetchrow_array) {
 }
 
 Test($iErrCount == 0);
-print STDERR "Please upgrade your ODBC drivers to the latest SQL Server drivers available.\n" if ($iErrCount != 0);
+print STDERR "Please upgrade your ODBC drivers to the latest SQL Server drivers available.  For example, 2000.80.194.00 is known to be problematic.  Use MDAC 2.7, if possible\n" if ($iErrCount != 0);
 
 $dbh->{PrintError} = 0;
 eval {$dbh->do("DROP TABLE PERL_DBD_TABLE1");};
@@ -383,9 +383,22 @@ do {
 print "out of while loop\n";
 Test($queryOutputParameter == $queryInputParameter1 + 1);
 
+# test a procedure with no parameters
+eval {$dbh->do("DROP PROCEDURE PERL_DBD_PROC1");}; 
+eval {$dbh->do("CREATE PROCEDURE PERL_DBD_PROC1 AS return 1;");}; 
+
+$sth1 = $dbh->prepare ("{ ? = call PERL_DBD_PROC1 }"); 
+my $output = undef; 
+$iErrCount = 0; 
+$sth1->bind_param_inout(1, \$output, 50, DBI::SQL_INTEGER); 
+
+$sth1->execute();
+Test($output == 1);
+
 # clean up test table and procedure
 eval {$dbh->do("DROP TABLE PERL_DBD_TABLE1");};
 eval {$dbh->do("DROP PROCEDURE PERL_DBD_PROC1");};
+
 
 $dbh->{odbc_async_exec} = 1;
 print "odbc_async_exec is: $dbh->{odbc_async_exec}\n";

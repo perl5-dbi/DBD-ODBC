@@ -6,7 +6,7 @@ use ODBCTEST;
 
 # to help ActiveState's build process along by behaving (somewhat) if a dsn is not provided
 BEGIN {
-   $tests = 19;
+   $tests = 21;
    unless (defined $ENV{DBI_DSN}) {
       print "1..0 # Skipped: DBI_DSN is undefined\n";
       exit;
@@ -176,13 +176,33 @@ $sth->execute;
 $sth->fetch;
 Test($sth->execute);
 
-print " Test 19: test connection success when DBI DSN has DSN=\n";
 my $connstr = $ENV{DBI_DSN};
-$connstr =~ s/ODBC:/ODBC:DSN=/;
+if (!($connstr =~ /DSN=/i || $connstr =~ /DRIVER=/i)) {
+   $connstr =~ s/ODBC:/ODBC:DSN=/;
 
-my $dbh2 = DBI->connect($connstr, $ENV{DBI_USER}, $ENV{DBI_PASS});
-Test(defined($dbh2));
-$dbh2->disconnect;
+   print " Test 19: test connection success when DBI DSN is invalid\n";
+   my $dbh3 = DBI->connect($ENV{DBI_DSN} . "x", $ENV{DBI_USER}, $ENV{DBI_PASS}, {RaiseError=>0, PrintError=>0});
+   print "Test Ok if Errstr not undef: " . $DBI::errstr . "\n";
+   Test(defined($DBI::errstr));
+   $dbh3->disconnect if (defined($dbh3));
+   
+   print " Test 20: test connection success when DBI DSN has DSN=\n";
+   $dbh3 = DBI->connect($connstr, $ENV{DBI_USER}, $ENV{DBI_PASS}, {RaiseError=>0, PrintError=>0});
+   Test(defined($dbh3));
+   $dbh3->disconnect if (defined($dbh3));
+
+   print " Test 21: test connection success when DBI DSN has DSN= and uid and pwd are set\n";
+   $dbh3 = DBI->connect($connstr . ";UID=$ENV{DBI_USER};PWD=$ENV{DBI_PASS}",undef,undef, {RaiseError=>0, PrintError=>0});
+   Test(defined($dbh3));
+
+   $dbh3->disconnect if (defined($dbh3));
+
+} else {
+   Test(1, " # Skipped: DSN already set with DSN= or DRIVER=");
+   Test(1, " # Skipped: DSN already set with DSN= or DRIVER=");
+   Test(1, " # Skipped: DSN already set with DSN= or DRIVER=");
+}
+	    
 # Test(1);
 # clean up
 $sth->finish;

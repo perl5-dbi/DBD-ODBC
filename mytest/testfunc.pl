@@ -6,7 +6,7 @@ use DBI qw(:sql_types);
 
 my (@row);
 
-my $dbh = DBI->connect()
+my $dbh = DBI->connect('dbi:ODBC:PERL_TEST_SQLSERVER',{AutoCommit=>1, RaisError=>1})
 	  or exit(0);
 # ------------------------------------------------------------
 
@@ -44,6 +44,9 @@ my %TypeTests = (
 		 'SQL_NUMERIC' => SQL_NUMERIC,
 		 'SQL_LONGVARCHAR' => SQL_LONGVARCHAR,
 		 'SQL_LONGVARBINARY' => SQL_LONGVARBINARY,
+		 'SQL_WVARCHAR' => SQL_WVARCHAR,
+		 'SQL_WCHAR' => SQL_WCHAR,
+		 'SQL_WLONGVARCHAR' => SQL_WLONGVARCHAR,
 		);
 
 my $ret; 
@@ -80,7 +83,7 @@ foreach $SQLInfo (sort keys %TypeTests) {
       # print join(', ', @coldescs), "\n";
       while (@row = $sth->fetchrow()) {
 	 
-	 print "$row[0]\n\t",
+	 print "\t$row[0]\n",
 	 # &nullif($row[1]), ", " ,
 	 #&nullif($row[2]), ", " ,
 	 #&nullif($row[3]), ", " ,
@@ -96,7 +99,7 @@ foreach $SQLInfo (sort keys %TypeTests) {
 }	
 
 my $SQL_XOPEN_CLI_YEAR = 10000;
-print $dbh->get_info($SQL_XOPEN_CLI_YEAR), "\n";
+print "\nSQL_XOPEN_CLI_YEAR = ", $dbh->get_info($SQL_XOPEN_CLI_YEAR), "\n";
 $dbh->disconnect();
 
 sub nullif ($) {

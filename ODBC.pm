@@ -9,7 +9,7 @@
 
 require 5.004;
 
-$DBD::ODBC::VERSION = '1.05';
+$DBD::ODBC::VERSION = '1.06';
 
 {
     package DBD::ODBC;
@@ -560,6 +560,9 @@ as I only used it for debugging purposes.
 This was added prior to the move to ODBC 3.x to allow the caller to "force" ODBC 3.0
 compatibility.  It's probably not as useful now, but it allowed get_info and get_type_info
 to return correct/updated information that ODBC 2.x didn't permit/provide.
+Since DBD::ODBC is now 3.x, this can be used to force 2.x behavior via something like:
+  my $dbh = DBI->connect("dbi:ODBC:$DSN", $user, $pass, { odbc_version => 2});
+       
    
 =item B<Private DBD::ODBC Functions>
 
