@@ -16,7 +16,7 @@ use DBI 1.21;		# must be installed first ...
 use DBI::DBD;
 use strict;
 
-my %opts = 
+my %opts =
 (
     NAME	=> 'DBD::ODBC',
     VERSION_FROM => 'ODBC.pm',
@@ -109,7 +109,7 @@ else {
 
     # cygwin patch
     $opts{INC}  .= " -I/usr/include/w32api" if $^O eq 'cygwin';
-    
+
     # Try to work out which driver manager is being used.
     # Feel free to come up with neat (or un-neat) hacks to get your's to build!
 
@@ -118,41 +118,78 @@ else {
     my $libs   = "odbc";
     $opts{LIBS} = " -L$lib_d1 -R$lib_d1 -L$lib_d2 -R$lib_d2 -l$libs";
 
+    my (@known_drivers) = sort (
+	'Microsoft ODBC',
+	'unixodbc',
+	'iodbc',
+	'esodbc',
+	'empress',
+	'intersolve',
+	'sapdb',
+	'adabas',
+	'udbc',
+	'easysoft',
+	'solid',
+	'informix',
+	);
+
     my $myodbc ='';	# edit and hack to suit!
     $myodbc = 'Microsoft ODBC'
                  if (    -e "$odbchome/system/odbc32.dll" or
 			 -e "$odbchome/system32/odbc32.dll" or
                          -e "$odbchome/odbc32.dll");
+
+    my $dlext = $Config{dlext};
+    my $arext = $Config{lib_ext};
+
     # per patches from Nick Gorham
     $myodbc = 'unixodbc'
-		if <$odbchome/lib/libodbc.*>;
+		if !$myodbc && <$odbchome/lib/libodbc.*>;
 
     $myodbc = 'iodbc'
-		if (!$myodbc && (<$odbchome/*iodbc*> || <$odbchome/lib/*iodbc*>));
+		if !$myodbc && (<$odbchome/*iodbc*> || <$odbchome/lib/*iodbc*>);
 
     $myodbc = 'esodbc'
-		if <$odbchome/*esoobclient*>;
+		if !$myodbc && <$odbchome/*esoobclient*>;
 
     $myodbc = 'empress'
-		if <$odbchome/lib/libempodbc.*>;
+		if !$myodbc && <$odbchome/lib/libempodbc.*>;
 
     $myodbc = 'intersolve'
-		if -f "$odbchome/include/qeodbc.h";
+		if !$myodbc && -f "$odbchome/include/qeodbc.h";
 
     $myodbc = 'sapdb'
-	        if -f "$odbchome/lib/libsqlod.a";
+		if !$myodbc && -f "$odbchome/lib/libsqlod.$arext";
 
     $myodbc = 'adabas'
-		if $ENV{DBROOT} && $odbchome eq $ENV{DBROOT} && -f "$odbchome/lib/odbclib.a";
+		if !$myodbc && $ENV{DBROOT} && $odbchome eq $ENV{DBROOT} && -f "$odbchome/lib/odbclib.$arext";
 
     $myodbc = 'udbc'
-    		if ($myodbc eq '' && <$odbchome/lib/libudbc.a>);
+		if !$myodbc && -f "$odbchome/lib/libudbc.$arext";
 
     $myodbc = 'easysoft'
-	      if ($myodbc eq '' && -f "$odbchome/lib/libesoobclient.so");
+		if !$myodbc && -f "$odbchome/lib/libesoobclient.$dlext";
 
     $myodbc = 'solid'
-	      if ($myodbc eq '' && -f "$odbchome/lib/libsolcli.so");
+		if !$myodbc && -f "$odbchome/lib/libsolcli.$dlext";
+
+    # JL 2002-12-16: This test is accurate on Unix (Solaris 7) with IBM
+    # Informix ClientSDK 2.80.UC1, which includes IBM Informix CLI
+    # v3.81.000, an ODBC 3.x driver.
+	# NB: The correct value for $ODBCHOME is $INFORMIXDIR.
+    $myodbc = 'informix'
+		if !$myodbc && -f "$odbchome/lib/cli/libifcli.$dlext";
+
+    if (!$myodbc) {
+	local($") = ", ";
+	my($list) = "@known_drivers";
+	$list =~ s%^(.{30,70})\s%$1\n\t%gmo;
+	die qq%
+Hmm...I cannot find an ODBC driver manager that I recognize.
+...And I know about these drivers:
+	$list
+%;
+    }
 
     warn "\nUmm, this looks like a $myodbc type of driver manager.\n";
 
@@ -167,7 +204,7 @@ else {
         $opts{dynamic_lib} = {OTHERLDFLAGS => "-lodbc32"};
     }
     elsif ($myodbc eq 'iodbc') {
-	my $ilibdir = "$odbchome/lib"; 
+	my $ilibdir = "$odbchome/lib";
 	my @ilibs = <$ilibdir/*iodbc*.*>;
 	@ilibs = grep { /\.($Config{so}|$Config{dlext}|a)$/ } @ilibs;
 	die "That's odd, I can't see any iodbc libs in $ilibdir" unless @ilibs;
@@ -271,7 +308,7 @@ else {
 	print SQLH qq{#include <sqlucode.h>\n};
 	print SQLH qq{#include <sql.h>\n};
 	print SQLH qq{#include <sqltypes.h>\n};
-    }    
+    }
     elsif ($myodbc eq 'intersolve') {
 	$opts{DEFINE}  = "";
   	print SQLH qq{#include <qeodbc.h>\n};
@@ -337,6 +374,14 @@ else {
 	print SQLH qq{#define DBD_ODBC_NO_SQLDRIVERCONNECT\n};
         print SQLH qq{#include <cli0cli.h>\n};
     }
+    elsif ($myodbc eq 'informix') {
+		# JL 2002-12-16: See comments above for environment details.
+        $opts{INC}  = "-I$odbchome/incl/cli $opts{INC}";
+        $opts{LIBS} = "-L$odbchome/lib/cli -lifcli -lifdmr";
+        $opts{DEFINE} .= "-DNO_WIN32";		# Applies to Unix only, of course
+        print SQLH qq{#include <stddef.h>\n};
+        print SQLH qq{#include <infxcli.h>\n};
+    }
     else {
 	print "\n*** WARNING ***\a\n";
 	print "Unknown driver manager. Using default build process.\n";
@@ -384,7 +429,7 @@ $(changes_pm): Changes
 	$(NOECHO) $(RM_F) $(changes_pm)
 	$(CP) Changes $(changes_pm)
 ';
-   
+
 }
 
 # ====================================================================

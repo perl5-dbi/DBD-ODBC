@@ -9,15 +9,16 @@
 
 require 5.004;
 
-$DBD::ODBC::VERSION = '1.04';
+$DBD::ODBC::VERSION = '1.05';
 
 {
     package DBD::ODBC;
 
     use DBI ();
     use DynaLoader ();
-
-    @ISA = qw(DynaLoader);
+    use Exporter ();
+    
+    @ISA = qw(Exporter DynaLoader);
 
     my $Revision = substr(q$Revision: 1.12 $, 10);
 
@@ -747,12 +748,17 @@ to ODBC developers (but I don't want to loose them).
 
         http://www.iodbc.org		iODBC driver manager source
 
-   Also, for Linux folks, you can checkout the following for another ODBC-ODBC bridge and support for iODBC.
+   For Linux/Unix folks, you can checkout the following for another ODBC-ODBC bridge and support for iODBC.
 
 	http://www.openlink.co.uk 
 		or
 	http://www.openlinksw.com 
 
+   And another:
+        OpenRDA
+   
+        http://www.atinet.com/support/openrda_samples.asp
+ 
 
 
 =head2 Frequently Asked Questions
@@ -781,6 +787,7 @@ you may find something useful at:
 	http://www.openlinksw.com
         http://www.easysoft.com
 	http://www.intersolv.com
+	http://www.atinet.com/support/openrda_samples.asp
 	      
 
 2) ODBC Driver Manager - the piece of software which interacts with the drivers

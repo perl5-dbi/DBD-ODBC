@@ -22,7 +22,7 @@ static const char *cSqlGetTypeInfo = "SQLGetTypeInfo(%d)";
 static void       AllODBCErrors(HENV henv, HDBC hdbc, HSTMT hstmt, int output, PerlIO *logfp);
 
 char *cvt_av2buf(SV *sth, AV *av, int c_type, int len, int count, long **indics);
-// AV *dbd_st_fetch(SV * sth, imp_sth_t *imp_sth);
+/* AV *dbd_st_fetch(SV * sth, imp_sth_t *imp_sth); */
 int dbd_describe(SV *h, imp_sth_t *imp_sth);
 int dbd_db_login6(SV *dbh, imp_dbh_t *imp_dbh, char *dbname, char *uid, char *pwd, SV *attr);
 int dbd_st_finish(SV *sth, imp_sth_t *imp_sth);
@@ -91,7 +91,7 @@ DBISTATE_DECLARE;
 #define SQLFreeConnect(d) SQLFreeHandle(SQL_HANDLE_DBC, d)
 
 #define SQLAllocStmt(d, s) SQLAllocHandle(SQL_HANDLE_STMT, d, s)
-//#define SQLFreeStmt(s) SQLFreeHandle(SQL_HANDLE_STMT, s)
+/* #define SQLFreeStmt(s) SQLFreeHandle(SQL_HANDLE_STMT, s) */
 
 /* knowing that we use SQLTransact with both an env and hdbc */
 #define SQLTransact(e, d, t) SQLEndTran(SQL_HANDLE_DBC, d, t)
@@ -106,20 +106,48 @@ void
     DBIS = dbistate;
 }
 
-static void odbc_clear_result_set(imp_sth_t *imp_sth)
+static void odbc_clear_result_set(SV *sth, imp_sth_t *imp_sth)
 {
-   Safefree(imp_sth->fbh);
-   Safefree(imp_sth->ColNames);
-   Safefree(imp_sth->RowBuffer);
+    SV *value;
+    char *key;
+    I32 keylen;
+    SV *inner = 0;
+    // MAGIC *mg;
 
-   /* dgood - Yikes!  I don't want to go down to this level, */
-   /*         but if I don't, it won't figure out that the   */
-   /*         number of columns have changed...              */
-   if (DBIc_FIELDS_AV(imp_sth)) {
-      sv_free((SV*)DBIc_FIELDS_AV(imp_sth));
-      DBIc_FIELDS_AV(imp_sth) = Nullav;
-   }
+    //SV *ohv;
+    // SV *orv;
+    Safefree(imp_sth->fbh);
+    Safefree(imp_sth->ColNames);
+    Safefree(imp_sth->RowBuffer);
 
+    /* dgood - Yikes!  I don't want to go down to this level, */
+    /*         but if I don't, it won't figure out that the   */
+    /*         number of columns have changed...              */
+    if (DBIc_FIELDS_AV(imp_sth)) {
+	sv_free((SV*)DBIc_FIELDS_AV(imp_sth));
+	DBIc_FIELDS_AV(imp_sth) = Nullav;
+    }
+
+    while ( (value = hv_iternextsv((HV*)SvRV(sth), &key, &keylen)) ) {
+	if (strncmp(key, "NAME_", 5) == 0 ||
+	      strncmp(key, "TYPE", 4) == 0 ||
+	      strncmp(key, "PRECISION", 9) == 0 ||
+	      strncmp(key, "SCALE", 5) == 0 ||
+	      strncmp(key, "NULLABLE", 8) == 0
+	   ) {
+	    hv_delete((HV*)SvRV(sth), key, keylen, G_DISCARD);
+	    if ((DBIc_DEBUGIV(imp_sth)) >= 4) {
+		PerlIO_printf(DBILOGFP,"  ODBC_CLEAR_RESULTS '%s' => %s\n", key, neatsvpv(value,0));
+	    }
+	}
+    }
+    /* 
+    PerlIO_printf(DBILOGFP,"CLEAR RESULTS cached attributes:\n");
+    while ( (value = hv_iternextsv((HV*)SvRV(inner), &key, &keylen)) ) {
+    PerlIO_printf(DBILOGFP,"CLEARRESULTS '%s' => %s\n", key, neatsvpv(value,0));
+    }
+    */
+   
    imp_sth->fbh       = NULL;
    imp_sth->ColNames  = NULL;
    imp_sth->RowBuffer = NULL;
@@ -248,7 +276,7 @@ int
 }
 
 int
-   dbd_discon_all(drh, imp_drh)
+   odbc_discon_all(drh, imp_drh)
    SV *drh;
 imp_drh_t *imp_drh;
 {
@@ -274,6 +302,11 @@ int dbd_db_execdirect( SV *dbh,
    SQLRETURN ret;
    SQLINTEGER rows;
    SQLHSTMT stmt;
+
+   if (!DBIc_ACTIVE(imp_dbh)) {
+       dbd_error(dbh, SQL_ERROR, "Can not allocate statement when disconnected from the database");
+       return 0;
+   }
 
    ret = SQLAllocStmt( imp_dbh->hdbc, &stmt ); /* TBD: 3.0 update */
    if (!SQL_ok(ret)) {
@@ -725,7 +758,7 @@ imp_dbh_t *imp_dbh;
     }
     /* support for DBI 1.20 begin_work */
     if (DBIc_has(imp_dbh, DBIcf_BegunWork)) {
-       // reset autocommit
+       /* reset autocommit */
        rc = SQLSetConnectOption(imp_dbh->hdbc, SQL_AUTOCOMMIT, SQL_AUTOCOMMIT_ON);
        DBIc_off(imp_dbh,DBIcf_BegunWork);
     }
@@ -748,7 +781,7 @@ imp_dbh_t *imp_dbh;
     }
     /* support for DBI 1.20 begin_work */
     if (DBIc_has(imp_dbh, DBIcf_BegunWork)) {
-       // reset autocommit
+       /*  reset autocommit */
        rc = SQLSetConnectOption(imp_dbh->hdbc, SQL_AUTOCOMMIT, SQL_AUTOCOMMIT_ON);
        DBIc_off(imp_dbh,DBIcf_BegunWork);
     }
@@ -1135,6 +1168,12 @@ char *table_type;
     imp_sth->hdbc = imp_dbh->hdbc;
 
     imp_sth->done_desc = 0;
+
+    if (!DBIc_ACTIVE(imp_dbh)) {
+	dbd_error(sth, SQL_ERROR, "Can not allocate statement when disconnected from the database");
+	return 0;
+    }
+
     rc = SQLAllocStmt(imp_dbh->hdbc, &imp_sth->hstmt);/* TBD: 3.0 update */
     if (rc != SQL_SUCCESS) {
 	dbd_error(sth, rc, "st_tables/SQLAllocStmt");
@@ -1190,6 +1229,12 @@ char *table;
    imp_sth->hdbc = imp_dbh->hdbc;
     
    imp_sth->done_desc = 0;
+
+   if (!DBIc_ACTIVE(imp_dbh)) {
+       dbd_error(sth, SQL_ERROR, "Can not allocate statement when disconnected from the database");
+       return 0;
+   }
+
    rc = SQLAllocStmt(imp_dbh->hdbc, &imp_sth->hstmt);/* TBD: 3.0 update */
    if (rc != SQL_SUCCESS) {
       dbd_error(sth, rc, "odbc_db_primary_key_info/SQLAllocStmt");
@@ -1247,6 +1292,15 @@ SV *attribs;
     imp_sth->odbc_ignore_named_placeholders = imp_dbh->odbc_ignore_named_placeholders;
     imp_sth->odbc_default_bind_type = imp_dbh->odbc_default_bind_type;
     imp_sth->odbc_force_rebind = imp_dbh->odbc_force_rebind;
+
+    if (!DBIc_ACTIVE(imp_dbh)) {
+	dbd_error(sth, 0, "Can not allocate statement when disconnected from the database");
+    }
+
+    if (!DBIc_ACTIVE(imp_dbh)) {
+	dbd_error(sth, SQL_ERROR, "Can not allocate statement when disconnected from the database");
+	return 0;
+    }
 
     rc = SQLAllocStmt(imp_dbh->hdbc, &imp_sth->hstmt);/* TBD: 3.0 update */
     if (!SQL_ok(rc)) {
@@ -1662,7 +1716,6 @@ imp_sth_t *imp_sth;
 	cbuf_ptr[fbh->ColNameLen] = 0;
 	cbuf_ptr[fbh->ColNameLen+1] = 0;
 
-	    // debug
 	if (DBIc_DEBUGIV(imp_sth) > 8) 
 	   PerlIO_printf(DBIc_LOGPIO(imp_dbh), 
 			 "\t\t post SQLDescribeCol     col %2d: '%s' (%x)\n",
@@ -1678,7 +1731,6 @@ imp_sth_t *imp_sth;
 
 	fbh->data = rbuf_ptr;
 
-	    // debug
 	if (DBIc_DEBUGIV(imp_sth) > 8) 
 	   PerlIO_printf(DBIc_LOGPIO(imp_dbh), 
 			 "\t\t pre   SQLBindCol     col %2d: '%s', %x, %x, %x\n",
@@ -1692,7 +1744,7 @@ imp_sth_t *imp_sth;
 			i+1,
 			fbh->ftype, fbh->data,
 			fbh->ColDisplaySize, &fbh->datalen);
-	    // debug
+
 	if (DBIc_DEBUGIV(imp_sth) > 8) 
 	   PerlIO_printf(DBIc_LOGPIO(imp_dbh), 
 			 "\t\t post  SQLBindCol     col %2d: '%s', %x, %x, %x\n",
@@ -1712,7 +1764,6 @@ imp_sth_t *imp_sth;
 	    break;
 	}
 	
-	    // debug
 	if (DBIc_DEBUGIV(imp_sth) > 8) 
 	   PerlIO_printf(DBIc_LOGPIO(imp_dbh), 
 			 "\t\t DEBUG     col %2d: '%s' \n",
@@ -1876,13 +1927,13 @@ imp_sth_t *imp_sth;
      */
     dbd_error(sth, rc, "st_execute/SQLExecute");
     if (!SQL_ok(rc) && rc != SQL_NO_DATA) {
-	// dbd_error(sth, rc, "st_execute/SQLExecute");
-       return -2;
+      /* dbd_error(sth, rc, "st_execute/SQLExecute"); */
+      return -2;
     }
 
     if (rc != SQL_NO_DATA) {
        
-       // SWORD num_fields;
+       /* SWORD num_fields; */
        RETCODE rc2;
        if (debug >= 7)
 	  PerlIO_printf(DBIc_LOGPIO(imp_dbh),
@@ -1905,7 +1956,7 @@ imp_sth_t *imp_sth;
         * attribute to force a re-describe after every execute? */
        if (imp_sth->odbc_force_rebind) {
 	  /* force calling dbd_describe after each execute */
-	  odbc_clear_result_set(imp_sth);
+	  odbc_clear_result_set(sth, imp_sth);
        }
 #if 0
        if (imp_sth->done_desc) {
@@ -1956,7 +2007,8 @@ imp_sth_t *imp_sth;
 	 * where calling describe after execute returned no rows
 	 * caused SQLServer to provide a description of a query
 	 * that didn't quite apply. */
-	// imp_sth->done_desc = 1; 
+
+	/* imp_sth->done_desc = 1;  */
 	DBIc_ACTIVE_off(imp_sth);
     }
     imp_sth->eod = SQL_SUCCESS;
@@ -2030,7 +2082,7 @@ imp_sth_t *imp_sth;
 		 if (DBIc_DEBUGIV(imp_sth) > 0) {
 		    PerlIO_printf(DBIc_LOGPIO(imp_dbh), "MORE Results!\n");
 		 }
-		 odbc_clear_result_set(imp_sth);
+		 odbc_clear_result_set(sth, imp_sth);
 
        		 imp_sth->odbc_force_rebind = 1; /* force future executes to rebind automatically */
 
@@ -2459,12 +2511,12 @@ static int
 
 	    case SQL_TIME:
 	    case SQL_TYPE_TIME:
-	       // fSqlType = SQL_VARCHAR;
+	       /* fSqlType = SQL_VARCHAR;*/
 	       break;
 	    case SQL_TIMESTAMP:
 	    case SQL_TYPE_TIMESTAMP:
-	       // fSqlType = SQL_VARCHAR;
-	       // cbColDef = 23;
+	       /* fSqlType = SQL_VARCHAR; */
+	       /* cbColDef = 23; */
 	       ibScale = 0;		/* tbd: millisecondS?) */
 	       /* bug fix! if phs->sv is not OK, then there's a chance
 	        * we go through garbage data to determine the length */
@@ -3523,6 +3575,12 @@ int		 Unique;
     imp_sth->hdbc = imp_dbh->hdbc;
 
     imp_sth->done_desc = 0;
+
+    if (!DBIc_ACTIVE(imp_dbh)) {
+	dbd_error(sth, SQL_ERROR, "Can not allocate statement when disconnected from the database");
+	return 0;
+    }
+
     rc = SQLAllocStmt(imp_dbh->hdbc, &imp_sth->hstmt);/* TBD: 3.0 update */
     if (rc != SQL_SUCCESS) {
 	dbd_error(sth, rc, "odbc_get_statistics/SQLAllocStmt");
@@ -3558,6 +3616,12 @@ char * TableName;
     imp_sth->hdbc = imp_dbh->hdbc;
 
     imp_sth->done_desc = 0;
+
+    if (!DBIc_ACTIVE(imp_dbh)) {
+	dbd_error(sth, SQL_ERROR, "Can not allocate statement when disconnected from the database");
+	return 0;
+    }
+
     rc = SQLAllocStmt(imp_dbh->hdbc, &imp_sth->hstmt);/* TBD: 3.0 update */
     if (rc != SQL_SUCCESS) {
 	dbd_error(sth, rc, "odbc_get_primary_keys/SQLAllocStmt");
@@ -3597,6 +3661,12 @@ int    Nullable;
     imp_sth->hdbc = imp_dbh->hdbc;
 
     imp_sth->done_desc = 0;
+
+    if (!DBIc_ACTIVE(imp_dbh)) {
+	dbd_error(sth, SQL_ERROR, "Can not allocate statement when disconnected from the database");
+	return 0;
+    }
+
     rc = SQLAllocStmt(imp_dbh->hdbc, &imp_sth->hstmt);/* TBD: 3.0 update */
     if (rc != SQL_SUCCESS) {
 	dbd_error(sth, rc, "odbc_get_special_columns/SQLAllocStmt");
@@ -3635,6 +3705,12 @@ char * FK_TableName;
     imp_sth->hdbc = imp_dbh->hdbc;
 
     imp_sth->done_desc = 0;
+
+    if (!DBIc_ACTIVE(imp_dbh)) {
+	dbd_error(sth, SQL_ERROR, "Can not allocate statement when disconnected from the database");
+	return 0;
+    }
+
     rc = SQLAllocStmt(imp_dbh->hdbc, &imp_sth->hstmt);/* TBD: 3.0 update */
     if (rc != SQL_SUCCESS) {
 	dbd_error(sth, rc, "odbc_get_foreign_keys/SQLAllocStmt");
@@ -3669,14 +3745,16 @@ I16 *DecimalDigits;
 I16 *Nullable;
 {
     D_imp_sth(sth);
+    SQLUINTEGER ColSize;
     RETCODE rc;
     rc = SQLDescribeCol(imp_sth->hstmt, colno,
 			ColumnName, BufferLength, NameLength,
-			DataType, ColumnSize, DecimalDigits, Nullable);
+			DataType, &ColSize, DecimalDigits, Nullable);
     if (!SQL_ok(rc)) {
 	dbd_error(sth, rc, "DescribeCol/SQLDescribeCol");
 	return 0;
     }
+	*ColumnSize = ColSize;
     return 1;
 }
 
@@ -3700,6 +3778,12 @@ int ftype;
     imp_sth->hdbc = imp_dbh->hdbc;
 
     imp_sth->done_desc = 0;
+
+    if (!DBIc_ACTIVE(imp_dbh)) {
+	dbd_error(sth, SQL_ERROR, "Can not allocate statement when disconnected from the database");
+	return 0;
+    }
+
     rc = SQLAllocStmt(imp_dbh->hdbc, &imp_sth->hstmt);/* TBD: 3.0 update */
     if (rc != SQL_SUCCESS) {
 	dbd_error(sth, rc, "odbc_get_type_info/SQLGetTypeInfo");
@@ -3845,6 +3929,12 @@ char *column;
     imp_sth->hdbc = imp_dbh->hdbc;
 
     imp_sth->done_desc = 0;
+
+    if (!DBIc_ACTIVE(imp_dbh)) {
+	dbd_error(sth, SQL_ERROR, "Can not allocate statement when disconnected from the database");
+	return 0;
+    }
+
     rc = SQLAllocStmt(imp_dbh->hdbc, &imp_sth->hstmt);/* TBD: 3.0 update */
     if (rc != SQL_SUCCESS) {
 	dbd_error(sth, rc, "odbc_db_columns/SQLAllocStmt");

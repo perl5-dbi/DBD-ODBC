@@ -19,6 +19,15 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
  Keep checking Oracle's ODBC drivers for Windows to fix the Date binding problem
 
 =head1 CHANGES
+=item Changes in DBD::ODBC 1.05 March 14, 2003
+
+ Cleaned up Makefile.PL and added Informix support thanks to Jonathan Leffler (see README.informix)
+ Added nicer error message when attempting to do anything while the database is disconnected. 
+ Fixed fetchrow_hashref('NAME_uc | NAME_lc') with odbc_more_results.
+ Added exporter to allow perl -MDBD::ODBC=9999 command line to determine version
+ Fixed for building with DBI 1.33 and greater
+ Removed all C++ style comments
+ Ensured files are in Unix format, with the exception of the README type information and Makefile.PL
 
 =item Changes in DBD::ODBC 1.04 January 24, 2003
 

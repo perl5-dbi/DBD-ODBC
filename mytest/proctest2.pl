@@ -4,10 +4,15 @@ use DBI;
 use strict;
 use Data::Dumper;
 
+unlink("dbitrace.log") if (-e "dbitrace.log");
+DBI->trace(9, "dbitrace.log");
+
 my $dbh = DBI->connect();
 $dbh->{LongReadLen} = 8000;
+$dbh->{FetchHashKeyName} = 'NAME_uc';
 my $dbh2 = DBI->connect();
 $dbh2->{LongReadLen} = 8000;
+$dbh2->{FetchHashKeyName} = 'NAME_uc';
 
 eval {
    local $dbh->{PrintError} = 0;
@@ -84,8 +89,6 @@ sub test($)
 ### Test
 ##########################################
 
-unlink("dbitrace.log") if (-e "dbitrace.log");
-$dbh2->trace(9, "dbitrace.log");
 
 test(10);
 

@@ -2,7 +2,6 @@
 
 use DBI;
 use strict;
-use Data::Dumper;
 
 my $dbh = DBI->connect();
 $dbh->{LongReadLen} = 8000;
