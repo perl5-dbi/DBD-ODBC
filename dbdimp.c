@@ -16,7 +16,7 @@ static const char *S_SqlTypeToString (SWORD sqltype);
 static const char *S_SqlCTypeToString (SWORD sqltype);
 static const char *cSqlTables = "SQLTables(%s,%s,%s,%s)";
 static const char *cSqlPrimaryKeys = "SQLPrimaryKeys(%s,%s,%s)";
-static const char *cSqlForeignKeys = "SQLForeignKeys(%s,%s,%s)";
+static const char *cSqlForeignKeys = "SQLForeignKeys(%s,%s,%s,%s,%s,%s)";
 static const char *cSqlColumns = "SQLColumns(%s,%s,%s,%s)";
 static const char *cSqlGetTypeInfo = "SQLGetTypeInfo(%d)";
 static void       AllODBCErrors(HENV henv, HDBC hdbc, HSTMT hstmt, int output, PerlIO *logfp);
@@ -3734,13 +3734,31 @@ char * FK_TableName;
 	return 0;
     }
 
+
+    /* just for sanity, later.  Any internals that may rely on this (including */
+    /* debugging) will have valid data */
+    imp_sth->statement = (char *)safemalloc(strlen(cSqlForeignKeys)+
+					    strlen(XXSAFECHAR(PK_CatalogName))+
+					    strlen(XXSAFECHAR(PK_SchemaName))+
+					    strlen(XXSAFECHAR(PK_TableName))+
+					    strlen(XXSAFECHAR(FK_CatalogName))+
+					    strlen(XXSAFECHAR(FK_SchemaName))+
+					    strlen(XXSAFECHAR(FK_TableName))+
+					    1);
+
+    sprintf(imp_sth->statement,
+	      cSqlForeignKeys,
+	      XXSAFECHAR(PK_CatalogName), XXSAFECHAR(PK_SchemaName),XXSAFECHAR(PK_TableName),
+	      XXSAFECHAR(FK_CatalogName), XXSAFECHAR(FK_SchemaName),XXSAFECHAR(FK_TableName)
+	   );
+    /* fix to handle "" (undef) calls -- thanks to Kevin Shepherd */
     rc = SQLForeignKeys(imp_sth->hstmt, 
-			PK_CatalogName, strlen(PK_CatalogName), 
-			PK_SchemaName, strlen(PK_SchemaName), 
-			PK_TableName, strlen(PK_TableName), 
-			FK_CatalogName, strlen(FK_CatalogName), 
-			FK_SchemaName, strlen(FK_SchemaName), 
-			FK_TableName, strlen(FK_TableName));
+			(PK_CatalogName && *PK_CatalogName) ? PK_CatalogName : 0, SQL_NTS,
+			(PK_SchemaName && *PK_SchemaName) ? PK_SchemaName : 0, SQL_NTS,
+			(PK_TableName && *PK_TableName) ? PK_TableName : 0, SQL_NTS,
+			(FK_CatalogName && *FK_CatalogName) ? FK_CatalogName : 0, SQL_NTS,
+			(FK_SchemaName && *FK_SchemaName) ? FK_SchemaName : 0, SQL_NTS,
+			(FK_TableName && *FK_TableName) ? FK_TableName : 0, SQL_NTS);
     if (!SQL_ok(rc)) {
 	dbd_error(sth, rc, "odbc_get_foreign_keys/SQLForeignKeys");
 	return 0;
