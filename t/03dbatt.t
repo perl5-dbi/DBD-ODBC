@@ -99,7 +99,6 @@ $dbh->{PrintError} = 0;
 my @tables = $dbh->tables;
 
 Test($#tables > 0); # 7
-Test($dbname eq $dbh->{odbc_SQL_DBMS_NAME});
 $rows = 0;
 if ($sth = $dbh->column_info(undef, undef, $ODBCTEST::table_name, undef)) {
     while (@row = $sth->fetchrow()) {
@@ -108,7 +107,6 @@ if ($sth = $dbh->column_info(undef, undef, $ODBCTEST::table_name, undef)) {
     $sth->finish();
 }
 Test($rows > 0);
-Test($dbname eq $dbh->{odbc_SQL_DBMS_NAME});
 
 $rows = 0;
 
@@ -120,10 +118,17 @@ if ($sth = $dbh->primary_key_info(undef, undef, $ODBCTEST::table_name, undef)) {
 }
 # my $dbname = $dbh->get_info(17); # DBI::SQL_DBMS_NAME
 if ($dbname =~ /Access/i) {
-   Test(1, " # Skipped: Known to fail using MS Access through 2000");
+   Test(1, " # Skipped: Primary Key Known to fail using MS Access through 2000");
 } else {
    Test($rows > 0);
 }
+
+# test $sth->{NAME} when using non-select statements
+$sth = $dbh->prepare("update $ODBCTEST::table_name set COL_A = 100 WHERE COL_A = 100");
+Test(@{$sth->{NAME}}==0);
+$sth->execute;
+Test(@{$sth->{NAME}}==0);
+
 Test($dbname eq $dbh->{odbc_SQL_DBMS_NAME});
 
 BEGIN { $tests = 14 + 5; } # num tests + one for each table_info column (5)
