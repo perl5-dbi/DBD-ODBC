@@ -20,6 +20,10 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
 
 =head1 CHANGES
 
+=item Changes in DBD::ODBC 1.01 December 9, 2000
+
+ Forgot to fix require DBI 1.201 in ODBC.pm to work for perl 5.8.  Fixed
+
 =item Changes in DBD::ODBC 1.00 December 8, 2002
 
  (Please see all changes since version 0.43)
