@@ -2521,7 +2521,7 @@ static int
    fParamType = phs->is_inout ? SQL_PARAM_INPUT_OUTPUT : SQL_PARAM_INPUT; 
    fCType = phs->ftype;
    ibScale = value_len;
-   cbColDef = value_len;
+   cbColDef = phs->is_inout ? phs->maxlen : value_len;
    /* JLU
     * need to look at this.
     * was cbValueMax = value_len for some binding purposes
@@ -2597,7 +2597,7 @@ static int
     * TBD: the default for this should be a DBD::ODBC specific option
     * or attribute.
     */
-   if (phs->sql_type == SQL_VARCHAR) {
+   if (phs->sql_type == SQL_VARCHAR && !phs->is_inout) {
       ibScale = 0;
       /* default to at least 80 if this is the first time through */
       if (phs->biggestparam == 0) {
@@ -2614,7 +2614,9 @@ static int
    if (!SvOK(phs->sv)) {
       /* if is_inout, shouldn't we null terminate the buffer and send
        * it, instead?? */
-      cbColDef = 1;
+      if (!phs->is_inout) {
+	 cbColDef = 1;
+      }
       if (phs->is_inout) {
 	 if (!phs->sv_buf) {
 	    croak("panic: DBD::ODBC binding undef with bad buffer!!!!");
@@ -2633,8 +2635,9 @@ static int
       rgbValue = phs->sv_buf;
       phs->cbValue = (UDWORD) value_len;
       /* not undef, may be a blank string or something */
-      if (phs->cbValue == 0)
+      if (!phs->is_inout && phs->cbValue == 0) {
 	 cbColDef = 1;
+      }
    }
    if (ODBC_TRACE_LEVEL(imp_sth) >=2)
       PerlIO_printf(DBIc_LOGPIO(imp_dbh),
