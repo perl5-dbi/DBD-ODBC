@@ -27,7 +27,8 @@ odbc_exec_direct.  For now, will still look for odbc_execdirect in prepare, but 
 as a backup (which is what it was doing), but that support will be dropped at some time in the future.
 
 Fix handling of print statements for SQL Server thanks to Martin Evans!  Thanks for all your work on this! 
-Due to bug in SQL Server, you must use odbc_exec_direct.  See t/20SqlServer.t for example.
+Due to bug in SQL Server, you must use odbc_exec_direct.  See t/20SqlServer.t for example.  You will need
+to call $sth->{odbc_more_results} to clear out any trailing messages.
 
 Change tests to use Test::More.  Whew, that's much nicer!
 
