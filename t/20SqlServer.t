@@ -441,7 +441,7 @@ $sth->execute;
 Test($testpass > 0);
 
 $dbh->{odbc_async_exec} = 0;
-DBI->trace(9);
+# DBI->trace(9);
 $sth2 = $dbh->prepare("print 'START' select count(*) from perl_dbd_table1 print 'END'");
 $sth2->execute;
 do {
