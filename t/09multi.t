@@ -31,6 +31,12 @@ my $dbh=DBI->connect()
 $dbh->{RaiseError} = 1;
 $dbh->{PrintError} = 0;
 $dbh->{LongReadLen} = 10000;
+# print "mult = ", $dbh->get_info(36) ,"\n";
+unless ($dbh->get_info(36) eq "Y") {
+   print "1..0 # Skipped multiple statements not supported using ", $dbh->get_info(17), " (SQL_MULT_RESULT_SETS)\n";
+   print $@;
+   exit 0;
+}
 
 my($sqlStr) ;
 my @test_colnames = sort(keys(%ODBCTEST::TestFieldInfo));
@@ -38,6 +44,7 @@ $sqlStr = "select $test_colnames[0] FROM $ODBCTEST::table_name
            select $test_colnames[0] from $ODBCTEST::table_name" ;
 #$sqlStr = "select emp_id from employee where emp_id = 2
 #           select emp_id, emp_name, address1, address2 from employee where emp_id = 2" ;
+
 
 my $result_sets = 0;
 $| = 1;

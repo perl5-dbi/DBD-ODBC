@@ -151,7 +151,7 @@ else {
     my $arext = $Config{lib_ext};
 
     # fix to avoid foo..ext on many systems.
-    $arext = s/^\.//;
+    $arext =~ s/^\.//;
 
     # per patches from Nick Gorham
     $myodbc = 'unixodbc'

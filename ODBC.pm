@@ -9,7 +9,7 @@
 
 require 5.004;
 
-$DBD::ODBC::VERSION = '1.09';
+$DBD::ODBC::VERSION = '1.10';
 
 {
     package DBD::ODBC;
@@ -422,6 +422,7 @@ See L<DBI> for more information.
 =head2 Notes:
 
 =over 4
+
 =item B<Change log/recent updates now in DBD::ODBC::Changes.pm>
 
  Please note that the change log has been moved to DBD::ODBC::Changes.pm
@@ -796,6 +797,8 @@ Example (using MSSQL Server):
       database=database_name;uid=user;pwd=password;';
       my $dbh  = DBI->connect("dbi:ODBC:$DSN") or die "$DBI::errstr\n";
 
+=back
+
 =head2 Random Links
 
 These are in need of sorting and annotating. Some are relevant only
@@ -830,8 +833,11 @@ to ODBC developers (but I don't want to loose them).
 
 
 =head2 Frequently Asked Questions
+
 Answers to common DBI and DBD::ODBC questions:
 
+=over 4
+ 
 =item How do I read more than N characters from a Memo | BLOB | LONG field?
 
 See LongReadLen in the DBI docs.  
