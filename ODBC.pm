@@ -1,7 +1,7 @@
 # $Id$
 #
 # Copyright (c) 1994,1995,1996,1998  Tim Bunce
-# portions Copyright (c) 1997,1998,1999,2000,2001,2002  Jeff Urlwin
+# portions Copyright (c) 1997-2004  Jeff Urlwin
 # portions Copyright (c) 1997  Thomas K. Wenrich
 #
 # You may distribute under the terms of either the GNU General Public
