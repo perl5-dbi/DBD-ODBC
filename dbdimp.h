@@ -172,4 +172,7 @@ struct phs_st {  	/* scalar placeholder EXPERIMENTAL	*/
 #define dbd_bind_ph		odbc_bind_ph
 #define dbd_error		odbc_error
 #define dbd_discon_all		odbc_discon_all
+#define dbd_st_tables		odbc_st_tables
+#define dbd_st_primary_keys	odbc_st_primary_keys
+#define dbd_db_execdirect	odbc_db_execdirect
 /* end */

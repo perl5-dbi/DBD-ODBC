@@ -133,7 +133,7 @@ _GetPrimaryKeys(dbh, sth, CatalogName, SchemaName, TableName)
 	char *	SchemaName
 	char *	TableName
 	CODE:
-	ST(0) = odbc_get_primary_keys(dbh, sth, CatalogName, SchemaName, TableName) ? &sv_yes : &sv_no;
+	ST(0) = odbc_st_primary_keys(dbh, sth, CatalogName, SchemaName, TableName) ? &sv_yes : &sv_no;
 
 void 
 _GetSpecialColumns(dbh, sth, Identifier, CatalogName, SchemaName, TableName, Scope, Nullable)
@@ -219,7 +219,6 @@ data_sources(drh, attr = NULL)
         UCHAR description[256];
         SWORD description_length;
 	D_imp_drh(drh);
-	HENV henv;
 
 	if (!imp_drh->connects) {
 	    rc = SQLAllocEnv(&imp_drh->henv);
