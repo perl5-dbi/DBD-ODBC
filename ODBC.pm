@@ -463,7 +463,9 @@ See L<DBI> for more information.
    svn checkout http://svn.perl.org/modules/dbd-odbc/trunk <your directory name here>
 
  Which will, after a short bit a of work, grab all the files into your
- local directory tree that you name.
+ local directory tree that you name.  For now, you can authenticate via the guest
+ user and guest password.  That will change to be unauthenticated in the future for
+ simple read-only checkout.
 				    
 =item B<Contributing>
 
