@@ -60,5 +60,5 @@ mytest/testundef3.pl
 mytest/testver.pl
 mytest/testxml.pl
 mytest/timetest.pl
-
+mytest/testconnspped.pl
 META.yml                                 Module meta-data (added by MakeMaker)
