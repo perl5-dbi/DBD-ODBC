@@ -1597,8 +1597,12 @@ int more;
 
    rc = SQLNumResultCols(imp_sth->hstmt, &num_fields);
    if (!SQL_ok(rc)) {
-      dbd_error(h, rc, "dbd_describe/SQLNumResultCols");
-      return 0;
+      /* dbd_error(h, rc, "dbd_describe/SQLNumResultCols"); */
+      AllODBCErrors(imp_sth->henv, imp_sth->hdbc, imp_sth->hstmt, ODBC_TRACE_LEVEL(imp_sth) >= 8, DBIc_LOGPIO(imp_dbh));
+      /* return 0; */
+      /* need to drop through and check for more results.
+       */
+      num_fields = 0;
    }
 
    /*
@@ -1617,7 +1621,7 @@ int more;
 	 PerlIO_flush(DBIc_LOGPIO(imp_sth));
       }
       if (rc == SQL_SUCCESS_WITH_INFO) {
-	 dbd_error(h, rc, "dbd_describe/SQLMoreResults");
+	 AllODBCErrors(imp_sth->henv, imp_sth->hdbc, imp_sth->hstmt, ODBC_TRACE_LEVEL(imp_sth) >= 8, DBIc_LOGPIO(imp_dbh));
          if (SQL_NO_DATA == rc) imp_sth->moreResults = 0;
       }
       if (rc == SQL_NO_DATA) {
@@ -2196,7 +2200,7 @@ imp_sth_t *imp_sth;
 	    }
 	    rc = SQLMoreResults(imp_sth->hstmt);
             if (rc == SQL_SUCCESS_WITH_INFO || rc == SQL_NO_DATA) {
-	       dbd_error(sth, rc, "st_fetch/SQLMoreResults1");
+                AllODBCErrors(imp_sth->henv, imp_sth->hdbc, imp_sth->hstmt, ODBC_TRACE_LEVEL(imp_sth) >= 8, DBIc_LOGPIO(imp_dbh));
                 if (SQL_NO_DATA == rc) {
                     /*PerlIO_printf(DBIc_LOGPIO(imp_sth), "SET moreResults=0\n");*/
                     imp_sth->moreResults = 0;
@@ -2210,7 +2214,7 @@ imp_sth_t *imp_sth;
 		  PerlIO_printf(DBIc_LOGPIO(imp_dbh), "MORE Results! (%d)\n", rc);
 	       }
 	       if (rc == SQL_NO_DATA || rc == SQL_SUCCESS_WITH_INFO) {
-		  dbd_error(sth, rc, "st_fetch/SQLMoreResults2");
+		  dbd_error(sth, rc, "st_fetch/SQLMoreResults");
 	       }
 	       odbc_clear_result_set(sth, imp_sth);
 
