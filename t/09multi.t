@@ -1,115 +1,106 @@
 #!/usr/bin/perl -I./t -w
 # $Id$
 
+use Test::More;
+
 $| = 1;
 
-use strict;
-use DBI;
-use ODBCTEST;
+use_ok('strict');
+use_ok('DBI');
+use_ok('ODBCTEST');
 
+my $tests;
 # to help ActiveState's build process along by behaving (somewhat) if a dsn is not provided
 BEGIN {
-   unless (defined $ENV{DBI_DSN}) {
-      print "1..0 # Skipped: DBI_DSN is undefined\n";
-      exit;
+   $tests = 7;
+   if (!defined $ENV{DBI_DSN}) {
+      plan skip_all => "DBI_DSN is undefined";
+   } else {
+      plan tests => $tests;
    }
 }
+
 # $ENV{'ODBCINI'}="/export/cmn/etc/odbc.ini" ;
 #my($connectString) = "dbi:ODBC:DSN=TESTDB;Database=xxxxx;uid=usrxxxxx;pwd=xxxxx" ;
 
-{
-    my $numTest = 0;
-    sub Test($;$) {
-	my $result = shift; my $str = shift || '';
-	printf("%sok %d%s\n", ($result ? "" : "not "), ++$numTest, $str);
-	$result;
-    }
+my $dbh=DBI->connect();
+unless($dbh) {
+   BAILOUT("Unable to connect to the database $DBI::errstr\nTests skipped.\n");
+   exit 0;
 }
 
-my $dbh=DBI->connect()
-       || die "Can't connect to your $ENV{DBI_DSN} using user: $ENV{DBI_USER} and pass: $ENV{DBI_PASS}\n$DBI::errstr\n";
 $dbh->{RaiseError} = 1;
 $dbh->{PrintError} = 0;
 $dbh->{LongReadLen} = 10000;
-# print "mult = ", $dbh->get_info(36) ,"\n";
-unless ($dbh->get_info(36) eq "Y") {
-   print "1..0 # Skipped multiple statements not supported using ", $dbh->get_info(17), " (SQL_MULT_RESULT_SETS)\n";
-   print $@;
-   exit 0;
-}
-
-my($sqlStr) ;
-my @test_colnames = sort(keys(%ODBCTEST::TestFieldInfo));
-$sqlStr = "select $test_colnames[0] FROM $ODBCTEST::table_name
-           select $test_colnames[0] from $ODBCTEST::table_name" ;
-#$sqlStr = "select emp_id from employee where emp_id = 2
-#           select emp_id, emp_name, address1, address2 from employee where emp_id = 2" ;
+SKIP:
+{
+   skip "Multiple statements not supported using " . $dbh->get_info(17) . " (SQL_MULT_RESULT_SETS)", $tests-3 unless ($dbh->get_info(36) eq "Y");
 
 
-my $result_sets = 0;
-$| = 1;
+   my($sqlStr) ;
+   my @test_colnames = sort(keys(%ODBCTEST::TestFieldInfo));
+   $sqlStr = "select $test_colnames[0] FROM $ODBCTEST::table_name
+	      select $test_colnames[0] from $ODBCTEST::table_name" ;
+   #$sqlStr = "select emp_id from employee where emp_id = 2
+   #           select emp_id, emp_name, address1, address2 from employee where emp_id = 2" ;
 
-my $sth;
-eval {
-   $sth = $dbh->prepare($sqlStr);
-   $sth->execute;
+
+   my $result_sets = 0;
+   
+   my $sth;
+   eval {
+      $sth = $dbh->prepare($sqlStr);
+      $sth->execute;
+   };
+   
+   if ($@) {
+      skip("Multiple statements not supported using " . $dbh->get_info(17) . "\n", $tests-3);
+   }
+
+
+   my @row;
+   my $cnt = 0;
+   $result_sets = 0;
+
+   do {
+      # print join(":", @{$sth->{NAME}}), "\n";
+      while ( my $ref = $sth->fetch ) {
+	 # print join(":", @$ref), "\n";
+      }
+      $result_sets++;
+   } while ( $sth->{odbc_more_results}  ) ;
+
+   is($result_sets, 2, "count number of result sets");
+
+   my $sql;
+   my @expected_result_cols;
+
+   # lets get some dummy data for testing.
+   ODBCTEST::tab_insert($dbh);
+
+   $sql = "select $test_colnames[0] from $ODBCTEST::table_name order by $test_colnames[0]
+	   select $test_colnames[0],$test_colnames[1]  from $ODBCTEST::table_name order by $test_colnames[0]";
+   @expected_result_cols = (1, 2);
+   ok(RunMultiTest($sql, \@expected_result_cols), "Multiple result sets with different column counts (less then more)");
+
+
+   $sql = "select $test_colnames[0],$test_colnames[1]  from $ODBCTEST::table_name order by $test_colnames[0]
+	   select $test_colnames[0] from $ODBCTEST::table_name order by $test_colnames[0]";
+
+   @expected_result_cols = (2, 1);
+   ok(RunMultiTest($sql, \@expected_result_cols), "Multiple result sets with different column counts (more then less)");
+
+   $sql = "select " . join(", ", grep {/COL_[ABC]/} @test_colnames) . " from $ODBCTEST::table_name order by $test_colnames[0]
+	   select $test_colnames[0] from $ODBCTEST::table_name order by $test_colnames[0]";
+
+   @expected_result_cols = ($#test_colnames, 1);
+   ok(RunMultiTest($sql, \@expected_result_cols), "Multiple result sets with multiple cols, then second result set with one col");
+
+
+   # clean up the dummy data.
+   ODBCTEST::tab_delete($dbh);
 };
 
-if ($@) {
-   # skipping test on this platform.
-   print "1..0 # Skipped multiple statements not supported using ", $dbh->get_info(17), "\n";
-   print $@;
-   exit 0;
-}
-
-
-print "1..4\n";
-
-# Test 1, simple empty data (should be simple), same # of columns in the two
-# result sets.
-my @row;
-my $cnt = 0;
-$result_sets = 0;
-
-do {
-   # print join(":", @{$sth->{NAME}}), "\n";
-   while ( my $ref = $sth->fetch ) {
-      # print join(":", @$ref), "\n";
-   }
-   $result_sets++;
-} while ( $sth->{odbc_more_results}  ) ;
-
-Test($result_sets == 2);
-
-my $sql;
-my @expected_result_cols;
-
-# lets get some dummy data for testing.
-ODBCTEST::tab_insert($dbh);
-
-$sql = "select $test_colnames[0] from $ODBCTEST::table_name order by $test_colnames[0]
-        select $test_colnames[0],$test_colnames[1]  from $ODBCTEST::table_name order by $test_colnames[0]";
-@expected_result_cols = (1, 2);
-Test(RunMultiTest($sql, \@expected_result_cols));
-
-
-$sql = "select $test_colnames[0],$test_colnames[1]  from $ODBCTEST::table_name order by $test_colnames[0]
-        select $test_colnames[0] from $ODBCTEST::table_name order by $test_colnames[0]";
-
-@expected_result_cols = (2, 1);
-Test(RunMultiTest($sql, \@expected_result_cols));
-
-$sql = "select " . join(", ", grep {/COL_[ABC]/} @test_colnames) . " from $ODBCTEST::table_name order by $test_colnames[0]
-        select $test_colnames[0] from $ODBCTEST::table_name order by $test_colnames[0]";
-
-@expected_result_cols = ($#test_colnames, 1);
-Test(RunMultiTest($sql, \@expected_result_cols));
-
-
-
-
-# clean up the dummy data.
-ODBCTEST::tab_delete($dbh);
 $dbh->disconnect();
 
 
@@ -164,3 +155,9 @@ sub RunMultiTest {
    }
    $test_pass;
 }
+
+exit(0);
+print $DBI::errstr;
+print $ODBCTEST::tab_insert_values[0];
+print sort(keys(%ODBCTEST::TestFieldInfo));
+
