@@ -554,6 +554,7 @@ SV   *attr;
       if (imp_drh->connects == 0) {
 	 SQLFreeEnv(imp_drh->henv);/* TBD: 3.0 update */
 	 imp_drh->henv = SQL_NULL_HENV;
+	 imp_dbh->henv = SQL_NULL_HENV;	/* needed for dbd_error */
       }
       return 0;
    }
@@ -639,6 +640,7 @@ SV   *attr;
 	 if (imp_drh->connects == 0) {
 	    SQLFreeEnv(imp_drh->henv);/* TBD: 3.0 update */
 	    imp_drh->henv = SQL_NULL_HENV;
+	    imp_dbh->henv = SQL_NULL_HENV;	/* needed for dbd_error */
 	 }
 	 return 0;
       }
@@ -663,6 +665,7 @@ SV   *attr;
       if (imp_drh->connects == 0) {
 	 SQLFreeEnv(imp_drh->henv);/* TBD: 3.0 update */
 	 imp_drh->henv = SQL_NULL_HENV;
+	 imp_dbh->henv = SQL_NULL_HENV;	/* needed for dbd_error */
       }
       return 0;
    } else if (rc == SQL_SUCCESS_WITH_INFO) {
@@ -681,6 +684,7 @@ SV   *attr;
       if (imp_drh->connects == 0) {
 	 SQLFreeEnv(imp_drh->henv);/* TBD: 3.0 update */
 	 imp_drh->henv = SQL_NULL_HENV;
+	 imp_dbh->henv = SQL_NULL_HENV;	/* needed for dbd_error */
       }
       return 0;
    }
@@ -849,6 +853,7 @@ imp_dbh_t *imp_dbh;
    if (imp_drh->connects == 0) {
       SQLFreeEnv(imp_drh->henv);/* TBD: 3.0 update */
       imp_drh->henv = SQL_NULL_HENV;
+      imp_dbh->henv = SQL_NULL_HENV;	/* needed for dbd_error */
    }
    /* We don't free imp_dbh since a reference still exists	*/
    /* The DESTROY method is the only one to 'free' memory.	*/
