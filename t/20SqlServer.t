@@ -18,7 +18,6 @@ BEGIN {
    if (!defined $ENV{DBI_DSN}) {
       plan skip_all => "DBI_DSN is undefined";
    } else {
-      # num tests + one for each table_info column (5)
       plan tests => $tests;
    }
 }

@@ -1,44 +1,34 @@
-#!/usr/bin/perl -I./t
+#!/usr/bin/perl -w -I./t
 # $Id$
+
+use Test::More;
 
 $| = 1;
 
+# use_ok('DBI', qw(:sql_types));
+# can't seem to get the imports right this way
+use DBI qw(:sql_types);
+use_ok('ODBCTEST');
+
 # to help ActiveState's build process along by behaving (somewhat) if a dsn is not provided
 BEGIN {
-   unless (defined $ENV{DBI_DSN}) {
-      print "1..0 # Skipped: DBI_DSN is undefined\n";
-      exit;
+   if (!defined $ENV{DBI_DSN}) {
+      plan skip_all => "DBI_DSN is undefined";
+   } else {
+      plan tests => 11;
    }
 }
-{
-   my $numTest = 0;
-   sub Test($;$) {
-      my $result = shift; my $str = shift || '';
-	printf("%sok %d%s\n", ($result ? "" : "not "), ++$numTest, $str);
-	$result;
-    }
+
+my $dbh = DBI->connect();
+unless($dbh) {
+   BAILOUT("Unable to connect to the database $DBI::errstr\nTests skipped.\n");
+   exit 0;
 }
+   
 
-print "1..$tests\n";
+$rc = 
+ok(ODBCTEST::tab_create($dbh), "Create tables");
 
-use DBI qw(:sql_types);
-use ODBCTEST;
-
-Test(1);
-
-print " Test 2: connecting to the database\n";
-my $dbh = DBI->connect() || die "Connect failed: $DBI::errstr\n";
-
-Test(1);
-
-
-#### testing a simple select"
-
-print " Test 3: create test table\n";
-$rc = ODBCTEST::tab_create($dbh);
-Test($rc);
-
-print " Test 4: insert test data\n";
 my @data = (
 	[ 1, 'foo', 'foo varchar', "1998-05-13", "1998-05-13 00:01:00" ],
 	[ 2, 'bar', 'bar varchar', "1998-05-14", "1998-05-14 00:01:00" ],
@@ -57,40 +47,38 @@ my @data_long = (
 );
 my $tab_insert_ok = 1;
 $rc = ODBCTEST::tab_insert_bind($dbh, \@data, 1);
+ok($rc, "Table insert test");
 unless ($rc) {
-	warn "Test 4 is known to fail often. It is not a major concern.  It *may* be an indication of being unable to bind datetime values correctly.\n";
+	diag("Test 4 is known to fail often. It is not a major concern.  It *may* be an indication of being unable to bind datetime values correctly.\n");
 	$tab_insert_ok = 0;
 	# print "not "
 }
-Test($rc);
 
 $dbh->{LongReadLen} = 2000;
-print " Test 5: select test data\n";
+is($dbh->{LongReadLen}, 2000, "Ensure long readlen set correctly");
+
 $rc = tab_select($dbh, \@data);
-Test($rc);
+ok($rc, "Select tests");
 
-print " Test 6: insert long test data\n";
 $rc = ODBCTEST::tab_insert_bind($dbh, \@data_long, 1);
+ok($rc, "Insert with bind tests");
 unless ($rc) {
-	if ($tab_insert_ok) {
-	    warn "Since test #4 succeeded, this could be indicative of a problem with long inserting, with binding parameters.\n";
-	} else {
-	    warn "Since test #4 failed, this could be indicative of a problem with date time binding, as per #4 above.\n";
-	}
+   if ($tab_insert_ok) {
+      diag("Since test #4 succeeded, this could be indicative of a problem with long inserting, with binding parameters.\n");
+   } else {
+      diag("Since test #4 failed, this could be indicative of a problem with date time binding, as per #4 above.\n");
+   }
 }
-Test($rc);
 
-print " Test 7: check long test data\n";
+
 $rc = tab_select($dbh, \@data_long);
-Test($rc);
+ok($rc, "select long test data");
 
-print " Test 8: update long test data\n";
 $rc = tab_update_long($dbh, \@data_long);
-Test($rc);
+ok($rc, "update long test data");
 
-print " Test 9: check long test data\n";
 $rc = tab_select($dbh, \@data_long);
-Test($rc);
+ok($rc, "select long test data again");
 
 # clean up!
 $rc = ODBCTEST::tab_delete($dbh);
@@ -101,10 +89,11 @@ $sth->bind_param(1, 1, SQL_INTEGER);
 $sth->bind_param(2, "test", SQL_LONGVARCHAR);
 my $ref = $sth->{ParamValues};
 my $key;
-foreach $key (keys %$ref) {
-   print "param $key: $ref->{$key}\n";
-}
-Test($ref->{1} == 1 && $ref->{2} eq "test");
+# foreach $key (keys %$ref) {
+   # print "param $key: $ref->{$key}\n";
+# }
+is($ref->{1}, 1, "ParamValues test integer");
+is($ref->{2}, "test", "Paramvalues test string");
 
 # how to test "sticky" bind_param?
 # how about setting ODBC default bind_param to some number
@@ -112,8 +101,8 @@ Test($ref->{1} == 1 && $ref->{2} eq "test");
 # clean up!
 $rc = ODBCTEST::tab_delete($dbh);
 
-BEGIN {$tests = 10;}
 exit(0);
+print $DBI::errstr;
 
 sub tab_select {
     my $dbh = shift;
