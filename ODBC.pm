@@ -9,7 +9,7 @@
 
 require 5.004;
 
-$DBD::ODBC::VERSION = '1.06';
+$DBD::ODBC::VERSION = '1.07';
 
 {
     package DBD::ODBC;
@@ -20,7 +20,7 @@ $DBD::ODBC::VERSION = '1.06';
     
     @ISA = qw(Exporter DynaLoader);
 
-    my $Revision = substr(q$Revision: 1.12 $, 10);
+    # my $Revision = substr(q$Id$, 13,2);
 
     require_version DBI 1.21;
 
@@ -428,8 +428,8 @@ See L<DBI> for more information.
  To easily access this documentation, use perldoc DBD::ODBC::Changes
 
  Also, while this document documents features, etc, I'm really trying to keep
- the FAQ type questions answered in the DBI FAQ itself...
- DBI FAQ (http://www.xmlproj.com/cgi/fom.cgi)
+ the FAQ type questions answered in the DBI FAQ itself... see
+ http://dbi.perl.org for more information.
    
 =item B<An Important note about the tests!>
 
@@ -446,6 +446,43 @@ See L<DBI> for more information.
  t/09multi.t, if your driver doesn't seem to support
  returning multiple result sets.  This is normal.
 
+=item B<Version Control>
+
+ I have recently placed all of the DBD::ODBC source code
+ under version control at svn.perl.org.  If you would like
+ to use the "bleeding" edge version, you can get the latest
+ from svn.perl.org via Subversion version control.  Note that I
+ don't guarantee that this version is any different than what
+ you get from the tarball from CPAN, but hey, it might be :)
+
+ You may read about Subversion from:
+   http://subversion.tigris.org
+
+ You can get a subversion client from there and check dbd-odbc out via:
+
+   svn checkout http://svn.perl.org/modules/dbd-odbc/trunk <your directory name here>
+
+ Which will, after a short bit a of work, grab all the files into your
+ local directory tree that you name.
+				    
+=item B<Contributing>
+
+ I am usually very open to contributions, but I have tended
+ to get behind.  That's one strong reason why I've put everything
+ in a shared version control environment.
+
+ Please use Subversion (see above) to appropriately get the latest
+ versions.
+
+ Please, before submitting a patch:
+    svn update
+    <test your patch>
+    svn diff > describe_my_diffs.patch
+
+ and send the resuting file to me...
+
+ It's probably best to send to dbi-users@perl.org, as I monitor that group.
+ 
 =item B<Private DBD::ODBC Attributes>
 =item odbc_more_results (applies to statement handle only!)
 

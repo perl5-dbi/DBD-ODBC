@@ -21,10 +21,12 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
 =head1 CHANGES
 
 =item Changes in DBD::ODBC 1.07 February 19, 2003
-=item Added to Subversion version control hosted by perl.org.  Thanks Robert!  See README
 
- Fix for Makefile.PL not having tab in front of $(NOOP)
- 
+ Added to Subversion version control hosted by perl.org.  Thanks Robert!  See ODBC.pm POD for more information.
+ Added contributing section to ODBC.pm POD -- see more details there
+ Fix for Makefile.PL not having tab in front of $(NOOP) (Finally)
+ Fix for SQLForeignKeys thanks to Kevin Shepherd
+
 =item Changes in DBD::ODBC 1.06 June 19, 2003
 
  Fixed test in t/02simple.t to skip if the DSN defined by the user has DSN= in it.
