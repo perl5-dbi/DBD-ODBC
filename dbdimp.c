@@ -22,7 +22,10 @@ static const char *cSqlGetTypeInfo = "SQLGetTypeInfo(%d)";
 static void       AllODBCErrors(HENV henv, HDBC hdbc, HSTMT hstmt, int output, PerlIO *logfp);
 
 char *cvt_av2buf(SV *sth, AV *av, int c_type, int len, int count, long **indics);
-AV *dbd_st_fetch(SV *	sth, imp_sth_t *imp_sth);
+// AV *dbd_st_fetch(SV * sth, imp_sth_t *imp_sth);
+int dbd_describe(SV *h, imp_sth_t *imp_sth);
+int dbd_db_login6(SV *dbh, imp_dbh_t *imp_dbh, char *dbname, char *uid, char *pwd, SV *attr);
+int dbd_st_finish(SV *sth, imp_sth_t *imp_sth);
  
 #define av_sz(av) (av_len(av) + 1)
 
@@ -354,7 +357,7 @@ char *pwd;
 SV   *attr;
 {
     D_imp_drh_from_dbh;
-    int ret;
+    /* int ret; */
     dTHR;
 
     RETCODE rc;
@@ -786,8 +789,8 @@ HSTMT hstmt;
 
          if(imp_dbh->odbc_err_handler) {
              dSP;
-             SV *sv, **svp;
-             HV *hv;
+	     /* SV *sv, **svp; */
+	     /* HV *hv; */
              int retval, count;
 
              ENTER;
@@ -1096,8 +1099,8 @@ char *table_type;
     D_imp_dbh(dbh);
     D_imp_sth(sth);
     RETCODE rc;
-    SV **svp;
-    char cname[128];					/* cursorname */
+    /* SV **svp; */
+    /* char cname[128];	*/				/* cursorname */
     dTHR;
 
     imp_sth->henv = imp_dbh->henv;	/* needed for dbd_error */
@@ -1207,8 +1210,8 @@ SV *attribs;
     dTHR;
     D_imp_dbh_from_sth;
     RETCODE rc;
-    SV **svp;
-    char cname[128];		/* cursorname */
+    /* SV **svp;
+    char cname[128]; */		/* cursorname */
 
     imp_sth->done_desc = 0;
     imp_sth->henv = imp_dbh->henv;	/* needed for dbd_error */
@@ -1710,10 +1713,17 @@ imp_sth_t *imp_sth;
 #ifdef DBDODBC_DEFER_BINDING
     D_imp_dbh_from_sth;
 #endif    
+    int outparams = 0;
+    /*
+     * if the handle is active, we need to finish it here.
+     * Note that dbd_st_finish already checks to see if it's active.
+     */
+    dbd_st_finish(sth, imp_sth);;
+
     /*
      * bind_param_inout support
      */
-    int outparams = (imp_sth->out_params_av) ? AvFILL(imp_sth->out_params_av)+1 : 0;
+    outparams = (imp_sth->out_params_av) ? AvFILL(imp_sth->out_params_av)+1 : 0;
     if (debug >= 4) {
 	PerlIO_printf(DBIc_LOGPIO(imp_dbh),
 		      "    dbd_st_execute (outparams = %d)...\n",
@@ -2094,7 +2104,7 @@ imp_sth_t *imp_sth;
 		 * with SQL_ERROR explicitly instead.
 		 */
 
-		dbd_error(sth, SQL_ERROR, "st_fetch/SQLFetch (long truncated)");
+		dbd_error(sth, SQL_ERROR, "st_fetch/SQLFetch (long truncated DBI attribute LongTruncOk not set and/or LongReadLen too small)");
 		return Nullav;
 	    }
 	    /* LongTruncOk true, just ensure perl has the right length

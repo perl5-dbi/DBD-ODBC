@@ -19,8 +19,18 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
  Keep checking Oracle's ODBC drivers for Windows to fix the Date binding problem
 
 =head1 CHANGES
+=item Changes in DBD::ODBC 1.02 January 6, 2003
 
-=item Changes in DBD::ODBC 1.01 December 9, 2000
+ Fix to call finish() automatically if execute is re-called in a loop 
+(and test in t/02simple.t to ensure it's fixed)
+ 
+ Augmented error message when longs are truncated to help users determine where
+ to look for help.
+
+ Fixes for build under Win32 with Perl5.8.  
+
+
+=item Changes in DBD::ODBC 1.01 December 9, 2002
 
  Forgot to fix require DBI 1.201 in ODBC.pm to work for perl 5.8.  Fixed
 

@@ -6,7 +6,7 @@ use ODBCTEST;
 
 # to help ActiveState's build process along by behaving (somewhat) if a dsn is not provided
 BEGIN {
-   $tests = 17;
+   $tests = 18;
    unless (defined $ENV{DBI_DSN}) {
       print "1..0 # Skipped: DBI_DSN is undefined\n";
       exit;
@@ -83,6 +83,7 @@ if ($sth) {
  		++$is_ok if grep { $coltype == $_ } @{$ODBCTEST::TestFieldInfo{$colname}};
 		print " yes\n" if grep { $coltype == $_ } @{$ODBCTEST::TestFieldInfo{$colname}};
 	}
+	print "\n";
 	Test($is_ok == $colcount);
 	# print "not " unless $is_ok == $colcount;
 	# print "ok 9\n";
@@ -169,6 +170,14 @@ Test(defined($dbname) && $dbname ne '');
 #print "\nnot " unless (defined($dbname) && $dbname ne '');
 #print "ok 17\n";
 
+print " Test 18: test automatically finish when execute run again\n";
+$sth = $dbh->prepare("select count(*) from $ODBCTEST::table_name");
+$sth->execute;
+$sth->fetch;
+Test($sth->execute);
+
+# clean up
+$sth->finish;
 exit(0);
 
 sub tab_select
