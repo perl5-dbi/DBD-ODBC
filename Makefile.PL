@@ -424,6 +424,8 @@ print "Warning: not all required environment variables are set.\n"
 print "Warning: DBI_DSN ($ENV{DBI_DSN}) doesn't start with 'dbi:ODBC:'\n"
 	if ($ENV{DBI_DSN} && $ENV{DBI_DSN} !~ m/^dbi:ODBC:/);
 print "\n";
+warn "See README.RH9 if you have problems with a bad Makefile generated here\a\a\a\n"
+   if ($ENV{LANG} && $ENV{LANG} =~ /utf8/);
 
 $rv;
 

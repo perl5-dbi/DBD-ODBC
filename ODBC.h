@@ -12,6 +12,8 @@
 
 #include <DBIXS.h>	/* from DBI. Load this after dbdodbc.h */
 
+#include "dbivport.h" /* copied from DBI to maintain compatibility */
+
 #include "dbdimp.h"
 
 #include <dbd_xsh.h>	/* from DBI. Load this after dbdodbc.h */

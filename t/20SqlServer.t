@@ -4,7 +4,7 @@
 $| = 1;
 
 
-my $tests = 26;
+my $tests = 28;
 # to help ActiveState's build process along by behaving (somewhat) if a dsn is not provided
 BEGIN {
    unless (defined $ENV{DBI_DSN}) {
@@ -25,6 +25,27 @@ use Data::Dumper;
     }
 }
 
+sub Multiple_concurrent_stmts($) {
+   my $dbh = shift;
+   my $sth = $dbh->prepare("select * from PERL_DBD_TABLE1");
+   $dbh->{RaiseError} = 1;
+   $sth->execute;
+   my @row;
+   eval {
+      while (@row = $sth->fetchrow_array()) {
+	 my $sth2 = $dbh->prepare("select * from $ODBCTEST::table_name");
+	 $sth2->execute;
+	 my @row2;
+	 while (@row2 = $sth2->fetchrow_array()) {
+	 }
+      }
+   };
+   
+   if ($@) {
+      return 0;
+   }
+   return 1;
+}
 
 my $dbh = DBI->connect() || die "Connect failed: $DBI::errstr\n";
 my $dbname = $dbh->get_info(17); # DBI::SQL_DBMS_NAME
@@ -397,10 +418,6 @@ $sth1->bind_param_inout(1, \$output, 50, DBI::SQL_INTEGER);
 $sth1->execute();
 Test($output == 1);
 
-# clean up test table and procedure
-eval {$dbh->do("DROP TABLE PERL_DBD_TABLE1");};
-eval {$dbh->do("DROP PROCEDURE PERL_DBD_PROC1");};
-
 
 $dbh->{odbc_async_exec} = 1;
 print "odbc_async_exec is: $dbh->{odbc_async_exec}\n";
@@ -422,5 +439,20 @@ $dbh->{odbc_err_handler} = \&err_handler;
 $sth = $dbh->prepare("dbcc TRACESTATUS(-1)");
 $sth->execute;
 Test($testpass > 0);
+
+$dbh->do("insert into perl_dbd_table1 (i, j) values (1, 2)");
+$dbh->do("insert into perl_dbd_table1 (i, j) values (3, 4)");
+Test(!&Multiple_concurrent_stmts($dbh));
+
+$dbh->disconnect;
+$dbh = DBI->connect($ENV{DBI_DSN}, $ENV{DBI_USER}, $ENV{DBI_PASS}, { odbc_cursortype => 2 });
+$dbh->{odbc_err_handler} = \&err_handler;
+Test(&Multiple_concurrent_stmts($dbh));
+
+
+# clean up test table and procedure
+eval {$dbh->do("DROP TABLE PERL_DBD_TABLE1");};
+eval {$dbh->do("DROP PROCEDURE PERL_DBD_PROC1");};
+
 
 $dbh->disconnect;

@@ -11,11 +11,7 @@
 
 #include "ODBC.h"
 
-#ifndef DBIc_TRACE_LEVEL
-#define ODBC_TRACE_LEVEL DBIc_DEBUG
-#else
 #define ODBC_TRACE_LEVEL DBIc_TRACE_LEVEL
-#endif
 
 static const char *S_SqlTypeToString (SWORD sqltype);
 static const char *S_SqlCTypeToString (SWORD sqltype);
@@ -47,6 +43,8 @@ int dbd_st_finish(SV *sth, imp_sth_t *imp_sth);
 #define ODBC_ROWSINCACHE               0x8337
 #define ODBC_FORCE_REBIND	       0x8338
 #define ODBC_EXEC_DIRECT               0x8339
+#define ODBC_VERSION		       0x833A
+#define ODBC_CURSORTYPE                0x833B
 
 /* ODBC_DEFAULT_BIND_TYPE_VALUE is now set to 0, which means that
  * DBD::ODBC will call SQLDescribeParam to find out what type of
@@ -443,6 +441,8 @@ SV   *attr;
 #endif
    SV **odbc_version_sv;
    UV   odbc_version = 0;
+   SV **odbc_cursortype_sv;
+   UV   odbc_cursortype = 0;
 
    if (!imp_drh->connects) {
       rc = SQLAllocHandle(SQL_HANDLE_ENV, SQL_NULL_HANDLE, &imp_drh->henv);		
@@ -702,6 +702,18 @@ SV   *attr;
 
    DBIc_set(imp_dbh,DBIcf_AutoCommit, 1);
 
+   DBD_ATTRIB_GET_IV(attr, "odbc_cursortype",15, odbc_cursortype_sv, odbc_cursortype);
+   if (odbc_cursortype) {
+      if (ODBC_TRACE_LEVEL(imp_dbh) >= 2) {
+	 PerlIO_printf(DBIc_LOGPIO(imp_dbh), "   Set cursor type to: %d", odbc_cursortype);
+      }
+      rc = SQLSetConnectAttr(imp_dbh->hdbc,(SQLINTEGER)SQL_CURSOR_TYPE, (SQLPOINTER)odbc_cursortype,(SQLINTEGER)SQL_IS_INTEGER );
+      if (!SQL_ok(rc)) {
+	 if (ODBC_TRACE_LEVEL(imp_dbh) >= 2)
+	    PerlIO_printf(DBIc_LOGPIO(imp_dbh), "    Failed to set SQL_CURSORTYPE to %d\n", (int)odbc_cursortype);
+      }
+   }
+   
    imp_drh->connects++;
    DBIc_IMPSET_on(imp_dbh);	/* imp_dbh set up now			*/
    DBIc_ACTIVE_on(imp_dbh);	/* call disconnect before freeing	*/
@@ -2893,6 +2905,8 @@ static db_params S_db_storeOptions[] =  {
    { "odbc_async_exec", ODBC_ASYNC_EXEC },
    { "odbc_err_handler", ODBC_ERR_HANDLER },
    { "odbc_exec_direct", ODBC_EXEC_DIRECT },
+   { "odbc_version", ODBC_VERSION },
+   { "odbc_cursortype", ODBC_CURSORTYPE },
    { NULL },
 };
 
@@ -2906,8 +2920,9 @@ static const db_params *
 	 break;
       pars++;
    }
-   if (pars->str == NULL)
+   if (pars->str == NULL) {
       return NULL;
+   }
    return pars;
 }
 
@@ -2930,8 +2945,13 @@ SV *valuesv;
    const db_params *pars;
    int bSetSQLConnectionOption;
 
-   if ((pars = S_dbOption(S_db_storeOptions, key, kl)) == NULL)
+   if ((pars = S_dbOption(S_db_storeOptions, key, kl)) == NULL) {
+      if (ODBC_TRACE_LEVEL(imp_dbh) >= 2)
+	 PerlIO_printf(DBIc_LOGPIO(imp_dbh), 
+		       "DBD::ODBC unsupported attribute passed (%s)\n", key);
+      
       return FALSE;
+   }
 
    bSetSQLConnectionOption = TRUE;
    switch(pars->fOption)
@@ -3093,7 +3113,16 @@ SV *valuesv;
 	    sv_setsv(imp_dbh->odbc_err_handler, valuesv);
 	 }
 	 break;
+      case ODBC_VERSION:
+	 /* set only in connect, nothing to store */
+	 bSetSQLConnectionOption = FALSE;
+	 break;
 
+      case ODBC_CURSORTYPE:
+	 /* set only in connect, nothing to store */
+	 bSetSQLConnectionOption = FALSE;
+	 break;
+	 
       default:
 	 on = SvTRUE(valuesv);
 	 vParam = on ? pars->true : pars->false;
@@ -3176,20 +3205,11 @@ SV *keysv;
 #endif
       retsv = newSVpv(imp_dbh->odbc_ver, 0);
       break;
+
       case SQL_DBMS_NAME:
-#if  0
-      {
-	 int i;
-	 PerlIO_printf(DBIc_LOGPIO(imp_dbh), "DBName: ");
-	 for (i = 0; i < sizeof(imp_dbh->odbc_dbname); i++)
-	    PerlIO_printf(DBIc_LOGPIO(imp_dbh), "%c", imp_dbh->odbc_dbname[i]);
-	 PerlIO_printf(DBIc_LOGPIO(imp_dbh), "\n");
+	 retsv = newSVpv(imp_dbh->odbc_dbname, 0);
+	 break;
 
-      }
-#endif
-
-      retsv = newSVpv(imp_dbh->odbc_dbname, 0);
-      break;
       case ODBC_IGNORE_NAMED_PLACEHOLDERS:
 	 /*
 	  * fetch current value of named placeholders.
@@ -3351,15 +3371,14 @@ SV *keysv;
    if (par->len <= 0)
       return Nullsv;
 
-   PerlIO_printf(DBIc_LOGPIO(imp_sth), " dbd_st_FETCH_attrib (%s)\n", par->str);
    if (par->need_describe && !imp_sth->done_desc && !dbd_describe(sth, imp_sth)) 
    {
       /* dbd_describe has already called dbd_error()          */
       /* we can't return Nullsv here because the xs code will */
       /* then just pass the attribute name to DBI for FETCH.  */
-      // if (ODBC_TRACE_LEVEL(imp_sth) > 3) {
+      if (ODBC_TRACE_LEVEL(imp_sth) > 3) {
 	 PerlIO_printf(DBIc_LOGPIO(imp_sth), " dbd_st_FETCH_attrib (%s) needed query description, but failed\n", par->str);
-   //}
+      }
       if (DBIc_WARN(imp_sth)) {
 	 warn("Describe failed during %s->FETCH(%s,%d)", SvPV(sth,na), key,imp_sth->done_desc);
       }

@@ -20,11 +20,21 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
 
 =head1 CHANGES
 
+=head2 Changes in DBD::ODBC 1.08 (subversion revision XXX) XXXX, 2004
+
+Added check in Makefile.PL to detect if the environment variable LANG is 
+Set.  If so, prints a warning about potential makefile generation issues.
+Change to use dbivport.h per new DBI spec.
+Add ability to set the cursor type during the connect.  This may allow some servers
+which do not support multiple concurrent statements to permit them.  Thanks to Martin Busik!
+See odbc_cursortype information in the ODBC POD.
+
+
 =head2 Changes in DBD::ODBC 1.07 February 19, 2004
 
 Added to Subversion version control hosted by perl.org.  Thanks Robert!  See ODBC.pm POD for more information.
 Added contributing section to ODBC.pm POD -- see more details there!
-Added parameter to odbc_errhandler for the NativeError -- thanks to Martin Busek.
+Added parameter to odbc_errhandler for the NativeError -- thanks to Martin Busik.
 Fix for Makefile.PL not having tab in front of $(NOOP) (Finally).
 Fix for SQLForeignKeys thanks to Kevin Shepherd.
 
