@@ -20,11 +20,18 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
 
 =head1 CHANGES
 
-=head2 Changes in DBD::ODBC 1.13 October xx, 2004
+=head2 Changes in DBD::ODBC 1.13 November xx, 2004
 
 Fix inconsistency/bug with odbc_exec_direct vs. odbc_execdirect settings.  Now made consistent with
-odbc_exec_direct.  For now, will still look for odbc_execdirect in prepare as a backup (which is what it
-was doing), but that support will be dropped at some time in the future.
+odbc_exec_direct.  For now, will still look for odbc_execdirect in prepare, but not as DBH param 
+as a backup (which is what it was doing), but that support will be dropped at some time in the future.
+
+Fix handling of print statements for SQL Server thanks to Martin Evans!  Thanks for all your work on this! 
+Due to bug in SQL Server, you must use odbc_exec_direct.  See t/20SqlServer.t for example.
+
+Change tests to use Test::More.  Whew, that's much nicer!
+
+Fix Oracle integral/numeric output params so that warning not printed about value not being numeric (even though it is!)
 
 =head2 Changes in DBD::ODBC 1.12 October 26, 2004
 

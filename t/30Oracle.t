@@ -44,7 +44,6 @@ SKIP:
    $sth->bind_param(2, 10, SQL_INTEGER);
    $sth->bind_param(3, 30, SQL_INTEGER);
    $sth->execute;
-   $value += 0;
    is($value, 301);
 
    $b = undef;
@@ -52,9 +51,12 @@ SKIP:
    $sth->bind_param(2, 20, SQL_INTEGER);
    $sth->bind_param(3, undef, SQL_INTEGER);
    $sth->execute;
-   $value += 0;
    is($value,1);
 
 };
+
+if (DBI->trace > 0) {
+   DBI->trace(0);
+}
 
 $dbh->disconnect;

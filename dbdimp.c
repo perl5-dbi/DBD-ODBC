@@ -231,17 +231,36 @@ static void odbc_handle_outparams(imp_sth_t *imp_sth, int debug)
 	 } else {
 	    /* no truncation occurred */
 	    SvPOK_only(sv);
-	    SvCUR(sv) = phs->cbValue;
+	    SvCUR_set(sv, phs->cbValue);
 	    *SvEND(sv) = '\0';
-	    if (debug >= 2) {
-	       PerlIO_printf(DBIc_LOGPIO(imp_sth),
-			     "       out %s = '%s'\t(len %ld)\n",
-			     phs->name, SvPV(sv,na), (long)phs->cbValue);
+	    if (phs->cbValue == phs->maxlen &&
+		(phs->sql_type == SQL_NUMERIC ||
+		 phs->sql_type == SQL_DECIMAL ||
+		 phs->sql_type == SQL_INTEGER ||
+		 phs->sql_type == SQL_SMALLINT ||
+		 phs->sql_type == SQL_FLOAT ||
+		 phs->sql_type == SQL_REAL ||
+		 phs->sql_type == SQL_DOUBLE)) {
+	       /*
+		* fix up for oracle, which leaves the buffer at the size
+		* requested, but only returns a few characters.  The
+		* intent is to truncate down to the actual number of
+		* characters necessary.  Need to find the first null
+		* byte and set the length there.
+		*/
+	       char *pstart = SvPV_nolen(sv);
+	       char *p = pstart;
+	       while (*p != '\0') {
+		  p++;
+	       }
+
+	       if (debug >= 2) {
+		  PerlIO_printf(DBIc_LOGPIO(imp_sth),
+				"       out %s = '%s'\t(len %ld), is numeric end of buffer = %d\n",
+				phs->name, SvPV(sv,na), (long)phs->cbValue, phs->sql_type, p - pstart);
+	       }
+	       SvCUR_set(sv, p - pstart);
 	    }
-#if 0
-	    if (phs->sql_type == SQL_INTEGER) {
-	    }
-#endif
 	 }
       } else {			/* is NULL	*/
 	 (void)SvOK_off(phs->sv);
@@ -275,13 +294,24 @@ RETCODE orc;
 
    if (!dbd_describe(sth, imp_sth, 0)) {
       /* SQLFreeStmt(imp_sth->hstmt, SQL_DROP); */ /* TBD: 3.0 update */
+      if (ODBC_TRACE_LEVEL(imp_sth) > 0) {
+	 PerlIO_printf(DBIc_LOGPIO(imp_sth), "dbd_describe failed, build_results...!\n");
+      }
       SQLFreeHandle(SQL_HANDLE_STMT, imp_sth->hstmt);
       imp_sth->hstmt = SQL_NULL_HSTMT;
       return 0; /* dbd_describe already called dbd_error()	*/
    }
 
-   if (dbd_describe(sth, imp_sth, 0) <= 0)
+   if (ODBC_TRACE_LEVEL(imp_sth) > 0) {
+      PerlIO_printf(DBIc_LOGPIO(imp_sth), "dbd_describe build_results #2...!\n");
+   }
+   if (dbd_describe(sth, imp_sth, 0) <= 0) {
+      if (ODBC_TRACE_LEVEL(imp_sth) > 0) {
+	 PerlIO_printf(DBIc_LOGPIO(imp_sth), "dbd_describe build_results #3...!\n");
+      }
+      
       return 0;
+   }
 
    DBIc_IMPSET_on(imp_sth);
 
@@ -763,7 +793,7 @@ SV   *attr;
       if (ODBC_TRACE_LEVEL(imp_dbh) >= 2)
 	 PerlIO_printf(DBIc_LOGPIO(imp_dbh), "    Setting DBH query timeout to %d\n", (int)odbc_timeout);
    }      
-   
+
    imp_drh->connects++;
    DBIc_IMPSET_on(imp_dbh);	/* imp_dbh set up now			*/
    DBIc_ACTIVE_on(imp_dbh);	/* call disconnect before freeing	*/
@@ -1597,12 +1627,8 @@ int more;
 
    rc = SQLNumResultCols(imp_sth->hstmt, &num_fields);
    if (!SQL_ok(rc)) {
-      /* dbd_error(h, rc, "dbd_describe/SQLNumResultCols"); */
-      AllODBCErrors(imp_sth->henv, imp_sth->hdbc, imp_sth->hstmt, ODBC_TRACE_LEVEL(imp_sth) >= 8, DBIc_LOGPIO(imp_dbh));
-      /* return 0; */
-      /* need to drop through and check for more results.
-       */
-      num_fields = 0;
+      dbd_error(h, rc, "dbd_describe/SQLNumResultCols");
+      return 0;
    }
 
    /*
@@ -1613,39 +1639,36 @@ int more;
     * */
    imp_sth->done_desc = 1;	/* assume ok from here on */
    if (!more) {
-       
-   while (num_fields == 0 && imp_dbh->odbc_sqlmoreresults_supported == 1) {
-      rc = SQLMoreResults(imp_sth->hstmt);
-      if (ODBC_TRACE_LEVEL(imp_sth) >= 8) {
-	 PerlIO_printf(DBIc_LOGPIO(imp_sth), "Numfields == 0, SQLMoreResults == %d\n", rc);
-	 PerlIO_flush(DBIc_LOGPIO(imp_sth));
-      }
-      if (rc == SQL_SUCCESS_WITH_INFO) {
-	 AllODBCErrors(imp_sth->henv, imp_sth->hdbc, imp_sth->hstmt, ODBC_TRACE_LEVEL(imp_sth) >= 8, DBIc_LOGPIO(imp_dbh));
-         if (SQL_NO_DATA == rc) imp_sth->moreResults = 0;
-      }
-      if (rc == SQL_NO_DATA) {
-	/*
-	 *  probably a print message in the execution.
-	 */
-	 dbd_error(h, rc, "dbd_describe/SQLNumResultCols");
-      }
-      imp_sth->done_desc = 0;	/* reset describe flags, so that we re-describe */
-      if (!SQL_ok(rc) || rc == SQL_NO_DATA) break;
-      
-      imp_sth->odbc_force_rebind = 1; /* force future executes to rebind automatically */
-      rc = SQLNumResultCols(imp_sth->hstmt, &num_fields);
-      if (ODBC_TRACE_LEVEL(imp_sth) >= 8) {
-	 PerlIO_printf(DBIc_LOGPIO(imp_dbh), "Numfields == 0, SQLNumResultCols == %d\n", rc);
-	 PerlIO_flush(DBIc_LOGPIO(imp_dbh));
-      }
-      if (!SQL_ok(rc)) {
-	 dbd_error(h, rc, "dbd_describe/SQLNumResultCols");
-	 return 0;
+
+      while (num_fields == 0 && imp_dbh->odbc_sqlmoreresults_supported == 1) {
+	 rc = SQLMoreResults(imp_sth->hstmt);
+	 if (ODBC_TRACE_LEVEL(imp_sth) >= 8) {
+	    PerlIO_printf(DBIc_LOGPIO(imp_sth), "Numfields == 0, SQLMoreResults == %d\n", rc);
+	    PerlIO_flush(DBIc_LOGPIO(imp_sth));
+	 }
+	 if (rc == SQL_SUCCESS_WITH_INFO) {
+	    AllODBCErrors(imp_sth->henv, imp_sth->hdbc, imp_sth->hstmt, ODBC_TRACE_LEVEL(imp_sth) >= 8, DBIc_LOGPIO(imp_dbh));
+	 }
+	 imp_sth->done_desc = 0;	/* reset describe flags, so that we re-describe */
+	 if (rc == SQL_NO_DATA) {
+	    imp_sth->moreResults = 0;
+	    dbd_error(h, rc, "dbd_describe/SQLNumResultCols");
+	    break;
+	 }
+	 if (!SQL_ok(rc)) break;
+	 imp_sth->odbc_force_rebind = 1; /* force future executes to rebind automatically */
+	 rc = SQLNumResultCols(imp_sth->hstmt, &num_fields);
+	 if (ODBC_TRACE_LEVEL(imp_sth) >= 8) {
+	    PerlIO_printf(DBIc_LOGPIO(imp_dbh), "Numfields == 0, SQLNumResultCols == %d\n", rc);
+	    PerlIO_flush(DBIc_LOGPIO(imp_dbh));
+	 }
+	 if (!SQL_ok(rc)) {
+	    dbd_error(h, rc, "dbd_describe/SQLNumResultCols");
+	    return 0;
+	 }
       }
    }
-   }
-   
+
    DBIc_NUM_FIELDS(imp_sth) = num_fields;
 
    if (ODBC_TRACE_LEVEL(imp_sth) >= 2)
@@ -1657,7 +1680,6 @@ int more;
 	 PerlIO_printf(DBIc_LOGPIO(imp_dbh),
 		       "    dbd_describe skipped (no result cols) (sql f%d)\n",
 		       imp_sth->hstmt);
-      /* imp_sth->done_desc = 1; */
       return 1;
    }
 
@@ -2114,12 +2136,20 @@ imp_sth_t *imp_sth;
       /* Especially for order by and join queries.			*/
       /* See Microsoft Knowledge Base article (#Q124899)		*/
       /* describe and allocate storage for results (if any needed)	*/
-      if (!dbd_describe(sth, imp_sth, 0))
+      if (!dbd_describe(sth, imp_sth, 0)) {
+	 if (ODBC_TRACE_LEVEL(imp_sth) > 0) {
+	    PerlIO_printf(DBIc_LOGPIO(imp_sth), "dbd_describe failed, dbd_st_execute #1...!\n");
+	 }
 	 return -2; /* dbd_describe already called dbd_error()	*/
+      }
    }
 
    if (DBIc_NUM_FIELDS(imp_sth) > 0) {
       DBIc_ACTIVE_on(imp_sth);	/* only set for select (?)	*/
+      if (ODBC_TRACE_LEVEL(imp_sth) > 0) {
+	 PerlIO_printf(DBIc_LOGPIO(imp_sth), "dbd_describe failed, dbd_st_execute #2...!\n");
+      }
+
    } else {
       if (debug >= 2) {
 	 PerlIO_printf(DBIc_LOGPIO(imp_dbh),
@@ -2194,27 +2224,28 @@ imp_sth_t *imp_sth;
       if (SQL_NO_DATA_FOUND == rc) {
 
 	 if (imp_dbh->odbc_sqlmoreresults_supported == 1) {
+	    rc = SQLMoreResults(imp_sth->hstmt);
 	    /* Check for multiple results */
 	    if (ODBC_TRACE_LEVEL(imp_sth) > 5) {
-	       PerlIO_printf(DBIc_LOGPIO(imp_dbh), "Getting more results:\n");
+	       PerlIO_printf(DBIc_LOGPIO(imp_dbh), "Getting more results: %d\n", rc);
 	    }
-	    rc = SQLMoreResults(imp_sth->hstmt);
-            if (rc == SQL_SUCCESS_WITH_INFO || rc == SQL_NO_DATA) {
-                AllODBCErrors(imp_sth->henv, imp_sth->hdbc, imp_sth->hstmt, ODBC_TRACE_LEVEL(imp_sth) >= 8, DBIc_LOGPIO(imp_dbh));
-                if (SQL_NO_DATA == rc) {
-                    /*PerlIO_printf(DBIc_LOGPIO(imp_sth), "SET moreResults=0\n");*/
-                    imp_sth->moreResults = 0;
-                }
-            }
-            
+
+	    if (rc == SQL_SUCCESS_WITH_INFO || rc == SQL_NO_DATA) {
+	       dbd_error(sth, rc, "st_fetch/SQLMoreResults");
+	       imp_sth->moreResults = 0;
+	    }
+
+#if 0
+	    if (rc == SQL_NO_DATA || rc == SQL_SUCCESS_WITH_INFO) {
+	       dbd_error(sth, rc, "st_fetch/SQLMoreResults");
+	       imp_sth->moreResults = 0;
+	    }
+#endif
 	    if (SQL_ok(rc)){
 	       /* More results detected.  Clear out the old result */
 	       /* stuff and re-describe the fields.                */
 	       if (ODBC_TRACE_LEVEL(imp_sth) > 0) {
-		  PerlIO_printf(DBIc_LOGPIO(imp_dbh), "MORE Results! (%d)\n", rc);
-	       }
-	       if (rc == SQL_NO_DATA || rc == SQL_SUCCESS_WITH_INFO) {
-		  dbd_error(sth, rc, "st_fetch/SQLMoreResults");
+		  PerlIO_printf(DBIc_LOGPIO(imp_dbh), "MORE Results!\n");
 	       }
 	       odbc_clear_result_set(sth, imp_sth);
 
@@ -2228,16 +2259,24 @@ imp_sth_t *imp_sth;
 				(ODBC_TRACE_LEVEL(imp_sth) > 0), DBIc_LOGPIO(imp_dbh));
 	       }
 
-	       if (!dbd_describe(sth, imp_sth, 1))
+	       if (!dbd_describe(sth, imp_sth, 1)) {
+		  if (ODBC_TRACE_LEVEL(imp_sth) > 0) {
+		     PerlIO_printf(DBIc_LOGPIO(imp_dbh), "MORE Results dbd_describe failed...!\n");
+		  }
+		  
 		  return Nullav; /* dbd_describe already called dbd_error() */
+	       }
 
 
+	       if (ODBC_TRACE_LEVEL(imp_sth) > 0) {
+		  PerlIO_printf(DBIc_LOGPIO(imp_dbh), "MORE Results dbd_describe success...!\n");
+	       }
 	       /* set moreResults so we'll know we can keep fetching */
 	       imp_sth->moreResults = 1;
-               imp_sth->done_desc = 0;
+	       imp_sth->done_desc = 0;
 	       return Nullav;
 	    }
-	    else if (rc == SQL_NO_DATA_FOUND){
+	    else if (rc == SQL_NO_DATA_FOUND || rc == SQL_NO_DATA || rc == SQL_SUCCESS_WITH_INFO){
 	       /* No more results */
 	       /* need to check output params here... */
 	       int outparams = (imp_sth->out_params_av) ? AvFILL(imp_sth->out_params_av)+1 : 0;
@@ -3051,7 +3090,7 @@ SV *valuesv;
       if (ODBC_TRACE_LEVEL(imp_dbh) >= 2)
 	 PerlIO_printf(DBIc_LOGPIO(imp_dbh), 
 		       "DBD::ODBC unsupported attribute passed (%s)\n", key);
-      
+
       return FALSE;
    }
 
@@ -3332,7 +3371,7 @@ SV *keysv;
 	  */
 	 retsv = newSViv(imp_dbh->odbc_query_timeout);
 	 break;
-	 
+
       case ODBC_DEFAULT_BIND_TYPE:
 	 /*
 	  * fetch current value of default bind type.
@@ -3505,6 +3544,7 @@ SV *keysv;
 
    i = DBIc_NUM_FIELDS(imp_sth);
 
+
    switch(par - S_st_fetch_params)
    {
       AV *av;
@@ -3588,6 +3628,17 @@ SV *keysv;
 	 break;
       case 10:                /* odbc_more_results */
 	 retsv = newSViv(imp_sth->moreResults);
+	 if (i == 0 && imp_sth->moreResults == 0) {
+	    int outparams = (imp_sth->out_params_av) ? AvFILL(imp_sth->out_params_av)+1 : 0;
+	    if (ODBC_TRACE_LEVEL(imp_sth) > 3) {
+	       PerlIO_printf(DBIc_LOGPIO(imp_sth), " numfields == 0 && moreResults = 0 finish\n");
+	    }
+	    if (outparams) {
+	       odbc_handle_outparams(imp_sth, ODBC_TRACE_LEVEL(imp_sth));
+	    }
+	       /* XXX need to 'finish' here */
+	    dbd_st_finish(sth, imp_sth);
+	 }
 	 break;
       case 11:
       {

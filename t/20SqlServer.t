@@ -14,7 +14,7 @@ use_ok('Data::Dumper');
 my $tests;
 # to help ActiveState's build process along by behaving (somewhat) if a dsn is not provided
 BEGIN {
-   $tests = 35;
+   $tests = 37;
    if (!defined $ENV{DBI_DSN}) {
       plan skip_all => "DBI_DSN is undefined";
    } else {
@@ -445,25 +445,30 @@ AS
    $dbh->{odbc_async_exec} = 0;
    is($dbh->{odbc_async_exec}, 0, "reset async exec");
    
-TODO: {
    # DBI->trace(9);
-	 local $TODO = "working on fixing print statements in queries";
-	 $sth2 = $dbh->prepare("print 'START' select count(*) from perl_dbd_table1 print 'END'");
-	 $sth2->execute;
-	 do {
-	    while (@row = $sth2->fetchrow_array) {
-	       is($row[0], 0, "Valid select results with print statements");
-	    }
-	 } while ($sth2->{odbc_more_results});
-	 
-	 is($testpass,2, "ensure 2 error messages from two print statements");
-	 is($lastmsg, 'END', "validate error messages being retrieved");
-	 DBI->trace(0);
-      };
+   $dbh->{odbc_exec_direct} = 1;
+   is($dbh->{odbc_exec_direct}, 1, "test setting odbc_exec_direct");
+   $sth2 = $dbh->prepare("print 'START' select count(*) from perl_dbd_table1 print 'END'");
+   $sth2->execute;
+   do {
+      while (@row = $sth2->fetchrow_array) {
+	 is($row[0], 1, "Valid select results with print statements");
+      }
+   } while ($sth2->{odbc_more_results});
+   
+   is($testpass,2, "ensure 2 error messages from two print statements");
+   is($lastmsg, 'END', "validate error messages being retrieved");
+
+   if (DBI->trace > 0) {
+      DBI->trace(0);
+   }
+   # need the finish if there are print statements (for now)
+   #$sth2->finish;
+
    $dbh->do("insert into perl_dbd_table1 (i, j) values (1, 2)");
    $dbh->do("insert into perl_dbd_table1 (i, j) values (3, 4)");
 
-   ok(!&Multiple_concurrent_stmts($dbh), "Multiple concurrent statements fail");
+   ok(!&Multiple_concurrent_stmts($dbh), "Multiple concurrent statements should fail");
 
    $dbh->disconnect;
    $dbh = DBI->connect($ENV{DBI_DSN}, $ENV{DBI_USER}, $ENV{DBI_PASS}, { odbc_cursortype => 2 });
