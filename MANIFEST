@@ -5,6 +5,7 @@ Makefile.PL
 README
 README.adabas
 README.informix
+README.RH9
 ODBC.h
 ODBC.pm
 ODBC.xs
