@@ -1,0 +1,61 @@
+=head1 Introduction
+
+This document describes how to build DBD::ODBC
+for perl ported to the cygwin platform.
+
+=head1 Prerequisites
+
+To build DBD::ODBC you need the following in
+order of installation:
+
+=over 4
+
+=item The cygwin tools
+
+The cygwin tools provide a unix environment on top
+of windows 95 en windows NT. It include a port of
+gcc and the main unix program development tools.
+The most recent cygwin version (currently B20.1)
+is available at http://sourceware.cygnus.com/cygwin/
+
+=item perl 5.00503
+
+Perl 5.00503 does not compile out of the box for cygwin. There is
+a good binary distribution however of perl 5.00503 for cygwin B20.1
+at http://cygutils.netpedia.net/. This port has the ability to build
+dynamic extensions.
+
+=item Windows ODBC headers and import libraries
+
+A rather complete set of headers and import libraries for windows
+including those for ODBC by Anders Norlander can be found at
+http://www.acc.umu.se/~anorland/gnu-win32/ I used version 0.1.5.
+
+=item DBI-1.12 or later from CPAN.
+
+DBI will build out of the box. Compilation does yield harmless messages
+of incompatible compiler versions. Testing will yield taint errors in
+Cwd.pm called from F<t/examp.t>. F<t/examp.t> must be run with -T unset.
+
+=item This module (DBD::ODBC)
+
+Install as in README. Again compilation will yield harmless messages of
+incompatible compiler versions.  After configuring a suitable datasource
+in 32-bit ODBC from your configuration screen, make test should pass
+all tests succesfully. I use it for MS Access 97 databases and
+sofar this works fine.
+
+=back
+
+=head1 TODO
+
+Make both DBI and DBD::ODBC compile cleanly and
+make DBI pass all test cleanly on this platform.
+
+=head1 COLOFON
+
+ Author: Teun Burgers
+ E-mail: burgers@ecn.nl
+ Date:   15-07-1999
+
+=cut
