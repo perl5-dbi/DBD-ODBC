@@ -1,6 +1,8 @@
 #!/usr/bin/perl -I./t
 # $Id$
 
+my $tests;
+
 $|=1;
 
 # to help ActiveState's build process along by behaving (somewhat) if a dsn is not provided
@@ -24,6 +26,7 @@ print "1..$tests\n";
 
 use DBI;
 use ODBCTEST;
+# use strict;
 
 my @row;
 
@@ -37,8 +40,8 @@ Test(1);	 # connected ok
 #### testing set/get of connection attributes
 $dbh->{RaiseError} = 0;
 $dbh->{'AutoCommit'} = 1;
-$rc = commitTest($dbh);
-print " ", $DBI->errstr, "" if ($rc < -1);
+my $rc = commitTest($dbh);
+print " ", $dbh->errstr, "" if ($rc < -1);
 if ($rc == -1) {
     Test(1, " # skipped due to lack of transaction support.");
 } else {
@@ -49,7 +52,7 @@ Test($dbh->{AutoCommit});
 
 $dbh->{'AutoCommit'} = 0;
 $rc = commitTest($dbh);
-print $DBI->errstr, "\n" if ($rc < -1);
+print $dbh->errstr, "\n" if ($rc < -1);
 if ($rc == -1) {
     Test(1, " # skipped due to lack of transaction support.");
 } else {
@@ -62,16 +65,31 @@ $dbh->{'AutoCommit'} = 1;
 # ------------------------------------------------------------
 
 my $rows = 0;
-# Check for tables function working.  
+# Check for tables function working.
+my $sth;
+
+my @table_info_cols = (
+		       'TABLE_CAT',
+		       'TABLE_SCHEM',
+		       'TABLE_NAME',
+		       'TABLE_TYPE',
+		       'REMARKS',
+		      );
 if ($sth = $dbh->table_info()) {
     my $cols = $sth->{NAME};
     for (my $i = 0; $i < @$cols; $i++) {
-      print ${$cols}[$i], ": ", $sth->func($i+1, 3, ColAttributes), "\n";
+       # print ${$cols}[$i], ": ", $sth->func($i+1, 3, ColAttributes),
+       # "\n";
+       Test(${$cols}[$i] eq $table_info_cols[$i]);
     }
     while (@row = $sth->fetchrow()) {
         $rows++;
     }
     $sth->finish();
+} else {
+   for (my $i = 0; $i < @table_info_cols; $i++) {
+      Test(1, " # skipped due to table_info not successful\n");
+   }
 }
 Test($rows > 0);
 Test($dbname eq $dbh->{odbc_SQL_DBMS_NAME});
@@ -108,7 +126,7 @@ if ($dbname =~ /Access/i) {
 }
 Test($dbname eq $dbh->{odbc_SQL_DBMS_NAME});
 
-BEGIN { $tests = 16; }
+BEGIN { $tests = 14 + 5; } # num tests + one for each table_info column (5)
 $dbh->disconnect;
 # print STDERR $dbh->{odbc_SQL_DRIVER_ODBC_VER}, "\n";
 
