@@ -5,6 +5,13 @@ use strict;
 use DBI;
 use ODBCTEST;
 
+# to help ActiveState's build process along by behaving (somewhat) if a dsn is not provided
+BEGIN {
+   unless (defined $ENV{DBI_DSN}) {
+      print "1..0 # Skipped: DBI_DSN is undefined\n";
+      exit;
+   }
+}
 # $ENV{'ODBCINI'}="/export/cmn/etc/odbc.ini" ;
 #my($connectString) = "dbi:ODBC:DSN=TESTDB;Database=xxxxx;uid=usrxxxxx;pwd=xxxxx" ;
 

@@ -104,6 +104,9 @@ else {
     warn "Using ODBC in $odbchome\n";
     $opts{INC}  = "-I. -I$dbi_arch_dir";
 
+    # cygwin patch
+    $opts{INC}  .= " -I/usr/include/w32api" if $^O eq 'cygwin';
+    
     # Try to work out which driver manager is being used.
     # Feel free to come up with neat (or un-neat) hacks to get your's to build!
 
@@ -122,7 +125,7 @@ else {
 		if <$odbchome/lib/libodbc.*>;
 
     $myodbc = 'iodbc'
-		if (<$odbchome/*iodbc*> || <$odbchome/lib/*iodbc*>);
+		if (!$myodbc && (<$odbchome/*iodbc*> || <$odbchome/lib/*iodbc*>));
 
     $myodbc = 'esodbc'
 		if <$odbchome/*esoobclient*>;

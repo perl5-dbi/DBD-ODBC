@@ -77,7 +77,7 @@ struct imp_sth_st {
 
 
 struct imp_fbh_st { 	/* field buffer EXPERIMENTAL */
-    imp_sth_t *imp_sth;	/* 'parent' statement */
+   imp_sth_t *imp_sth;	/* 'parent' statement */
     /* field description - SQLDescribeCol() */
     UCHAR *ColName;		/* zero-terminated column name */
     SWORD ColNameLen;

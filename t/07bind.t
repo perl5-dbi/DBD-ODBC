@@ -1,5 +1,14 @@
 #!/usr/bin/perl -I./t
 $| = 1;
+
+
+# to help ActiveState's build process along by behaving (somewhat) if a dsn is not provided
+BEGIN {
+   unless (defined $ENV{DBI_DSN}) {
+      print "1..0 # Skipped: DBI_DSN is undefined\n";
+      exit;
+   }
+}
 print "1..$tests\n";
 
 use DBI qw(:sql_types);

@@ -1,5 +1,23 @@
 #!/usr/bin/perl -I./t
 $|=1;
+
+# to help ActiveState's build process along by behaving (somewhat) if a dsn is not provided
+BEGIN {
+   unless (defined $ENV{DBI_DSN}) {
+      print "1..0 # Skipped: DBI_DSN is undefined\n";
+      exit;
+   }
+}
+
+{
+    my $numTest = 0;
+    sub Test($;$) {
+	my $result = shift; my $str = shift || '';
+	printf("%sok %d%s\n", ($result ? "" : "not "), ++$numTest, $str);
+	$result;
+    }
+}
+
 print "1..$tests\n";
 
 use DBI;
@@ -7,27 +25,26 @@ use ODBCTEST;
 
 my @row;
 
-print "ok 1\n";
+Test(1);	# loaded DBI ok.
 
 my $dbh = DBI->connect() || die "Connect failed: $DBI::errstr\n";
-print "ok 2\n";
+Test(1);	 # connected ok
 
 #### testing set/get of connection attributes
 $dbh->{RaiseError} = 0;
 $dbh->{'AutoCommit'} = 1;
 $rc = commitTest($dbh);
 print " ", $DBI->errstr, "" if ($rc < 0);
-print "not " unless ($rc == 1);
-print "ok 3\n";
+Test($rc == 1); # print "not " unless ($rc == 1);
 
-print "not " unless($dbh->{AutoCommit});
-print "ok 4\n";
+
+Test($dbh->{AutoCommit});
 
 $dbh->{'AutoCommit'} = 0;
 $rc = commitTest($dbh);
 print $DBI->errstr, "\n" if ($rc < 0);
-print "not " unless ($rc == 0);
-print "ok 5\n";
+Test($rc == 0);
+
 $dbh->{'AutoCommit'} = 1;
 
 # ------------------------------------------------------------
@@ -40,11 +57,24 @@ if ($sth = $dbh->table_info()) {
     }
     $sth->finish();
 }
-print "not " unless $rows;
-print "ok 6\n";
+Test($rows > 0);
 
+$rows = 0;
+my @tables = $dbh->tables;
 
-BEGIN { $tests = 6; }
+Test($#tables > 0); # 7
+
+$rows = 0;
+if ($sth = $dbh->column_info(undef, undef, $ODBCTEST::table_name, undef)) {
+    while (@row = $sth->fetchrow()) {
+        $rows++;
+    }
+    $sth->finish();
+}
+Test($rows > 0);
+
+Test(1); # 9
+BEGIN { $tests = 9; }
 $dbh->disconnect();
 
 # ------------------------------------------------------------

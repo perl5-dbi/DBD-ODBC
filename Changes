@@ -7,6 +7,9 @@ DBI::Changes - Log of significant changes to the DBI
 =head1 Todo
 
  I'll be building this list shortly.
+ Make ODBC version 3.0 default!
+ Add array parameter binding (per new DBI Spec)
+ Add row caching/multiple row fetches to speed selects
  Better/more tests on multiple statement handles which ensure the correct number of rows
  Better/more tests on all queries which ensure the correct number of rows
  Better tests on SQLExecDirect/do
@@ -17,6 +20,43 @@ DBI::Changes - Log of significant changes to the DBI
 =head1 CHANGES
 
  See DBD::ODBC POD for more detail.
+
+=head2 DBD::ODBC 0.43
+
+Fix for FoxPro (and potentially other) Drivers!!!!!
+Add support for DBI column_info
+Fix for binding undef value which comes from dereferencing hash
+Fix to make all bound columns word (int) aligned in the buffer.
+
+=head2 DBD::ODBC 0.42
+
+Added patches to the tests to support ActiveState's automated build process.
+Fix ping() to try SQLTables for a test, instead of a strange query.  
+
+=head2 DBD::ODBC 0.41
+
+Fixed problem where SQLDescribeParam would fail (probably
+bug in ODBC driver).  Now reverts to SQL_VARCHAR if that
+happens, instead of failing the query.
+
+Fixed error report when using Oracle's driver.  There is
+a known problem.  Left the error on the test, but added
+warning indicating it's a known problem.
+
+=head2 DBD::ODBC 0.40
+
+Most significant change is the change in the default binding
+type which forces DBD::ODBC to attempt to determine the bind
+type if one is not passed.  I decided to make this the default
+behavior to make things as simple as possible.
+
+Fixed connection code put in 0.39 to work correctly.
+
+Two minor patches for building, one for Cygwin one
+if both iODBC and unixODBC libraries are installed.
+Probably need better command line on this, but if 
+someone has the problem, please let me know (and 
+hopefully send a patch with it).
 
 =head2 DBD::ODBC 0.39
  

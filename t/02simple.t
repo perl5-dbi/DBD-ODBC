@@ -4,40 +4,54 @@ $| = 1;
 use DBI qw(:sql_types);
 use ODBCTEST;
 
+# to help ActiveState's build process along by behaving (somewhat) if a dsn is not provided
+BEGIN {
+   $tests = 17;
+   unless (defined $ENV{DBI_DSN}) {
+      print "1..0 # Skipped: DBI_DSN is undefined\n";
+      exit;
+   }
+}
+
+{
+   my $numTest = 0;
+   sub Test($;$) {
+      my $result = shift; my $str = shift || '';
+	printf("%sok %d%s\n", ($result ? "" : "not "), ++$numTest, $str);
+	$result;
+    }
+}
+
 print "1..$tests\n";
 
-print "ok 1\n";
+Test(1);
 
 print " Test 2: connecting to the database\n";
 #DBI->trace(2);
 my $dbh = DBI->connect() || die "Connect failed: $DBI::errstr\n";
 $dbh->{AutoCommit} = 1;
 
-print "ok 2\n";
+Test(1);
 
 
 #### testing a simple select
 
 print " Test 3: create test table\n";
+my $rc = 0;
 $rc = ODBCTEST::tab_create($dbh);
-print "not " unless($rc);
-print "ok 3\n";
+Test($rc);
 
 print " Test 4: check existance of test table\n";
-my $rc = 0;
 $rc = ODBCTEST::tab_exists($dbh);
-print "not " unless($rc >= 0);
-print "ok 4\n";
+Test($rc >= 0);
 
 print " Test 5: insert test data\n";
 $rc = ODBCTEST::tab_insert($dbh);
-print "not " unless($rc);
-print "ok 5\n";
+Test($rc);
 
 print " Test 6: select test data\n";
 $rc = tab_select($dbh);
-print "not " unless($rc);
-print "ok 6\n";
+Test($rc);
 
 print " Tests 7,8: test LongTruncOk\n";
 $rc = undef;
@@ -45,13 +59,12 @@ $dbh->{LongReadLen} = 50;
 $dbh->{LongTruncOk} = 1;
 $dbh->{PrintError} = 0;
 $rc = select_long($dbh);
-print "not " unless($rc);
-print "ok 7\n";
+Test($rc);
 
+# now force an error and ensure we get a long truncated event.
 $dbh->{LongTruncOk} = 0;
 $rc = select_long($dbh);
-print "not " if ($rc);
-print "ok 8\n";
+Test(!$rc);
 
 print " Test 9: test ColAttributes\n";
 my $sth = $dbh->prepare("SELECT * FROM $ODBCTEST::table_name ORDER BY COL_A");
@@ -69,13 +82,14 @@ if ($sth) {
 		print "$i: $colname = $coltype\n";
  		++$is_ok if grep { $coltype == $_ } @{$ODBCTEST::TestFieldInfo{$colname}};
 	}
-	print "not " unless $is_ok == $colcount;
-	print "ok 9\n";
+	Test($is_ok == $colcount);
+	# print "not " unless $is_ok == $colcount;
+	# print "ok 9\n";
 	
 	$sth->finish;
 }
 else {
-	print "not ok 9\n";
+   Test(0);
 }
 
 print " Test 10: test \$DBI::err\n";
@@ -86,8 +100,7 @@ $dbh->{PrintError} = 0;
 # 
 $sth = $dbh->prepare("SELECT XXNOTCOLUMN FROM $ODBCTEST::table_name");
 $sth->execute() if $sth;
-print "not " if (length($DBI::err) < 1);
-print "ok 10\n";
+Test(length($DBI::err) > 0);
 
 print " Test 11: test date values\n";
 $sth = $dbh->prepare("SELECT COL_D FROM $ODBCTEST::table_name WHERE COL_D > {d '1998-05-13'}");
@@ -97,8 +110,7 @@ while (@row = $sth->fetchrow) {
 	$count++ if ($row[0]);
 	# print "$row[0]\n";
 }
-print "not " if $count != 1;
-print "ok 11\n";
+Test($count == 1);
 
 print " Test 12: test group by queries\n";
 $sth = $dbh->prepare("SELECT COL_A, COUNT(*) FROM $ODBCTEST::table_name GROUP BY COL_A");
@@ -108,8 +120,7 @@ while (@row = $sth->fetchrow) {
 	$count++ if ($row[0]);
 	print "$row[0], $row[1]\n";
 }
-print "not " if $count == 0;
-print "ok 12\n";
+Test($count != 0);
 
 $rc = ODBCTEST::tab_delete($dbh);
 
@@ -118,23 +129,23 @@ $rc = ODBCTEST::tab_delete($dbh);
 print " Test 13: test data_sources\n";
 my @data_sources = DBI->data_sources('ODBC');
 print "Data sources:\n\t", join("\n\t",@data_sources),"\n\n";
-print "not " if ($#data_sources < 0);
-print "ok 13\n";
+Test($#data_sources >= 0);
 
 print " Test 14: test ping method\n";
-print "not " unless $dbh->ping;
-print "ok 14\n";
+Test($dbh->ping);
 
 print " Test 15: test storing of DBH parameter\n";
 if ($dbh->{odbc_ignore_named_placeholders}) {
-   print "Attrib not 0 to start (", $dbh->{odbc_ignore_named_placeholders}, ")\nnot ";
+   print "Attrib not 0 to start (", $dbh->{odbc_ignore_named_placeholders}, ")\n ";
+   Test(0);
 } else {
    $dbh->{odbc_ignore_named_placeholders} = 1;
-   print "Attrib not true (", $dbh->{odbc_ignore_named_placeholders}, ")\nnot " unless $dbh->{odbc_ignore_named_placeholders};
+   Test($dbh->{odbc_ignore_named_placeholders} == 1);
+   print "Attrib not true (", $dbh->{odbc_ignore_named_placeholders}, ")\n";
 }
-print "ok 15\n";
 
-print "ok 16\n";
+Test(1);# 16
+
 
 print " Test 17: test get_info\n";
 my $dbname;
@@ -143,7 +154,6 @@ print " connected to $dbname\n";
 print "\nnot " unless (defined($dbname) && $dbname ne '');
 print "ok 17\n";
 
-BEGIN {$tests = 17;}
 exit(0);
 
 sub tab_select
