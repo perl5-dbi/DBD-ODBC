@@ -548,9 +548,9 @@ There are drivers that only support SQLExecDirect and the DBD::ODBC
 do() override doesn't allow returning result sets.  Therefore, the
 way to do this now is to set the attributed odbc_exec_direct.
 There are currently two ways to get this:
-	$dbh->prepare($sql, { odbc_execdirect => 1}); 
+	$dbh->prepare($sql, { odbc_exec_direct => 1}); 
  and
-	$dbh->{odbc_execdirect} = 1;
+	$dbh->{odbc_exec_direct} = 1;
  When $dbh->prepare() is called with the attribute "ExecDirect" set to a non-zero value 
  dbd_st_prepare do NOT call SQLPrepare, but set the sth flag odbc_exec_direct to 1.
  

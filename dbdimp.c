@@ -1410,6 +1410,9 @@ SV *attribs;
       if ((odbc_exec_direct_sv = DBD_ATTRIB_GET_SVP(attribs, "odbc_execdirect", strlen("odbc_execdirect"))) != NULL) {
 	 imp_sth->odbc_exec_direct = SvIV(*odbc_exec_direct_sv) != 0;
       }
+      if ((odbc_exec_direct_sv = DBD_ATTRIB_GET_SVP(attribs, "odbc_exec_direct", strlen("odbc_exec_direct"))) != NULL) {
+	 imp_sth->odbc_exec_direct = SvIV(*odbc_exec_direct_sv) != 0;
+      }
    }
    /* scan statement for '?', ':1' and/or ':foo' style placeholders	*/
    dbd_preparse(imp_sth, statement);
@@ -1419,7 +1422,7 @@ SV *attribs;
       /* parse the (possibly edited) SQL statement */
       rc = SQLPrepare(imp_sth->hstmt, 
 		      imp_sth->statement, strlen(imp_sth->statement));
-      if (ODBC_TRACE_LEVEL(imp_sth) >= 2)
+      if (ODBC_TRACE_LEVEL(imp_dbh) >= 2)
 	 PerlIO_printf(DBIc_LOGPIO(imp_dbh), "    SQLPrepare returned %d\n\n",
 		       rc);
 
@@ -1431,7 +1434,7 @@ SV *attribs;
 	 return 0;
       }
    }
-   if (ODBC_TRACE_LEVEL(imp_sth) >= 2)
+   if (ODBC_TRACE_LEVEL(imp_dbh) >= 2)
       PerlIO_printf(DBIc_LOGPIO(imp_dbh), "    dbd_st_prepare'd sql f%d, ExecDirect=%d\n\t%s\n",
 		    imp_sth->hstmt, imp_sth->odbc_exec_direct, imp_sth->statement);
 
@@ -1609,11 +1612,18 @@ imp_sth_t *imp_sth;
 	 PerlIO_printf(DBIc_LOGPIO(imp_sth), "Numfields == 0, SQLMoreResults == %d\n", rc);
 	 PerlIO_flush(DBIc_LOGPIO(imp_sth));
       }
-      if (rc == SQL_SUCCESS_WITH_INFO || rc == SQL_NO_DATA) {
+      if (rc == SQL_SUCCESS_WITH_INFO) {
 	 AllODBCErrors(imp_sth->henv, imp_sth->hdbc, imp_sth->hstmt, ODBC_TRACE_LEVEL(imp_sth) >= 8, DBIc_LOGPIO(imp_dbh));
       }
+      if (rc == SQL_NO_DATA) {
+	/*
+	 *  probably a print message in the execution.
+	 */
+	 dbd_error(h, rc, "dbd_describe/SQLNumResultCols");
+      }
       imp_sth->done_desc = 0;	/* reset describe flags, so that we re-describe */
-      if (!SQL_ok(rc)) break;
+      if (!SQL_ok(rc) || rc == SQL_NO_DATA) break;
+      
       imp_sth->odbc_force_rebind = 1; /* force future executes to rebind automatically */
       rc = SQLNumResultCols(imp_sth->hstmt, &num_fields);
       if (ODBC_TRACE_LEVEL(imp_sth) >= 8) {
@@ -1637,6 +1647,7 @@ imp_sth_t *imp_sth;
 	 PerlIO_printf(DBIc_LOGPIO(imp_dbh),
 		       "    dbd_describe skipped (no result cols) (sql f%d)\n",
 		       imp_sth->hstmt);
+      /* imp_sth->done_desc = 1; */
       return 1;
    }
 
@@ -2182,7 +2193,10 @@ imp_sth_t *imp_sth;
 	       /* More results detected.  Clear out the old result */
 	       /* stuff and re-describe the fields.                */
 	       if (ODBC_TRACE_LEVEL(imp_sth) > 0) {
-		  PerlIO_printf(DBIc_LOGPIO(imp_dbh), "MORE Results!\n");
+		  PerlIO_printf(DBIc_LOGPIO(imp_dbh), "MORE Results! (%d)\n", rc);
+	       }
+	       if (rc == SQL_NO_DATA || rc == SQL_SUCCESS_WITH_INFO) {
+		  dbd_error(sth, rc, "st_fetch/SQLMoreResults");
 	       }
 	       odbc_clear_result_set(sth, imp_sth);
 
