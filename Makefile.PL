@@ -42,8 +42,14 @@ Getopt::Long::GetOptions("g!" => \$opt_g,
 	   "o=s" => \$opt_o) or die "Invalid arguments";
 
 print "Overriding ODBC Directory with command line option: $opt_o\n" if $opt_o ;
-print "Setting debug options!\n" if $opt_g ;
-$opts{OPTIMIZE} = '-g -O0' if $opt_g;
+if ($opt_g) {
+   print "Setting debug options!\n";
+   if ($^O eq 'MSWin32') {
+      $opts{OPTIMIZE} = '/Zi';
+   } else {
+      $opts{OPTIMIZE} = '-g -O0';
+   }
+}
 
 print "\nConfiguring DBD::ODBC ...\n
 >>>\tRemember to actually *READ* the README file!
