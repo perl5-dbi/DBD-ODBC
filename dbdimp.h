@@ -30,10 +30,22 @@ struct imp_dbh_st {
     HENV henv;			/* copy from imp_drh for speed		*/
     HDBC hdbc;
     char odbc_ver[20];  /* ODBC compat. version for driver */
+    char odbc_dbname[64];
     int  odbc_ignore_named_placeholders;	/* flag to ignore named parameters */
     int  odbc_default_bind_type;	/* flag to set default binding type (experimental) */
     int  odbc_sqldescribeparam_supported; /* flag to see if SQLDescribeParam is supported */
-    int  odbc_sqlmoreresults_supported; /* flag to see if SQLDescribeParam is supported */
+    int  odbc_sqlmoreresults_supported; /* flag to see if SQLMoreResults is supported */
+    int	 odbc_defer_binding; /* flag to work around SQLServer bug and defer binding until */
+			    /* last possible moment */
+    int  odbc_force_rebind; /* force rebinding the output columns after each execute to
+       /* resolve some issues where certain stored procs can return
+       /* multiple result sets */
+    int  odbc_async_exec; /* flag to set asynchronous execution */
+    int  odbc_exec_direct;		/* flag for executing SQLExecDirect instead of SQLPrepare and SQLExecute.  Magic happens at SQLExecute() */
+    SQLUINTEGER odbc_async_type; /* flag to store the type of asynchronous
+                                  * execution the driver supports */
+    SV *odbc_err_handler; /* contains the error handler coderef */
+    int  RowCacheSize;			/* default row cache size in rows for statements */
 };
 
 /* Define sth implementor data structure */
@@ -44,7 +56,7 @@ struct imp_sth_st {
     HDBC       hdbc;		/* copy for speed	*/
     HSTMT      hstmt;
 
-	int        moreResults;	/* are there more results to fetch?	*/
+    int        moreResults;	/* are there more results to fetch?	*/
     int        done_desc;	/* have we described this sth yet ?	*/
 
     /* Input Details	*/
@@ -72,11 +84,16 @@ struct imp_sth_st {
     UWORD *row_status;			/* row indicators for array binding */
     int  odbc_ignore_named_placeholders;	/* flag to ignore named parameters */
     int  odbc_default_bind_type;	/* flag to set default binding type (experimental) */
+    int  odbc_exec_direct;		/* flag for executing SQLExecDirect instead of SQLPrepare and SQLExecute.  Magic happens at SQLExecute() */
+    int  odbc_force_rebind; /* force rebinding the output columns after each execute to
+       /* resolve some issues where certain stored procs can return
+       /* multiple result sets */
 };
 #define IMP_STH_EXECUTING	0x0001
 
 
 struct imp_fbh_st { 	/* field buffer EXPERIMENTAL */
+   char szDummyBuffer[1024];
    imp_sth_t *imp_sth;	/* 'parent' statement */
     /* field description - SQLDescribeCol() */
     UCHAR *ColName;		/* zero-terminated column name */

@@ -1,64 +1,271 @@
 =head1 NAME
 
-DBI::Changes - Log of significant changes to the DBI
+DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
 
 =cut
 
 =head1 Todo
 
  I'll be building this list shortly.
- Make ODBC version 3.0 default!
+ ++ done ++ Make ODBC version 3.0 default!
+ ++ done ++ Document more of the DBD::ODBC private attributes/functions.
  Add array parameter binding (per new DBI Spec)
  Add row caching/multiple row fetches to speed selects
  Better/more tests on multiple statement handles which ensure the correct number of rows
- Better/more tests on all queries which ensure the correct number of rows
+ Better/more tests on all queries which ensure the correct number of rows and data
  Better tests on SQLExecDirect/do
- Change default behaviour to use SQLDescribeParam instead of SQL_VARCHAR.
+ ++ done ++ Change default behaviour to use SQLDescribeParam instead of SQL_VARCHAR.
 
  Keep checking Oracle's ODBC drivers for Windows to fix the Date binding problem
 
 =head1 CHANGES
 
- See DBD::ODBC POD for more detail.
+=item Changes in DBD::ODBC 1.00 December 8, 2002
 
-=head2 DBD::ODBC 0.43
+ (Please see all changes since version 0.43)
 
-Fix for FoxPro (and potentially other) Drivers!!!!!
-Add support for DBI column_info
-Fix for binding undef value which comes from dereferencing hash
-Fix to make all bound columns word (int) aligned in the buffer.
+ Updated Makefile.PL to handle SQL_Wxxx types correctly with unixODBC and linking 
+ directly with EasySoft OOB.  Note that I could not find where iODBC defines SQL_WLONG_VARCHAR,
+ so I'm not sure it's fixed on all other platforms.  Should not have been a problem under
+ Win32...
 
-=head2 DBD::ODBC 0.42
+ Found that the fix in _18 was only enabled if debug enabled and it broke something else.
+ removed the fix.
 
-Added patches to the tests to support ActiveState's automated build process.
-Fix ping() to try SQLTables for a test, instead of a strange query.  
+ Updated Makefile.PL to use DBI version 1.21 instead of 1.201 to facilitate builds under
+ latest development versions of Perl.
 
-=head2 DBD::ODBC 0.41
+ Updated code to use the *greater* of the column display size and the column length for
+ allocating column buffers.  This *should* workaround a problem with DBD::ODBC and the 
+ Universe database.
 
-Fixed problem where SQLDescribeParam would fail (probably
-bug in ODBC driver).  Now reverts to SQL_VARCHAR if that
-happens, instead of failing the query.
+ Added code thanks to Michael Riber to handle SQLExecDirect instead of SQLPrepare.  There are 
+ two ways to get this:
+	$dbh->prepare($sql, { odbc_execdirect => 1}); 
+ and
+	$dbh->{odbc_execdirect} = 1;
+ When $dbh->prepare() is called with the attribute "ExecDirect" set to a non-zero value 
+ dbd_st_prepare do NOT call SQLPrepare, but set the sth flag odbc_exec_direct to 1.
+ 
+ Fixed numeric value binding when binding non-integral values.  Now lets the driver 
+ or the database handle the conversion.
 
-Fixed error report when using Oracle's driver.  There is
-a known problem.  Left the error on the test, but added
-warning indicating it's a known problem.
+ Fixed makefile.pl generation of makefile to force the ODBC directory first in the 
+ include list to help those installing ODBC driver managers on systems which 
+ already have ODBC drivers in their standard include path.
 
-=head2 DBD::ODBC 0.40
+=item Changes in DBD::ODBC 0.45_18 September 26, 2002
 
-Most significant change is the change in the default binding
-type which forces DBD::ODBC to attempt to determine the bind
-type if one is not passed.  I decided to make this the default
-behavior to make things as simple as possible.
+ Updated MANIFEST to include more of the mytest/* files (examples, tests)
+ Fixed problem when attempting to get NUM_OF_FIELDS after execute returns no rows/columns.
+
+=item Changes in DBD::ODBC 0.45_17 August 26, 2002
+
+ More fixes for multiple result sets.  Needed to clear the DBIc_FIELDS_AV
+ when re-executing the multiple-result set stored procedure/query.
+
+=item Changes in DBD::ODBC 0.45_16 August 26, 2002
+
+ Updated to fix output parameters with multiple result sets.  The output
+ parameters are not set until the last result set has been retrieved.
+
+=item Changes in DBD::ODBC 0.45_15 August 20, 2002
+
+ Updated for new DBIc_STATE macros (all debug, as it turned out) to be thread safer in the long run
+
+ Updated for the new DBIc_LOGFP macros
+
+ Added CLONE method
+
+ Fix for SQL Server where multiple result sets being returned from a stored proc,
+ where one of the result sets was empty (insert/update).
+ 
+ Added new attribute odbc_force_rebind, which forces DBD::ODBC to
+ check recheck for new result sets every execute.  This is only
+ really necessary if you have a stored procedure which returns different
+ result sets with each execute, given the same "prepare".  Many times
+ this will be automatically set by DBD::ODBC, however, if there is only
+ one result set in the stored proc, but it can differ with each call,
+ then DBD::ODBC will not know to set it. 
+
+ Updated the DBD::ODBC POD documentation to document DBD::ODBC 
+ private attributes and usage.
+ 
+=item Changes in DBD::ODBC 0.45_14 August 13, 2002
+
+Added support to handle (better) DBI begin_work().
+
+Fix for binding undef parameters on SQL Server.
+
+Fix bug when connecting twice in the same script.  Trying to set the environment ODBC version
+twice against the same henv caused an error.
+
+=item Changes in DBD::ODBC 0.45_13 August 9, 2002
+
+Workaround problem with iODBC where SQLAllocHandleStd is not present in iODBC.
+Made Changes file accessible via perldoc DBD::ODBC::Changes.  In the near future
+the change log will be removed from here and put in changes to tidy up a bit.
+ 
+=item Changes in DBD::ODBC 0.45_12 August 9, 2002
+
+Fixed global destruction access violation (which was seemingly random).
+ 
+=item Changes in DBD::ODBC 0.45_11 August 8, 2002
+
+Updated manifest to include more samples.
+Working on checking for leaks on Linux, where I might get more information about
+the process memory.
+
+Working on fixing problems with MS SQL Server binding parameters.  It seems that SQLServer
+gets "confused" if you bind a NULL first.  In "older" (SQLServer 2000 initial release) versions
+of the driver, it would truncate char fields.  In "newer" versions of the SQL Server
+driver, it seems to only truncate dates (actually, round them to the nearest minute).  If you have
+problems in the SQL Server tests, please upgrade your driver to the latest version on
+Microsoft's website (MDAC 2.7 or above) http://www.microsoft.com/data
+
+=item Changes in DBD::ODBC 0.45_10 July 30, 2002
+
+Added database specific tests to ensure things are working.  Some of the tests may
+not work for all people or may not be desirable.  I have tried to keep them as
+safe as possible, but if they don't work, please let me know.
+
+Added support for the internal function GetFunctions to handle ODBC 3's
+SQL_API_ODBC3_ALL_FUNCTIONS.  Would have caused a memory overwrite on the
+stack if it was called. 
+
+
+=item Changes in DBD::ODBC 0.45_9 July 30, 2002
+
+Fixed bug in procedure handling for SQLServer.  Was not re-describing the result sets
+if the SQLMoreResults in the execute needs to be called.
+ 
+=item Changes in DBD::ODBC 0.45_8 July 25, 2002
+
+Fixed bug in tracing code when binding an undef parameter which did not
+happen to have a valid buffer with tracing level >= 2
+
+Fixed bug when binding undef after a valid data bind on a timestamp.  The
+Scale value was being calculated based upon the string that had been bound
+prior to the bind of the undef and if that had a sub-second value, then
+the scale would be set to the wrong value...
+ I.e. bind_param(1, '2000-05-17 00:01:00.250', SQL_TYPE_TIMESTAMP) then
+       execute
+      bind_param(1, undef, SQL_TYPE_TIMESTAMP) then
+
+Fixed SQL Server issue when binding a null and the length was set to 0 instead of 1
+
+=item Changes in DBD::ODBC 0.45_7 July 25, 2002
+
+Adding support for array binding, but not finished.
+
+Fixed bug where SqlServer Stored procedures which perform INSERT would not correctly
+return a result set.  Thanks to Joe Tebelskis for finding it and Martin Evans for
+supplying a fix.
+
+Fixed bug where binding the empty string would cuase a problem.  Fixed and added
+test in t/07bind.t.
+ 
+=item Changes in DBD::ODBC 0.45_6 July 24, 2002
+
+Added support for new DBI ParamValues feature.
+ 
+=item Changes in DBD::ODBC 0.45_5 July 23, 2002
+
+Added odbc_err_handler and odbc_async_exec thanks to patches by David L. Good.
+See example in mytest/testerrhandler.pl
+
+Here's the notes about it:
+
+> I've implemented two separate functions.  The first is an "error
+> handler" similar to that in DBD::Sybase.  The error handler can be used
+> to intercept error and status messages from the server.  It is the only
+> way (at least currently) that you can retrieve non-error status messages
+> when execution is successful.
+>
+> To use the error handler, set the "odbc_err_handler" attribute on
+> your database handle to a reference to a subroutine that will act
+> as the error handler.  This subroutine will be passed two args, the
+> SQLSTATE and the error message.  If the subroutine returns 0, the
+> error message will be otherwise ignored.  If it returns non-zero,
+> the error message will be processed normally.
+>
+> The second function implemented is asynchronous execution.  It's only
+> useful for retrieving server messages with an error handler during an
+> execute() that takes a long time (such as a DBCC on a large database) ODBC
+> doesn't have the concept of a callback routine like Sybase's DBlib/CTlib
+> does, so asynchronous execution is needed to be able to get the server
+> messages before the SQL statement is done processing.
+>
+> To use asynchronous execution, set the "odbc_async_exec" attribute on
+> your database handle to 1.  Not all ODBC drivers support asynchronous
+> execution.  To see if yours does, set odbc_async_exec to 1 and then check
+> it's value.  If the value is 1, your ODBC driver can do asynchronous
+> execution.  If the value is 0, your ODBC driver cannot.
+
+=item Changes in DBD::ODBC 0.45_4 July 22, 2002
+
+More fixes for DB2 tests and timestamp handling.
+ 
+=item Changes in DBD::ODBC 0.45_3 July 22, 2002
+
+Changes to internal timestamp type handling and test structure to ensure tests
+work for all platforms.  DB2 was giving me fits due to bad assumptions.  Thanks
+to Martin Evans (again) for help in identifying the problems and helping research
+solutions.  This includes the scale/precision values to correctly store full timestamps.
+ 
+=item Changes in DBD::ODBC 0.45_2 July 19, 2002
+
+Moving API usage to ODBC 3.0 specifications.  With lots of help from Martin Evans (again!).
+Thanks Martin!!!!!
+ 
+=head2 Changes in DBD::ODBC 0.44 July 18, 2002
+
+.44 was never officially released.
+Fix for do() and execute to handle DB2 correctly.  Patch/discovery thanks to Martin Evans.
+Partly moving towards defaulting to ODBC 3.x standards.
+
+=head2 Changes in DBD::ODBC 0.43 July 18, 2002
+
+ Fix for FoxPro (and potentially other) Drivers!!!!!
+
+ Add support for DBI column_info
+
+ Fix for binding undef value which comes from dereferencing hash
+
+ Fix to make all bound columns word (int) aligned in the buffer.
+
+=head2 Changes in DBD::ODBC 0.42 July 8, 2002
+
+ Added patches to the tests to support ActiveState's automated build process.
+
+ Fix ping() to try SQLTables for a test, instead of a strange query.  
+
+=head2 Changes in DBD::ODBC 0.41 April 15, 2002
+
+ Fixed problem where SQLDescribeParam would fail (probably
+ bug in ODBC driver).  Now reverts to SQL_VARCHAR if that
+ happens, instead of failing the query.
+
+ Fixed error report when using Oracle's driver.  There is
+ a known problem.  Left the error on the test, but added
+ warning indicating it's a known problem.
+
+=head2 Changes in DBD::ODBC 0.40 April 12, 2002
+
+ Most significant change is the change in the default binding
+ type which forces DBD::ODBC to attempt to determine the bind
+ type if one is not passed.  I decided to make this the default
+ behavior to make things as simple as possible.
 
 Fixed connection code put in 0.39 to work correctly.
 
-Two minor patches for building, one for Cygwin one
-if both iODBC and unixODBC libraries are installed.
-Probably need better command line on this, but if 
-someone has the problem, please let me know (and 
-hopefully send a patch with it).
+ Two minor patches for building, one for Cygwin one
+ if both iODBC and unixODBC libraries are installed.
+ Probably need better command line on this, but if 
+ someone has the problem, please let me know (and 
+ hopefully send a patch with it).
 
-=head2 DBD::ODBC 0.39
+=head2 Changes in DBD::ODBC 0.39 March 12, 2002
  
  See mytest/longbin.pl for demonstration of inserting and retrieving
  long binary files to/from the db.  Uses MD5 algorithm to verify data.
@@ -76,11 +283,11 @@ hopefully send a patch with it).
  Changes to connect sequence to provide better error
  messages for those using DSN-less connections.
 
-=head2 DBD::ODBC 0.38
+=head2 Changes in DBD::ODBC 0.38 February 12, 2002
 
  Fixed do function (again) thanks to work by Martin Evans.
 
-=head2 DBD::ODBC 0.37
+=head2 Changes in DBD::ODBC 0.37 February 10, 2002
 
  Patches for get_info where return type is string.  Patches
  thanks to Steffen Goldner.  Thanks Steffen!
@@ -88,8 +295,6 @@ hopefully send a patch with it).
  Patched get_info to NOT attempt to get data for SQL_DRIVER_HSTMT
  and SQL_DRIVER_HDESC as they expect data in and have limited value
  (IMHO).
-
-=head2 Changes in DBD::ODBC 0.37
 
  Further fixed build for ODBC 2.x drivers.  The new SQLExecDirect
  code had SQLAllocHandle which is a 3.x function, not a 2.x function.
@@ -100,12 +305,12 @@ hopefully send a patch with it).
  new SQLExecDirect code.  This has been fixed.
  
  
-=head2 Changes in DBD::ODBC 0.36
+=head2 Changes in DBD::ODBC 0.36 February 10, 2002
 
  Fixed build for ODBC 2.x drivers.  The new SQLExecDirect code
  had SQLFreeHandle which is a 3.x function, not a 2.x function.
  
-=head2 Changes in DBD::ODBC 0.35
+=head2 Changes in DBD::ODBC 0.35 February 9, 2002
 
  Fixed (finally) multiple result sets with differing
  numbers of columns.  The final fix was to call
@@ -125,7 +330,7 @@ hopefully send a patch with it).
  is being called.  Patches thanks to Merijn Broeren.
  Thanks Merijn!
    
-=head2 Changes in DBD::ODBC 0.34
+=head2 Changes in DBD::ODBC 0.34 February 7, 2002
  
  Further revamped tests to attempt to determine if SQLDescribeParam
  will work to handle the binding types.  The t/08bind.t attempts
@@ -141,13 +346,13 @@ hopefully send a patch with it).
 
  Support for upcoming dbi get_info.
  
-=head2 Changes in DBD::ODBC 0.33_3
+=head2 Changes in DBD::ODBC 0.33_3 February 4, 2002
 
  Revamped tests to include tests for multiple result sets.
  The tests are ODBC driver platform specific and will be skipped
  for drivers which do not support multiple result sets.
  
-=head2 Changes in DBD::ODBC 0.33_2
+=head2 Changes in DBD::ODBC 0.33_2 February 4, 2002
 
  Finally tested new binding techniques with SQL Server 2000,
  but there is a nice little bug in their MDAC and ODBC
@@ -169,7 +374,7 @@ hopefully send a patch with it).
    
  Please comment soon...
    
-=head2 Changes in DBD::ODBC 0.33_1
+=head2 Changes in DBD::ODBC 0.33_1 February 4, 2002
 
 *** WARNING: ***
  
@@ -199,14 +404,14 @@ hopefully send a patch with it).
    'Does anyone insert a ?'
 
 				    
-=head2 Changes in DBD::ODBC 0.32
+=head2 Changes in DBD::ODBC 0.32 January 22, 2002
 
  More SAP patches to Makfile.PL to eliminate the call to Data Sources
 
  A patch to the test (for SAP and potentially others), to allow
  fallback to SQL_TYPE_DATE in the tests
  
-=head2 Changes in DBD::ODBC 0.31
+=head2 Changes in DBD::ODBC 0.31 January 18, 2002
 
  Added SAP patches to build directly against SAP driver instead of
  driver manager thanks to Flemming Frandsen (thanks!)
@@ -216,7 +421,7 @@ hopefully send a patch with it).
  we need to actually execute the dummy query.
  
 
-=head2 Changes in DBD::ODBC 0.30
+=head2 Changes in DBD::ODBC 0.30 January 8, 2002
 
  Added ping patch for Solid courtesy of Marko Asplund
 
@@ -240,7 +445,7 @@ hopefully send a patch with it).
  $dbh->do("create or replace etc :new.D = sysdate etc");
  
 
-=head2 Changes in DBD::ODBC 0.29
+=head2 Changes in DBD::ODBC 0.29 August 22, 2001
 
  Cygwin patches from Neil Lunn (untested by me).  Thanks Neil!
  
@@ -304,19 +509,19 @@ Added ability to bind_param_inout() via patches from Jeremy Cooper.  Haven't fig
 
 Updated t/02simple.t to not print an error, when there is not one.
    
-=head2 Changes in DBD::ODBC 0.28
+=head2 Changes in DBD::ODBC 0.28 March 23, 2000
 
 Added support for SQLSpecialColumns thanks to patch provided by Martin J. Evans [martin@easysoft.com]
 
 Fixed bug introduced in 0.26 which was introduced of SQLMoreResults was not supported by the driver.
 
-=head2 Changes in DBD::ODBC 0.27
+=head2 Changes in DBD::ODBC 0.27 March 8, 2000
 
 Examined patch for ping method to repair problem reported by Chris Bezil.  Thanks Chris!
 
 Added simple test for ping method working which should identify this in the future.
 
-=head2 Changes in DBD::ODBC 0.26
+=head2 Changes in DBD::ODBC 0.26 March 5, 2000
 
 Put in patch for returning only positive rowcounts from dbd_st_execute.  The original patch
 was submitted by Jon Smirl and put back in by David Good.  Reasoning seems sound, so I put it
@@ -332,7 +537,7 @@ Put in rudimentary cancel support via SQLCancel.  Call $sth->cencel to utilize. 
 untested by me, as I do not have a good sample for this yet.  It may come in handy with threaded
 perl, someday or it may work in a signal handler.
    
-=head2 Changes in DBD::ODBC 0.25
+=head2 Changes in DBD::ODBC 0.25 March 4, 2000
 
 Added conditional compilation for SQL_WVARCHAR and SQL_WLONGVARCHAR.  If they
 are not defined by your driver manager, they will not be compiled in to the code.
@@ -342,7 +547,7 @@ If you would like to support these types on some platforms, you may be able to
 
 Added more long tests with binding in t\09bind.t.  Note use of bind_param!
  
-=head2 Changes in DBD::ODBC 0.24
+=head2 Changes in DBD::ODBC 0.24 February 24, 2000
 
 Fixed Test #13 in 02simple.t.  Would fail, improperly, if there was only one data source defined.
 
@@ -360,14 +565,14 @@ Added fix for sp_prepare/sp_execute bug reported by Paul G. Weiss.
 
 Added some code for handling a hint on disconnect where the user gets an error for not committing.
  
-=head2 Changes in DBD::ODBC 0.22
+=head2 Changes in DBD::ODBC 0.22 September 8, 1999
 
 Fixed for threaded perl builds.  Note that this was tested only on Win32, with no threads in use and using DBI 1.13.
 Note, for ActiveState/PERL_OBJECT builds, DBI 1.13_01 is required as of 9/8/99.  
 If you are using ActiveState's perl, this can be installed by using PPM.
 
 
-=head2 Changes in DBD::ODBC 0.21
+=head2 Changes in DBD::ODBC 0.21 
 
 Thanks to all who provided patches!
 
@@ -404,7 +609,7 @@ Fixed bug in SQLColumns call.
 Fixed blob handling via patches from Jochen Wiedmann.
 Added data_sources capability via snarfing code from DBD::Adabas (Jochen Wiedmann)
 
-=head2 Changes in DBD::ODBC 0.20
+=head2 Changes in DBD::ODBC 0.20 August 14, 1998
 
 SQLColAttributes fixes for SQL Server and MySQL. Fixed tables method
 by renaming to new table_info method. Added new tyoe_info_all method.
@@ -420,7 +625,7 @@ files in some cases.
 Enhancements to build process. Better handling of errors in
 error handling code.
 
-=head2 Changes in DBD::ODBC 0.17
+=head2 Changes in DBD::ODBC 0.17 
 
 This release is mostly due to the good work of Jeff Urlwin.
 My eternal thanks to you Jeff.

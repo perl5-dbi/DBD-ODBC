@@ -26,8 +26,7 @@ use ODBCTEST;
 my $dbh = DBI->connect() || die "Connect failed: $DBI::errstr\n";
 
 if (!$dbh->func(58, GetFunctions))  { #SQL_API_SQLDescribeParam
-   print "SQLDescribeParam not supported under ", $dbh->get_info(17), "\n";
-   print "1..0\n";
+   print "1..0 # Skipped: SQLDescribeParam not supported using ", $dbh->get_info(17), "\n";;
    exit 0;
 } 
 
@@ -52,9 +51,12 @@ my @data_no_dates_with_long = (
 );
 
 my @data_with_dates = (
-	[ 7, 'foo22', 'test3',     "{d '1998-05-13'}", "{ts '1998-05-13 00:01:00'}"],
-	[ 8, 'bar22', 'test3',    "{d '1998-05-14'}", "{ts '1998-05-14 00:01:00'}"],
-	[ 9, 'bletch22', 'test3', "{d '1998-05-15'}", "{ts '1998-05-15 00:01:00'}"],
+	[ 7, 'foo22', 'test3',     "1998-05-13", "1998-05-13 00:01:00"],
+	[ 8, 'bar22', 'test3',    "1998-05-14", "1998-05-14 00:01:00"],
+	[ 9, 'bletch22', 'test3', "1998-05-15", "1998-05-15 00:01:00"],
+	[ 10, 'bletch22', 'test3', "1998-05-15", "1998-05-15 00:01:00.250"],
+	[ 11, 'bletch22', 'test3', "1998-05-15", "1998-05-15 00:01:00.390"],
+	[ 12, 'bletch22', 'test3', undef, undef],
 );
 
 print "1..3\n";
@@ -72,13 +74,14 @@ unless ($rc) {
 }
 Test($rc);
 
+$dbh->{PrintError} = 0;
 $rc = ODBCTEST::tab_insert_bind($dbh, \@data_no_dates_with_long, 0);
 Test($rc);
 
 $rc = ODBCTEST::tab_insert_bind($dbh, \@data_with_dates, 0);
 # warn "\nThis test is known to fail using Oracle's ODBC drivers for versions 8.x and 9.0 -- please ignore the failure or, better yet, bug Oracle :)\n\n";
 print "\n";
-if ($dbname =~ /Oracle/i) {
+if (!$rc && $dbname =~ /Oracle/i) {
    Test(1, " # Skipped: Known to fail using Oracle's ODBC drivers 8.x and 9.x\n");
 } else {
    Test($rc);

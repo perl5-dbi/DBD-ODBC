@@ -38,8 +38,8 @@ require 5.004;
    %TestFieldInfo = (
 		     'COL_A' => [SQL_SMALLINT,-5, SQL_TINYINT, SQL_NUMERIC, SQL_DECIMAL, SQL_FLOAT, SQL_REAL],
 		     'COL_B' => [SQL_VARCHAR, SQL_CHAR],
-		     'COL_C' => [SQL_LONGVARCHAR],
-		     'COL_D' => [SQL_DATE, SQL_TIMESTAMP, SQL_TYPE_DATE],
+		     'COL_C' => [SQL_LONGVARCHAR, -1],
+		     'COL_D' => [SQL_TYPE_TIMESTAMP, SQL_TYPE_DATE, SQL_DATE, SQL_TIMESTAMP ],
 		    );
 
    sub get_type_for_column {
@@ -51,7 +51,7 @@ require 5.004;
       my $sth;
       foreach $type (@{ $TestFieldInfo{$column} }) {
 	 $sth = $dbh->func($type, GetTypeInfo);
-	    # may not correct behavior, but get the first compat type
+	    # may not be correct behavior, but get the first compat type
 	 if ($sth) {
 	    @row = $sth->fetchrow();
 	    $sth->finish();
@@ -86,6 +86,9 @@ require 5.004;
 	 if ($row[5]) {
 	    $fields .= "($row[2])"	 if ($row[5] =~ /LENGTH/i);
 	    $fields .= "($row[2],0)" if ($row[5] =~ /PRECISION,SCALE/i);
+	 }
+	 if ($f eq 'COL_A') {
+	    $fields .= " NOT NULL PRIMARY KEY ";
 	 }
 	    # print "-- $fields\n";
       }
@@ -137,11 +140,11 @@ require 5.004;
    #
 
    @tab_insert_values = ( 
-			 [1, 'foo', 'foo varchar', "{d '1998-05-11'}"],
-			 [2, 'bar', 'bar varchar', "{d '1998-05-12'}"],
-			 [3, "bletch", "bletch varchar", "{d '1998-05-10'}"],
-			 [4, "80char", $longstr, "{d '1998-05-13'}"],
-			 [5, "gt250char", $longstr2, "{d '1998-05-14'}"],
+			 [1, 'foo', 'foo varchar', "{d '1998-05-11'}", "{ts '1998-05-11 00:00:00'}"],
+			 [2, 'bar', 'bar varchar', "{d '1998-05-12'}", "{ts '1998-05-12 00:00:00'}"],
+			 [3, "bletch", "bletch varchar", "{d '1998-05-10'}", "{ts '1998-05-10 00:00:00'}"],
+			 [4, "80char", $longstr, "{d '1998-05-13'}", "{ts '1998-05-13 12:00:00'}"],
+			 [5, "gt250char", $longstr2, "{d '1998-05-14'}", "{ts '1998-05-14 00:00:00'}"],
 			);
 			   
    sub tab_insert {
@@ -150,15 +153,26 @@ require 5.004;
        # qeDBF needs a space after the table name!
       foreach (@tab_insert_values) {
       
+	 @row = ODBCTEST::get_type_for_column($dbh, 'COL_D');
+	 # print "TYPE FOUND = $row[1]\n";
 	 if (!$dbh->do("INSERT INTO $table_name (COL_A, COL_B, COL_C, COL_D) VALUES ("
 		 . join(", ", $_->[0],
 			$dbh->quote($_->[1]),
 			$dbh->quote($_->[2]), 
-			$_->[3]). ")")) {
+			$_->[isDateType($row[1]) ? 3 : 4]). ")")) {
 	    return 0;
 	 }
       }
       1;
+   }
+
+   sub isDateType($) {
+      my $type = shift;
+      if ($type == SQL_DATE  || $type == SQL_TYPE_DATE) {
+	 return 1;
+      } else {
+	 return 0;
+      }
    }
 
    sub tab_insert_bind {
@@ -172,7 +186,7 @@ require 5.004;
 	 warn $DBI::errstr;
 	 return 0;
       }
-      $sth->{PrintError} = 1;
+      # $sth->{PrintError} = 1;
       foreach (@data) {
 	 my @row;
 	 if ($handle_column_type) {
@@ -195,17 +209,20 @@ require 5.004;
 	    $sth->bind_param(3, $_->[2]);
 	 }
 	 
-	 print "SQL_DATE = ", SQL_DATE, " SQL_TIMESTAMP = ", SQL_TIMESTAMP, "\n";
+	 # print "SQL_DATE = ", SQL_DATE, " SQL_TIMESTAMP = ", SQL_TIMESTAMP, "\n";
 	 @row = ODBCTEST::get_type_for_column($dbh, 'COL_D');
 	 print "TYPE FOUND = $row[1]\n";
+	 # if ($row[1] == SQL_TYPE_TIMESTAMP) {
+	 #   $row[1] = SQL_TIMESTAMP;
+	 #}
 	 # print "Binding the date value: \"$_->[$row[1] == SQL_DATE ? 3 : 4]\"\n";
 	 if ($handle_column_type) {
-	    $sth->bind_param(4, $_->[$row[1] == SQL_DATE ? 3 : 4], { TYPE => $row[1] });
+	    $sth->bind_param(4, $_->[isDateType($row[1]) ? 3 : 4], { TYPE => $row[1] });
 	 } else {
 	    # sigh, couldn't figure out how to get rid of the warning nicely,
 	    # so I turned it off!!!  Now, I have to turn it back on due
 	    # to  problems in other perl versions.
-	    $sth->bind_param(4, $_->[$row[1] == SQL_DATE ? 3 : 4]);
+	    $sth->bind_param(4, $_->[isDateType($row[1]) ? 3 : 4]);
 	 }
 	 return 0 unless $sth->execute;
       }

@@ -162,26 +162,36 @@ _GetForeignKeys(dbh, sth, PK_CatalogName, PK_SchemaName, PK_TableName, FK_Catalo
 	ST(0) = odbc_get_foreign_keys(dbh, sth, PK_CatalogName, PK_SchemaName, PK_TableName, FK_CatalogName, FK_SchemaName, FK_TableName) ? &sv_yes : &sv_no;
 
 #
-# Corresponds to ODBC 2.0.  3.0's SQL_API_ODBC3_ALL_FUNCTIONS will break this
+# Corresponds to ODBC 2.0.  3.0's SQL_API_ODBC3_ALL_FUNCTIONS is handled also
 # scheme
 void
 GetFunctions(dbh, func)
 	SV *	dbh
-	int		func
+	unsigned short func
 	PPCODE:
-	UWORD pfExists[100];
+	UWORD pfExists[SQL_API_ODBC3_ALL_FUNCTIONS_SIZE];
 	RETCODE rc;
 	int i;
+	int j;
 	D_imp_dbh(dbh);
 	rc = SQLGetFunctions(imp_dbh->hdbc, func, pfExists);
 	if (SQL_ok(rc)) {
-		if (func == SQL_API_ALL_FUNCTIONS) {
-			for (i = 0; (i < sizeof(pfExists)/sizeof(pfExists[0])); i++) {
+	   switch (func) {
+	      case SQL_API_ALL_FUNCTIONS:
+			for (i = 0; i < 100; i++) {
 				XPUSHs(pfExists[i] ? &sv_yes : &sv_no);
 			}
-		} else {
-			XPUSHs(pfExists[0] ? &sv_yes : &sv_no);
-		}
+			break;
+	      case SQL_API_ODBC3_ALL_FUNCTIONS:
+		 for (i = 0; i < SQL_API_ODBC3_ALL_FUNCTIONS_SIZE; i++) {
+		    for (j = 0; j < 8 * sizeof(pfExists[i]); j++) {
+		       XPUSHs((pfExists[i] & (1 << j)) ? &sv_yes : &sv_no);
+		    }
+		 }
+		 break;
+	      default:
+		XPUSHs(pfExists[0] ? &sv_yes : &sv_no);
+	   }
 	}
 
 MODULE = DBD::ODBC    PACKAGE = DBD::ODBC::db

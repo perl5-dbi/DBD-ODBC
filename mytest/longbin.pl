@@ -1,6 +1,6 @@
 #/usr/bin/perl -w
 use strict;
-use DBI;
+use DBI qw (:sql_types);
 use Digest::MD5 qw(md5 md5_hex);
 
 my $dbh = DBI->connect();
@@ -13,17 +13,13 @@ eval {
    $dbh->do("drop table longtest;");
 };
 
+# probably should use get_info to get the type for long here...
 my $dbname = $dbh->get_info(17); # DBI::SQL_DBMS_NAME
-print $dbname, "\n";
-if ($dbname =~ /SQL Server/i) {
-   $dbh->do("Create table longtest (id integer, picture image)");
-} elsif ($dbname =~ /Oracle/i) {
-   $dbh->do("Create table longtest (id integer, picture long)");
-} elsif ($dbname =~ /Access/i) {
-   $dbh->do("Create table longtest (id integer, picture longbinary)");
-} else {
-   die "Can't figure out correct table types\n";
-}
+my $longbinary_type = get_first_type_info($dbh, SQL_LONGVARBINARY);
+my $integer_type = get_first_type_info($dbh, SQL_INTEGER);
+print "$dbname, ($integer_type, $longbinary_type)\n";
+
+$dbh->do("Create table longtest (id $integer_type, picture $longbinary_type)");
    
 my $sth = $dbh->prepare("insert into longtest (id, picture) values (?, ?)");
 my $id = 0;
@@ -91,3 +87,16 @@ sub getFileMD5 ($) {
     close(F);
     $md5->hexdigest;
 }
+
+sub get_first_type_info($$) {
+   my $dbh = shift;
+   my $type = shift;
+
+   my @typeinfo = $dbh->type_info($type);
+
+   return $typeinfo[0]->{TYPE_NAME};
+   
+}
+
+
+	

@@ -48,7 +48,7 @@ eval {
 
 if ($@) {
    # skipping test on this platform.
-   print "1..0\n";
+   print "1..0 # Skipped multiple statements not supported using ", $dbh->get_info(17), "\n";
    print $@;
    exit 0;
 }

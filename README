@@ -3,7 +3,7 @@ DBD::ODBC -- DBD module interfacing the ODBC databases.
    $Id$
 
    Copyright (c) 1994,1995,1996,1997,1998  Tim Bunce
-   portions Copyright (c) 1997,1998 Jeff Urlwin
+   portions Copyright (c) 1997,1998,1999,2000,2001,2002 Jeff Urlwin
    portions Copyright (c) 1997  Thomas K. Wenrich
 
    You may distribute under the terms of either the GNU General Public
@@ -15,15 +15,15 @@ DBD::ODBC -- DBD module interfacing the ODBC databases.
 
 *BEFORE* BUILDING, TESTING AND INSTALLING this you will need to:
 
-    Build, test and install Perl 5 (at least 5.004).
+    Build, test and install Perl 5
     It is very important to TEST it and INSTALL it!
 
-    Build, test and install the DBI module (at least DBI 0.93).
+    Build, test and install the DBI module (at least DBI 1.201).
     It is very important to TEST it and INSTALL it!
 
     Remember to *read* the DBI README file!
 
-    Remember to *read* the ODBC.pm POD documentation!!!
+    Remember to *read* the DBD::ODBC.pm POD documentation and the DBD::ODBC::Changes.pm POD documentation!!!
 BUILDING:
 
   set-up these environment variables:
@@ -71,8 +71,8 @@ DBD-ODBC currently uses SQLDescribeParam for binding parameters to queries.
 You may (and probably will) have success using DBD-ODBC without binding
 parameters.
 
-In the next version (or so) you should be able to use bind_param even on
-level 1 drivers. Stay tuned.
+In some future version you should be able to use bind_param even on
+level 1 drivers.  This is a VERY low priority!
 
 
 KNOWN COMPATIBLE Drivers (w/level 2 calls):
@@ -133,6 +133,7 @@ DBI 'home page': http://www.arcana.co.uk/technologia/perl/DBI/index.html
 
 perldoc DBI
 perldoc DBD::ODBC	(which will include the DBD::ODBC FAQ list)
+perldoc DBD::ODBC::Changes
 
 Win32 ODBC drivers:
 http://www.microsoft.com/support/products/backoffice/odbc/

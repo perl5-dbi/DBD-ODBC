@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl -sw
+#!/usr/local/bin/perl -w
 #
 # $Id$
 #
@@ -10,8 +10,9 @@ use Config;
 use ExtUtils::MakeMaker 5.16, qw(&WriteMakefile $Verbose);
 use File::Basename;
 use Getopt::Long;
+use File::Spec;
 
-use DBI 1.201;		# must be installed first
+use DBI 1.21;		# must be installed first ...
 use DBI::DBD;
 use strict;
 
@@ -29,18 +30,19 @@ my %opts =
     OBJECT	=> '$(O_FILES)',
  );
 if ($ExtUtils::MakeMaker::VERSION >= 5.43) {
-    $opts{AUTHOR} = 'Tim Bunce and Jeff Urlwin ( http://www.isc.org/dbi-lists.html )';
+    $opts{AUTHOR} = 'Tim Bunce and Jeff Urlwin ( http://lists.perl.org/showlist.cgi?name=dbi-users )';
     $opts{ABSTRACT} = 'ODBC driver for the DBI module.';
-    $opts{PREREQ_PM} = { DBI => 0 };
+    $opts{PREREQ_PM} = { DBI => 1.21 };
     $opts{CAPI} = 'TRUE' if $Config{archname} =~ /-object\b/i;
 }
 
-$::opt_g = 0;
-$::opt_o = '';
-GetOptions(qw(g! o=s)) or die "Invalid arguments";
+our $opt_g = 0;
+our $opt_o = '';
+Getopt::Long::GetOptions("g!" => \$opt_g,
+	   "o=s" => \$opt_o) or die "Invalid arguments";
 
-$opts{OPTIMIZE} = '-g -O0' if $::opt_g;
-
+    print "Overriding ODBC Directory with command line option: $opt_o\n" if $opt_o ;
+$opts{OPTIMIZE} = '-g -O0' if $opt_g;
 
 print "\nConfiguring DBD::ODBC ...\n
 >>>\tRemember to actually *READ* the README file!
@@ -64,14 +66,15 @@ if ($^O eq 'MSWin32') {
     $opts{LIBS} = ["ODBC32.LIB"];
     $opts{macro}->{EXTRALIB} = 'ODBC32.LIB';
     print SQLH "#include <windows.h>\n";
-    print SQLH "#include <sql.h> \n#include <sqlext.h>\n";
+    print SQLH "#include <sql.h>\n#include <sqltypes.h>\n#include <sqlext.h>\n";
 }
 else {
 
     # for Adabas
     $ENV{ODBCHOME} = $ENV{DBROOT} if $ENV{DBROOT} && -f "$ENV{DBROOT}/lib/odbclib.a";
 
-    my $odbchome= $::opt_o || $ENV{ODBCHOME};
+    print "Overriding ODBC Directory with command line option: $opt_o\n" if $opt_o ;
+    my $odbchome= $opt_o || $ENV{ODBCHOME};
 
     $odbchome = VMS::Filespec::unixify($odbchome) if $^O eq 'VMS';
 
@@ -158,6 +161,7 @@ else {
 	$opts{LIBS} = "-L/usr/lib/w32api -lodbc32";
         print SQLH "#include <windows.h>\n";
         print SQLH "#include <sql.h>\n";
+        print SQLH "#include <sqltypes.h>\n";
         print SQLH "#include <sqlext.h>\n";
         print SQLH "#undef WIN32\n";
         $opts{dynamic_lib} = {OTHERLDFLAGS => "-lodbc32"};
@@ -195,6 +199,7 @@ else {
 	#print SQLH qq{#include <iodbc.h>\n};
 	print SQLH qq{#include <isqlext.h>\n};
 	print SQLH qq{#include <sql.h>\n};
+	print SQLH qq{#include <sqltypes.h>\n};
 	#print SQLH qq{#include "fixup_t.h"\n};
     }
     elsif ($myodbc eq 'unixodbc') {
@@ -219,6 +224,8 @@ else {
 		unless $ENV{LD_LIBRARY_PATH} =~ /\Q$odbchome\/lib/;
 	}
 	print SQLH qq{#include <sql.h>\n};
+	print SQLH qq{#include <sqlucode.h>\n};
+	print SQLH qq{#include <sqltypes.h>\n};
 	print SQLH qq{#include <sqlext.h>\n};
     }
     elsif ($myodbc eq 'esodbc') {
@@ -261,7 +268,9 @@ else {
 	}
 	print SQLH qq{#define FAR \n#define EXPORT \n#define CALLBACK \n};
 	print SQLH qq{#include <sqlext.h>\n};
+	print SQLH qq{#include <sqlucode.h>\n};
 	print SQLH qq{#include <sql.h>\n};
+	print SQLH qq{#include <sqltypes.h>\n};
     }    
     elsif ($myodbc eq 'intersolve') {
 	$opts{DEFINE}  = "";
@@ -269,7 +278,7 @@ else {
 	if (-f "$odbchome/include/sql.h") {
 	    print "You seem to have the official header files.\n";
 	    $opts{INC} .= " -I$odbchome/include";
-	    print SQLH qq{#include <sql.h> \n#include <sqlext.h>\n};
+	    print SQLH qq{#include <sql.h>\n#include <sqltypes.h>\n#include <sqlext.h>\n};
 	}
 	else {
 	    # This is common on Solaris
@@ -360,11 +369,50 @@ print "Warning: DBI_DSN ($ENV{DBI_DSN}) doesn't start with 'dbi:ODBC:'\n"
 	if ($ENV{DBI_DSN} && $ENV{DBI_DSN} !~ m/^dbi:ODBC:/);
 print "\n";
 
+sub MY::post_constants {
+   my ($self) = shift;
 
-sub MY::postamble {
-    return dbd_postamble(@_);
+   '
+# make Changes file available as installed pod docs "perldoc DBI::Changes"
+inst_libdbdodbc = ' . File::Spec->catdir($self->{INST_LIB}, 'DBD/ODBC') . '
+changes_pm = ' . File::Spec->catfile($self->{INST_LIB}, 'DBD/ODBC', 'Changes.pm') . '
+
+config :: $(changes_pm)
+
+$(changes_pm): Changes
+	$(NOECHO) $(MKPATH) $(inst_libdbdodbc)
+	$(NOECHO) $(RM_F) $(changes_pm)
+	$(CP) Changes $(changes_pm)
+';
+   
 }
 
+# ====================================================================
+
+{
+    package MY; # SUPER needs package context, $self is not sufficient
+
+    use strict;
+    use Config;
+
+
+    sub postamble {
+       return main::dbd_postamble(@_);
+    }
+
+    sub const_cccmd {
+       my $self = shift;
+       local($_) = $self->SUPER::const_cccmd(@_);
+
+       # inject the defined local ODBC before default include to ensure
+       # the ODBC driver we want is first
+       if ($^O ne 'MSWin32') {
+	  s/-c/-c \$\(DEFINE\)/;
+	  print "Injecting selected odbc driver into cc command\n";
+       }
+       $_;
+    }
+}
 __END__
 
 
