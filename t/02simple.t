@@ -6,7 +6,7 @@ use ODBCTEST;
 
 # to help ActiveState's build process along by behaving (somewhat) if a dsn is not provided
 BEGIN {
-   $tests = 18;
+   $tests = 19;
    unless (defined $ENV{DBI_DSN}) {
       print "1..0 # Skipped: DBI_DSN is undefined\n";
       exit;
@@ -176,6 +176,14 @@ $sth->execute;
 $sth->fetch;
 Test($sth->execute);
 
+print " Test 19: test connection success when DBI DSN has DSN=\n";
+my $connstr = $ENV{DBI_DSN};
+$connstr =~ s/ODBC:/ODBC:DSN=/;
+
+my $dbh2 = DBI->connect($connstr, $ENV{DBI_USER}, $ENV{DBI_PASS});
+Test(defined($dbh2));
+$dbh2->disconnect;
+# Test(1);
 # clean up
 $sth->finish;
 exit(0);

@@ -19,6 +19,13 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
  Keep checking Oracle's ODBC drivers for Windows to fix the Date binding problem
 
 =head1 CHANGES
+
+=item Changes in DBD::ODBC 1.03 January 17, 2003
+
+ Add automatic detection of DRIVER= or DSN= to add user id and password to
+ connect string.
+
+
 =item Changes in DBD::ODBC 1.02 January 6, 2003
 
  Fix to call finish() automatically if execute is re-called in a loop 

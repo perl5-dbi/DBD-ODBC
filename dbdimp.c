@@ -336,6 +336,19 @@ imp_dbh_t *imp_dbh;
 }
 
 
+/*
+ * quick dumb function to handle case insensitivity for DSN= or DRIVER=
+ * in DSN...note this is becuase strncmpi is not available on all
+ * platforms using that name (VC++ most notably).
+ */
+#if defined(WIN32) && !defined(strncmpi)
+#define strncmpi _strnicmp
+#endif
+
+int dsnHasDriverOrDSN(char *dsn) {
+   return (strncmpi(dsn, "DSN=", 4) == 0 || strncmpi(dsn, "DRIVER=", 7) == 0);
+}
+
 /*------------------------------------------------------------
 connecting to a data source.
 Allocates henv and hdbc.
@@ -364,6 +377,8 @@ SV   *attr;
     SWORD dbvlen;
     UWORD supported;
 
+    char dbname_local[512];
+    
     /*
      * for SQLDriverConnect
      */
@@ -419,13 +434,20 @@ SV   *attr;
     }
 
 #ifndef DBD_ODBC_NO_SQLDRIVERCONNECT
-    if (DBIc_DEBUGIV(imp_dbh) >= 2)
-	PerlIO_printf(DBIc_LOGPIO(imp_dbh), "Driver connect '%s', '%s', '%s'\n", dbname, uid, pwd);
 
     /*
      * SQLDriverConnect handles/maps/fixes db connections and can optionally
      * add a dialog box to the application.  
      */
+    if (strlen(dbname) > SQL_MAX_DSN_LENGTH || dsnHasDriverOrDSN(dbname)) {
+       sprintf(dbname_local, "%s;UID=%s;PWD=%s", dbname, uid, pwd);
+       dbname = dbname_local;
+       /* strcpy(dbname_local, dbname); */
+    }
+
+    if (DBIc_DEBUGIV(imp_dbh) >= 2)
+       PerlIO_printf(DBIc_LOGPIO(imp_dbh), "Driver connect '%s', '%s', '%s'\n", dbname_local, uid, pwd);
+
     rc = SQLDriverConnect(imp_dbh->hdbc,
 			  0, /* no hwnd */
 			  dbname,
@@ -436,6 +458,10 @@ SV   *attr;
 			  SQL_DRIVER_NOPROMPT /* no dialog box (for now) */
 			 );
 
+    /*
+     PerlIO_printf(DBIc_LOGPIO(imp_dbh), "Driver connect '%s', '%s',
+     '%s', %d\n", dbname, uid, pwd, rc);
+     */
 #else
     /* if we are using something that can not handle SQLDriverconnect,
      * then set rc to a not OK state
@@ -448,13 +474,13 @@ SV   *attr;
      * and level 2+ just to indicate that we are trying SQLConnect.
      */
     if (!SQL_ok(rc)) {
-	if (DBIc_DEBUGIV(imp_dbh) > 3) {
+       if (DBIc_DEBUGIV(imp_dbh) > 3) {
 #ifdef DBD_ODBC_NO_SQLDRIVERCONNECT
 	    PerlIO_printf(DBIc_LOGPIO(imp_dbh), "SQLDriverConnect unsupported.\n");
 #else
 	    PerlIO_printf(DBIc_LOGPIO(imp_dbh), "SQLDriverConnect failed:\n");
 #endif
-	}
+       }
 
 #ifndef DBD_ODBC_NO_SQLDRIVERCONNECT
 	/*
@@ -465,12 +491,7 @@ SV   *attr;
 	 */
 	/* wanted to use strncmpi, but couldn't find one on all
 	 * platforms.  Sigh. */
-	if (strlen(dbname) > SQL_MAX_DSN_LENGTH ||
-	    ((strlen(dbname) > 4) &&
-	     toupper(dbname[0]) == 'D' &&
-	     toupper(dbname[1]) == 'S' &&
-	     toupper(dbname[2]) == 'N' &&
-	     dbname[3] == '=')) {
+	if (strlen(dbname) > SQL_MAX_DSN_LENGTH || dsnHasDriverOrDSN(dbname)) {
 	   
 	   /* must be DSN= or some "direct" connection attributes,
 	    * probably best to error here and give the user a real
@@ -1854,7 +1875,7 @@ imp_sth_t *imp_sth;
 
     if (rc != SQL_NO_DATA) {
        
-       SWORD num_fields;
+       // SWORD num_fields;
        RETCODE rc2;
        if (debug >= 7)
 	  PerlIO_printf(DBIc_LOGPIO(imp_dbh),
@@ -1965,13 +1986,14 @@ imp_sth_t *imp_sth;
 {
     dTHR;
     D_imp_dbh_from_sth;
-    UWORD supported;
     int debug = DBIc_DEBUGIV(imp_sth);
     int i;
     AV *av;
     RETCODE rc;
     int num_fields;
+#ifdef TIMESTAMP_STRUCT /* iODBC doesn't define this */
     char cvbuf[512];
+#endif
     int ChopBlanks;
 
     /* Check that execute() was executed sucessfully. This also implies	*/
@@ -3042,9 +3064,7 @@ SV *keysv;
     D_imp_drh_from_dbh;
     RETCODE rc;
     STRLEN kl;
-    STRLEN plen;
     char *key = SvPV(keysv,kl);
-    int on;
     UDWORD vParam = 0;
     const db_params *pars;
     SV *retsv = NULL;
@@ -3235,8 +3255,6 @@ SV *keysv;
     int i;
     SV *retsv = NULL;
     T_st_params *par;
-    int n_fields;
-    imp_fbh_t *fbh;
     char cursor_name[256];
     SWORD cursor_name_len;
     RETCODE rc;
@@ -3398,7 +3416,6 @@ SV *valuesv;
     char *key = SvPV(keysv,kl);
     char *value = SvPV(valuesv, vl);
     T_st_params *par;
-    RETCODE rc;
 
     for (par = S_st_store_params; par->len > 0; par++)
 	if (par->len == kl && strEQ(key, par->str))
@@ -3443,7 +3460,7 @@ int ftype;
     
     /* See fancy logic below */
     for (i = 0; i < 6; i++)
-	rgbInfoValue[i] = 0xFF;
+	rgbInfoValue[i] = (char)0xFF;
 
     rc = SQLGetInfo(imp_dbh->hdbc, ftype,
 		    rgbInfoValue, size-1, &cbInfoValue);
@@ -3667,8 +3684,10 @@ int ftype;
     D_imp_dbh(dbh);
     D_imp_sth(sth);
     RETCODE rc;
-    SV **svp;
+#if 0
+    /* TBD: cursorname? */
     char cname[128];			/* cursorname */
+#endif
 
     imp_sth->henv = imp_dbh->henv;	/* needed for dbd_error */
     imp_sth->hdbc = imp_dbh->hdbc;
@@ -3737,7 +3756,7 @@ int desctype;
     SDWORD fDesc = -2;
 
     for (i = 0; i < 6; i++)
-	rgbInfoValue[i] = 0xFF;
+	rgbInfoValue[i] = (char)0xFF;
 
     if ( !DBIc_ACTIVE(imp_sth) ) {
 	dbd_error(sth, SQL_ERROR, "no statement executing");
