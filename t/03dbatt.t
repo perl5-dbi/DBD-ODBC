@@ -1,66 +1,58 @@
-#!/usr/bin/perl -I./t
+#!perl -w -I./t
 # $Id$
 
-my $tests;
+use Test::More;
 
 $|=1;
 
+use_ok('DBI', qw(:sql_types));
+use_ok('ODBCTEST');
+
 # to help ActiveState's build process along by behaving (somewhat) if a dsn is not provided
 BEGIN {
-   unless (defined $ENV{DBI_DSN}) {
-      print "1..0 # Skipped: DBI_DSN is undefined\n";
-      exit;
+   if (!defined $ENV{DBI_DSN}) {
+      plan skip_all => "DBI_DSN is undefined";
+   } else {
+      # num tests + one for each table_info column (5)
+      plan tests => 19 + 5;
    }
 }
 
-{
-    my $numTest = 0;
-    sub Test($;$) {
-	my $result = shift; my $str = shift || '';
-	printf("%sok %d%s\n", ($result ? "" : "not "), ++$numTest, $str);
-	$result;
-    }
-}
-
-print "1..$tests\n";
-
-use DBI;
-use ODBCTEST;
-# use strict;
 
 my @row;
 
-Test(1);	# loaded DBI ok.
+my $dbh = DBI->connect();
+unless($dbh) {
+   BAILOUT("Unable to connect to the database $DBI::errstr\nTests skipped.\n");
+   exit 0;
+}
 
-my $dbh = DBI->connect() || die "Connect failed: $DBI::errstr\n";
 $dbh->{LongReadLen} = 1000;
+is($dbh->{LongReadLen}, 1000, "Set Long Read Len");
 my $dbname = $dbh->{odbc_SQL_DBMS_NAME};
-Test(1);	 # connected ok
 
 #### testing set/get of connection attributes
 $dbh->{RaiseError} = 0;
-$dbh->{'AutoCommit'} = 1;
+$dbh->{AutoCommit} = 1;
+ok($dbh->{AutoCommit}, "AutoCommit set on dbh");
+
 my $rc = commitTest($dbh);
-print " ", $dbh->errstr, "" if ($rc < -1);
-if ($rc == -1) {
-    Test(1, " # skipped due to lack of transaction support.");
-} else {
-    Test($rc == 1); # print "not " unless ($rc == 1);
-}
 
-Test($dbh->{AutoCommit});
+diag(" Strange: " . $dbh->errstr . "\n") if ($rc < -1);
+SKIP: {
+    skip "skipped due to lack of transaction support", 3 if ($rc == -1);
 
-$dbh->{'AutoCommit'} = 0;
-$rc = commitTest($dbh);
-print $dbh->errstr, "\n" if ($rc < -1);
-if ($rc == -1) {
-    Test(1, " # skipped due to lack of transaction support.");
-} else {
-    Test($rc == 0);
-}
-Test($dbname eq $dbh->{odbc_SQL_DBMS_NAME});
+    is($rc, 1, "commitTest with AutoCommit");
 
-$dbh->{'AutoCommit'} = 1;
+    $dbh->{AutoCommit} = 0;
+    ok(!$dbh->{AutoCommit}, "AutoCommit turned off");
+    $rc = commitTest($dbh);
+    diag(" Strange: " . $dbh->errstr . "\n") if ($rc < -1);
+    is($rc, 0, "commitTest with AutoCommit off");
+};
+
+$dbh->{AutoCommit} = 1;
+ok($dbh->{AutoCommit}, "Ensure autocommit back on");
 
 # ------------------------------------------------------------
 
@@ -75,30 +67,30 @@ my @table_info_cols = (
 		       'TABLE_TYPE',
 		       'REMARKS',
 		      );
-if ($sth = $dbh->table_info()) {
+
+SKIP:  {
+    $sth = $dbh->table_info();
+    skip "table_info returned undef sth", 7 unless $sth;
     my $cols = $sth->{NAME};
+    isa_ok($cols, 'ARRAY', "sth {NAME} returns ref to array");
     for (my $i = 0; $i < @$cols; $i++) {
        # print ${$cols}[$i], ": ", $sth->func($i+1, 3, ColAttributes),
        # "\n";
-       Test(${$cols}[$i] eq $table_info_cols[$i]);
+       is(${$cols}[$i], $table_info_cols[$i], "Column test for table_info $i");
     }
     while (@row = $sth->fetchrow()) {
         $rows++;
     }
+    cmp_ok($rows, '>', 0, "must be some tables out there?");
     $sth->finish();
-} else {
-   for (my $i = 0; $i < @table_info_cols; $i++) {
-      Test(1, " # skipped due to table_info not successful\n");
-   }
-}
-Test($rows > 0);
-Test($dbname eq $dbh->{odbc_SQL_DBMS_NAME});
+};
+
 
 $rows = 0;
 $dbh->{PrintError} = 0;
 my @tables = $dbh->tables;
 
-Test($#tables > 0); # 7
+cmp_ok($#tables, '>', 0, "tables returnes array");
 $rows = 0;
 if ($sth = $dbh->column_info(undef, undef, $ODBCTEST::table_name, undef)) {
     while (@row = $sth->fetchrow()) {
@@ -106,7 +98,7 @@ if ($sth = $dbh->column_info(undef, undef, $ODBCTEST::table_name, undef)) {
     }
     $sth->finish();
 }
-Test($rows > 0);
+cmp_ok($rows, '>', 0, "column info returns more than one row for test table");
 
 $rows = 0;
 
@@ -116,30 +108,32 @@ if ($sth = $dbh->primary_key_info(undef, undef, $ODBCTEST::table_name, undef)) {
     }
     $sth->finish();
 }
-# my $dbname = $dbh->get_info(17); # DBI::SQL_DBMS_NAME
-if ($dbname =~ /Access/i) {
-   Test(1, " # Skipped: Primary Key Known to fail using MS Access through 2000");
-} else {
-   Test($rows > 0);
-}
+
+SKIP: {
+    skip "Primary Key Known to fail using MS Access through 2000", 1 if ($dbname =~ /Access/i);
+    cmp_ok($rows, '>', 0, "primary key count");
+};
 
 # test $sth->{NAME} when using non-select statements
 $sth = $dbh->prepare("update $ODBCTEST::table_name set COL_A = 100 WHERE COL_A = 100");
-Test(@{$sth->{NAME}}==0);
-$sth->execute;
-Test(@{$sth->{NAME}}==0);
+ok($sth, "prepare update statement returns valid sth ");
 
-Test($dbname eq $dbh->{odbc_SQL_DBMS_NAME});
+is(@{$sth->{NAME}}, 0, "update statement has 0 columns returned");
+$sth->execute;
+is(@{$sth->{NAME}}, 0, "update statement has 0 columns returned 2");
 
 $dbh->{odbc_query_timeout} = 30;
-Test($dbh->{odbc_query_timeout} == 30);
+is($dbh->{odbc_query_timeout}, 30, "Verify odbc_query_timeout set ok");
 
 my $sth_timeout = $dbh->prepare("select COL_A from $ODBCTEST::table_name");
-Test($sth_timeout->{odbc_query_timeout} == 30);
+is($sth_timeout->{odbc_query_timeout}, 30, "verify dbh setting for query_timeout passed to sth");
 $sth_timeout->{odbc_query_timeout} = 1;
-Test($sth_timeout->{odbc_query_timeout} == 1);
-BEGIN { $tests = 17 + 5; } # num tests + one for each table_info column (5)
+is($sth_timeout->{odbc_query_timeout}, 1, "verify sth query_timeout can be overridden");
+
 $dbh->disconnect;
+exit 0;
+# avoid annoying warning
+print $DBI::errstr;
 # print STDERR $dbh->{odbc_SQL_DRIVER_ODBC_VER}, "\n";
 
 # ------------------------------------------------------------
@@ -162,7 +156,7 @@ sub commitTest {
     }
 
     my $supported = $dbh->get_info(46); # SQL_TXN_CAPABLE 
-    print "Transactions supported: $supported\n";
+    # print "Transactions supported: $supported\n";
     if (!$supported) {
 	return -1;
     }

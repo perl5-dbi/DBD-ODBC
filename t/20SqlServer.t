@@ -4,7 +4,7 @@
 $| = 1;
 
 
-my $tests = 30;
+my $tests = 31;
 # to help ActiveState's build process along by behaving (somewhat) if a dsn is not provided
 BEGIN {
    unless (defined $ENV{DBI_DSN}) {
@@ -439,7 +439,7 @@ $dbh->{odbc_err_handler} = \&err_handler;
 $sth = $dbh->prepare("dbcc TRACESTATUS(-1)");
 $sth->execute;
 Test($testpass > 0);
-
+$testpass = 0;
 $dbh->{odbc_async_exec} = 0;
 # DBI->trace(9);
 $sth2 = $dbh->prepare("print 'START' select count(*) from perl_dbd_table1 print 'END'");
@@ -449,8 +449,8 @@ do {
       print "$row[0]\n";
    }
 } while ($sth2->{odbc_more_results});
-
-DBI->trace(0);
+Test($testpass == 2);
+# DBI->trace(0);
 $dbh->do("insert into perl_dbd_table1 (i, j) values (1, 2)");
 $dbh->do("insert into perl_dbd_table1 (i, j) values (3, 4)");
 

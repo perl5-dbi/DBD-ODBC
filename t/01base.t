@@ -1,21 +1,20 @@
-#!/usr/bin/perl 
+#!perl -w
 # $Id$
 
-print "1..$tests\n";
+use Test::More tests => 5;
 
 require DBI;
-print "ok 1\n";
+require_ok('DBI');
 
 import DBI;
-print "ok 2\n";
+pass("import DBI");
 
 $switch = DBI->internal;
-(ref $switch eq 'DBI::dr') ? print "ok 3\n" : print "not ok 3\n";
+is(ref $switch, 'DBI::dr', "DBI->internal is DBI::dr");
 
 $drh = DBI->install_driver('ODBC');
-(ref $drh eq 'DBI::dr') ? print "ok 4\n" : print "not ok 4\n";
+is(ref $drh, 'DBI::dr', "Install ODBC driver OK");
 
-print "ok 5\n" if $drh->{Version};
+ok($drh->{Version}, "Version is not empty");
 
-BEGIN{$tests = 5;}
-exit(0);
+exit 0;

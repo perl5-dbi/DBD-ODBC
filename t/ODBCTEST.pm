@@ -21,7 +21,8 @@ require 5.004;
    package ODBCTEST;
 
    use DBI qw(:sql_types);
-
+   use Test::More;
+   
    $VERSION = '0.01';
    $table_name = "PERL_DBD_TEST";
 
@@ -92,7 +93,7 @@ require 5.004;
 	 }
 	    # print "-- $fields\n";
       }
-      print "Using fields: $fields\n";
+      # diag("Using fields: $fields\n");
       $dbh->do("CREATE TABLE $table_name ($fields)");
    }
 
@@ -109,7 +110,7 @@ require 5.004;
       $rc = -1;
 
       unless ($sth = $dbh->table_info()) {
-	 print "Can't list tables: $DBI::errstr\n";
+	 # diag("Can't list tables: $DBI::errstr\n");
 	 return -1;
       }
 	# TABLE_QUALIFIER,TABLE_OWNER,TABLE_NAME,TABLE_TYPE,REMARKS
@@ -124,7 +125,7 @@ require 5.004;
 		# and (uc($user) eq uc($row[1]))) 
 		# qeDBF driver returns null for TABLE_OWNER
 	    my $owner = $row->{TABLE_OWNER} || '(unknown owner)';
-	    print "$owner.$row->{TABLE_NAME}\n";
+	    # diag("$owner.$row->{TABLE_NAME}\n");
 	    $rc = 1;
 	    last;
 	 }
@@ -191,7 +192,7 @@ require 5.004;
 	 my @row;
 	 if ($handle_column_type) {
 	    @row = ODBCTEST::get_type_for_column($dbh, 'COL_A');
-	    print "Binding the value: $_->[0] type = $row[1]\n";
+	    # diag("Binding the value: $_->[0] type = $row[1]\n");
 	    $sth->bind_param(1, $_->[0], { TYPE => $row[1] });
 	 } else {
 	    $sth->bind_param(1, $_->[0]);
@@ -211,7 +212,7 @@ require 5.004;
 	 
 	 # print "SQL_DATE = ", SQL_DATE, " SQL_TIMESTAMP = ", SQL_TIMESTAMP, "\n";
 	 @row = ODBCTEST::get_type_for_column($dbh, 'COL_D');
-	 print "TYPE FOUND = $row[1]\n";
+	 # diag("TYPE FOUND = $row[1]\n");
 	 # if ($row[1] == SQL_TYPE_TIMESTAMP) {
 	 #   $row[1] = SQL_TIMESTAMP;
 	 #}

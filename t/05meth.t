@@ -1,27 +1,32 @@
 #!/usr/bin/perl -I./t
 # $Id$
 
+## TBd: these tests don't seem to be terribly useful
+use Test::More;
 
 $| = 1;
 
+use_ok('DBI', qw(:sql_types));
+use strict;
+
 # to help ActiveState's build process along by behaving (somewhat) if a dsn is not provided
 BEGIN {
-   unless (defined $ENV{DBI_DSN}) {
-      print "1..0 # Skipped: DBI_DSN is undefined\n";
-      exit;
+   if (!defined $ENV{DBI_DSN}) {
+      plan skip_all => "DBI_DSN is undefined";
+   } else {
+      plan tests => 8;
    }
 }
-print "1..$::tests\n";
 
-use DBI;
-use strict;
 
 my @row;
 
-print "ok 1\n";
+my $dbh = DBI->connect();
+unless($dbh) {
+   BAILOUT("Unable to connect to the database $DBI::errstr\nTests skipped.\n");
+   exit 0;
+}
 
-my $dbh = DBI->connect() || die "Connect failed: $DBI::errstr\n";
-print "ok 2\n";
 
 #### testing Tim's early draft DBI methods
 
@@ -29,25 +34,24 @@ my $r1 = $DBI::rows;
 $dbh->{AutoCommit} = 0;
 my $sth;
 $sth = $dbh->prepare("DELETE FROM PERL_DBD_TEST");
+ok($sth, "delete prepared statement");
 $sth->execute();
-print "not " unless($sth->rows >= 0 
-		    && $DBI::rows == $sth->rows);
+cmp_ok($sth->rows, '>=', 0, "Number of rows > 0");
+cmp_ok($DBI::rows, '==', $sth->rows, "Number of rows from DBI matches sth");
 $sth->finish();
 $dbh->rollback();
-print "ok 3\n";
+pass("finished and rolled back");
 
 $sth = $dbh->prepare('SELECT * FROM PERL_DBD_TEST WHERE 1 = 0');
 $sth->execute();
 @row = $sth->fetchrow();
-if ($sth->err)
-    {
-    print ' $sth->err: ', $sth->err, "\n";
-    print ' $sth->errstr: ', $sth->errstr, "\n";
-    print ' $dbh->state: ', $dbh->state, "\n";
-#    print ' $sth->state: ', $sth->state, "\n";
-    }
+if ($sth->err) {
+   diag(" $sth->err: " . $sth->err . "\n");
+   diag(" $sth->errstr: " . $sth->errstr . "\n");
+   diag(" $dbh->state: " . $dbh->state . "\n");
+}
+ok(!$sth->err, "no error");
 $sth->finish();
-print "ok 4\n";
 
 my ($a, $b);
 $sth = $dbh->prepare('SELECT COL_A, COL_B FROM PERL_DBD_TEST');
@@ -70,7 +74,7 @@ while ($sth->fetch())
 	last;
 	}
     }
-print "ok 5\n";
+pass("?");
 $sth->finish();
 
 ($a, $b) = (undef, undef);
@@ -85,21 +89,21 @@ while ($sth->fetch())
 	last;
 	}
     }
-print "ok 6\n";
+pass("??");
 
-print "calling finish\n";
 $sth->finish();
 
 # turn off error warnings.  We expect one here (invalid transaction state)
-print "resetting attributes\n";
 $dbh->{RaiseError} = 0;
 $dbh->{PrintError} = 0;
-print "disconnecting\n";
 $dbh->disconnect();
-print "disconnected\n";
+exit 0;
+
+# avoid warning on one use of DBI::errstr
+print $DBI::errstr;
+
 # make sure there is an invalid transaction state error at the end here.
 # (XXX not reliable, iodbc-2.12 with "INTERSOLV dBase IV ODBC Driver" == -1)
 #print "# DBI::err=$DBI::err\nnot " if $DBI::err ne "25000";
 #print "ok 7\n"; 
 
-BEGIN { $::tests = 6; }
