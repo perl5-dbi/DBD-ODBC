@@ -429,7 +429,7 @@ AS
    sub err_handler {
       my ($state, $msg, $nativeerr) = @_;
       # Strip out all of the driver ID stuff
-      $msg =~ s/^(\[[\w\s]*\])+//;
+      $msg =~ s/^(\[[\w\s:]*\])+//;
       $lastmsg = $msg;
       print "===> state: $state msg: $msg nativeerr: $nativeerr\n";
       $testpass++;
