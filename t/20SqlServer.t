@@ -52,7 +52,7 @@ unless($dbh) {
 
 my $dbname = $dbh->get_info(17); # DBI::SQL_DBMS_NAME
 SKIP: {
-   skip "Microsoft SQL Server tests not supported using $dbname", $tests-3 unless ($dbname =~ /Microsoft SQL Server/i);
+   skip "Microsoft SQL Server tests not supported using $dbname", $tests-2 unless ($dbname =~ /Microsoft SQL Server/i);
 
    
    # the times chosen below are VERY specific to NOT cause rounding errors, but may cause different
@@ -499,10 +499,10 @@ TODO: {
    $dbh->do("drop table perl_dbd_test1");
    $dbh->commit;
 
+};
 
    $dbh->disconnect;
       
-};
 
 exit 0;
 # get rid of use once warnings
