@@ -20,6 +20,7 @@ my %opts =
 (
     NAME	=> 'DBD::ODBC',
     VERSION_FROM => 'ODBC.pm',
+    PREREQ_PM => { "Test::Simple" => 0.40 }, # actually Test::More pkg in T::S dist
     clean	=> { FILES=> 'ODBC.xsi dbdodbc.h' },
     dist	=> {
 	#DIST_DEFAULT=> 'clean distcheck disttest ci tardist',
