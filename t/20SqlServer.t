@@ -4,7 +4,7 @@
 $| = 1;
 
 
-my $tests = 28;
+my $tests = 30;
 # to help ActiveState's build process along by behaving (somewhat) if a dsn is not provided
 BEGIN {
    unless (defined $ENV{DBI_DSN}) {
@@ -440,8 +440,20 @@ $sth = $dbh->prepare("dbcc TRACESTATUS(-1)");
 $sth->execute;
 Test($testpass > 0);
 
+$dbh->{odbc_async_exec} = 0;
+DBI->trace(9);
+$sth2 = $dbh->prepare("print 'START' select count(*) from perl_dbd_table1 print 'END'");
+$sth2->execute;
+do {
+   while (@row = $sth2->fetchrow_array) {
+      print "$row[0]\n";
+   }
+} while ($sth2->{odbc_more_results});
+
+DBI->trace(0);
 $dbh->do("insert into perl_dbd_table1 (i, j) values (1, 2)");
 $dbh->do("insert into perl_dbd_table1 (i, j) values (3, 4)");
+
 Test(!&Multiple_concurrent_stmts($dbh));
 
 $dbh->disconnect;
@@ -453,6 +465,28 @@ Test(&Multiple_concurrent_stmts($dbh));
 # clean up test table and procedure
 eval {$dbh->do("DROP TABLE PERL_DBD_TABLE1");};
 eval {$dbh->do("DROP PROCEDURE PERL_DBD_PROC1");};
+
+eval { local $dbh->{PrintError} = 0; $dbh->do("drop table perl_dbd_test1"); };
+$dbh->do("create table perl_dbd_test1 (i integer primary key, t varchar(30))");
+$dbh->{AutoCommit} = 0;
+$dbh->do("insert into perl_dbd_test1 (i, t) values (1, 'initial')");
+$dbh->commit;
+$dbh->do("update perl_dbd_test1 set t = 'second' where i = 1");
+
+my $dbh2 = DBI->connect($ENV{DBI_DSN}, $ENV{DBI_USER}, $ENV{DBI_PASS}, {odbc_query_timeout => 2, PrintError=>0});
+# $dbh2->{odbc_query_timeout} = 5;
+$dbh2->{AutoCommit} = 0;
+$dbh2->do("update perl_dbd_test1 set t = 'bad' where i = ?",undef,1);
+$dbh2->rollback;
+# should timeout and get to here.  if so, test will pass
+Test(1);
+$dbh2->do("update perl_dbd_test1 set t = 'bad' where i = 1");
+$dbh2->rollback;
+$dbh2->disconnect;
+Test(1);
+$dbh->commit;
+$dbh->do("drop table perl_dbd_test1");
+$dbh->commit;
 
 
 $dbh->disconnect;

@@ -20,6 +20,12 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
 
 =head1 CHANGES
 
+=head2 Changes in DBD::ODBC 1.12 October 26, 2004
+
+Fix bug with odbc_execdirect attributed thanks to Martin Evans
+Fix bug(s) with odbc_query_timeout and tested with SQL*Server.  
+Oracle tests failed with setting timeout.  Probably not handled by Oracle's ODBC driver
+
 =head2 Changes in DBD::ODBC 1.11 October 11, 2004
 
 Added odbc_timeout, but untested

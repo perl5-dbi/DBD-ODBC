@@ -178,6 +178,7 @@ $sth->execute;
 $sth->fetch;
 Test($sth->execute);
 
+#DBI->trace(9, "c:/trace.txt");
 my $connstr = $ENV{DBI_DSN};
 if (!($connstr =~ /DSN=/i || $connstr =~ /DRIVER=/i)) {
    $connstr =~ s/ODBC:/ODBC:DSN=/;

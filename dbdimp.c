@@ -108,17 +108,18 @@ void
    DBIS = dbistate;
 }
 
-static RETCODE odbc_set_query_timeout(imp_sth_t *imp_sth, UV odbc_timeout)
+static RETCODE odbc_set_query_timeout(SV *h, HSTMT hstmt, UV odbc_timeout)
 {
    RETCODE rc;
-   if (ODBC_TRACE_LEVEL(imp_sth) >= 2) {
-      PerlIO_printf(DBIc_LOGPIO(imp_sth), "   Set timeout to: %d", odbc_timeout);
+   D_imp_xxh(h);
+   if (ODBC_TRACE_LEVEL(imp_xxh) >= 2) {
+      PerlIO_printf(DBIc_LOGPIO(imp_xxh), "   Set timeout to: %d\n", odbc_timeout);
    }
-   rc = SQLSetStmtAttr(imp_sth->hstmt,(SQLINTEGER)SQL_ATTR_QUERY_TIMEOUT, (SQLPOINTER)odbc_timeout,(SQLINTEGER)SQL_IS_INTEGER );
+   rc = SQLSetStmtAttr(hstmt,(SQLINTEGER)SQL_ATTR_QUERY_TIMEOUT, (SQLPOINTER)odbc_timeout,(SQLINTEGER)SQL_IS_INTEGER );
    if (!SQL_ok(rc)) {
       /* raise warnings if setting fails, but don't die? */
-      if (ODBC_TRACE_LEVEL(imp_sth) >= 2)
-	 PerlIO_printf(DBIc_LOGPIO(imp_sth), "    Failed to set Statement ATTR Query Timeout to %d\n", (int)odbc_timeout);
+      if (ODBC_TRACE_LEVEL(imp_xxh) >= 2)
+	 PerlIO_printf(DBIc_LOGPIO(imp_xxh), "    Failed to set Statement ATTR Query Timeout to %d\n", (int)odbc_timeout);
    }
    return rc;
 }
@@ -343,6 +344,13 @@ int dbd_db_execdirect( SV *dbh,
       PerlIO_printf(DBIc_LOGPIO(imp_dbh), "    SQLExecDirect sql %s\n",
 		    statement);
 
+   if (imp_dbh->odbc_query_timeout) {
+      ret = odbc_set_query_timeout(dbh, stmt, imp_dbh->odbc_query_timeout);
+      if (!SQL_ok(ret)) {
+	 dbd_error(dbh, ret, "execdirect set_query_timeout");
+      }
+      /* don't fail if the query timeout can't be set. */
+   }
    ret = SQLExecDirect(stmt, (SQLCHAR *)statement, SQL_NTS);
    if (ODBC_TRACE_LEVEL(imp_dbh) >= 2) {
       PerlIO_printf(DBIc_LOGPIO(imp_dbh),
@@ -544,7 +552,7 @@ SV   *attr;
 */
 
    if (ODBC_TRACE_LEVEL(imp_dbh) >= 8)
-      PerlIO_printf(DBIc_LOGPIO(imp_dbh), "Driver connect '%s', '%s', '%s'\n", dbname, uid, pwd);
+      PerlIO_printf(DBIc_LOGPIO(imp_dbh), "Driver connect '%s', '%s', 'xxxx'\n", dbname, uid);
 
    rc = SQLDriverConnect(imp_dbh->hdbc,
 			 0, /* no hwnd */
@@ -749,9 +757,11 @@ SV   *attr;
       }
    }
 
-   DBD_ATTRIB_GET_IV(attr, "odbc_query_timeout",15, odbc_timeout_sv, odbc_timeout);
+   DBD_ATTRIB_GET_IV(attr, "odbc_query_timeout",strlen("odbc_query_timeout"), odbc_timeout_sv, odbc_timeout);
    if (odbc_timeout) {
       imp_dbh->odbc_query_timeout = odbc_timeout;
+      if (ODBC_TRACE_LEVEL(imp_dbh) >= 2)
+	 PerlIO_printf(DBIc_LOGPIO(imp_dbh), "    Setting DBH query timeout to %d\n", (int)odbc_timeout);
    }      
    
    imp_drh->connects++;
@@ -1369,6 +1379,8 @@ SV *attribs;
    imp_sth->odbc_default_bind_type = imp_dbh->odbc_default_bind_type;
    imp_sth->odbc_force_rebind = imp_dbh->odbc_force_rebind;
    imp_sth->odbc_query_timeout = imp_dbh->odbc_query_timeout;
+   if (ODBC_TRACE_LEVEL(imp_dbh) >= 5)
+      PerlIO_printf(DBIc_LOGPIO(imp_dbh), "    initializing sth query timeout to %d\n", (int)imp_dbh->odbc_query_timeout);
 
    if (!DBIc_ACTIVE(imp_dbh)) {
       dbd_error(sth, 0, "Can not allocate statement when disconnected from the database");
@@ -1395,7 +1407,7 @@ SV *attribs;
       /* if the attribute is there, let it override what the default
        * value from the dbh is (set above).
        */
-      if ((odbc_exec_direct_sv = DBD_ATTRIB_GET_SVP(attribs, "odbc_execdirect", 10)) != NULL) {
+      if ((odbc_exec_direct_sv = DBD_ATTRIB_GET_SVP(attribs, "odbc_execdirect", strlen("odbc_execdirect"))) != NULL) {
 	 imp_sth->odbc_exec_direct = SvIV(*odbc_exec_direct_sv) != 0;
       }
    }
@@ -1455,7 +1467,7 @@ SV *attribs;
     * we need to set the SQL_ATTR_QUERY_TIMEOUT
     */
    if (imp_sth->odbc_query_timeout){
-      odbc_set_query_timeout(imp_sth, imp_sth->odbc_query_timeout);
+      odbc_set_query_timeout(sth, imp_sth->hstmt, imp_sth->odbc_query_timeout);
       if (!SQL_ok(rc)) {
 	 dbd_error(sth, rc, "set_query_timeout");
       }
@@ -1597,7 +1609,7 @@ imp_sth_t *imp_sth;
 	 PerlIO_printf(DBIc_LOGPIO(imp_sth), "Numfields == 0, SQLMoreResults == %d\n", rc);
 	 PerlIO_flush(DBIc_LOGPIO(imp_sth));
       }
-      if (rc == SQL_SUCCESS_WITH_INFO) {
+      if (rc == SQL_SUCCESS_WITH_INFO || rc == SQL_NO_DATA) {
 	 AllODBCErrors(imp_sth->henv, imp_sth->hdbc, imp_sth->hstmt, ODBC_TRACE_LEVEL(imp_sth) >= 8, DBIc_LOGPIO(imp_dbh));
       }
       imp_sth->done_desc = 0;	/* reset describe flags, so that we re-describe */
