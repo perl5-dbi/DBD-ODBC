@@ -1,4 +1,6 @@
 #!/usr/bin/perl -I./t -w
+# $Id$
+
 $| = 1;
 
 use strict;

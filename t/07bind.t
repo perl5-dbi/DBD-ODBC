@@ -1,4 +1,6 @@
 #!/usr/bin/perl -I./t
+# $Id$
+
 $| = 1;
 
 # to help ActiveState's build process along by behaving (somewhat) if a dsn is not provided

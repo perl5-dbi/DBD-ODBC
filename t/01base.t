@@ -1,4 +1,5 @@
 #!/usr/bin/perl 
+# $Id$
 
 print "1..$tests\n";
 
