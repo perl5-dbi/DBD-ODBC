@@ -6,6 +6,7 @@ README
 README.adabas
 README.informix
 README.RH9
+README.hpux
 ODBC.h
 ODBC.pm
 ODBC.xs
