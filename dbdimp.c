@@ -489,10 +489,14 @@ SV   *attr;
      * SQLDriverConnect handles/maps/fixes db connections and can optionally
      * add a dialog box to the application.  
      */
-    if (strlen(dbname) > SQL_MAX_DSN_LENGTH || dsnHasDriverOrDSN(dbname) && !dsnHasUIDorPWD(dbname)) {
+    if ((strlen(dbname) > SQL_MAX_DSN_LENGTH || dsnHasDriverOrDSN(dbname)) && !dsnHasUIDorPWD(dbname)) {
        sprintf(dbname_local, "%s;UID=%s;PWD=%s;", dbname, uid, pwd);
-       uid=NULL;
-       pwd=NULL;
+       /*
+        * Removed resetting these due to issues, potentially causing
+        * errors connecting
+        * uid=NULL;
+        * pwd=NULL;
+        */
        dbname = dbname_local;
        /* strcpy(dbname_local, dbname); */
     }
@@ -887,7 +891,7 @@ HSTMT hstmt;
               */
              XPUSHs(sv_2mortal(newSVpv(sqlstate, 0)));
              XPUSHs(sv_2mortal(newSVpv(ErrorMsg, 0)));
-
+	     XPUSHs(sv_2mortal(newSViv(NativeError)));
 
              PUTBACK;
              if((count = perl_call_sv(imp_dbh->odbc_err_handler, G_SCALAR)) != 1)

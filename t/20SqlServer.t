@@ -410,10 +410,10 @@ Test($dbh->{odbc_async_exec});
 # of the error handler stuff I have.
 my $testpass = 0;
 sub err_handler {
-   my ($state, $msg) = @_;
+   my ($state, $msg, $nativeerr) = @_;
    # Strip out all of the driver ID stuff
    $msg =~ s/^(\[[\w\s]*\])+//;
-   print "===> state: $state msg: $msg\n";
+   print "===> state: $state msg: $msg nativeerr: $nativeerr\n";
    $testpass++;
    return 0;
 }

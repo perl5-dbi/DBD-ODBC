@@ -562,6 +562,9 @@ This can also be used for procedures under MS SQL Server (Sybase too, probably)
 to obtain messages from system procedures such as DBCC.  Check t/20SQLServer.t
 and mytest/testerrhandler.pl
 
+The callback function takes three parameters: the SQLState, the ErrorMessage and
+the native server error.
+ 
 =item odbc_SQL_ROWSET_SIZE
 
 Here is the information from the original patch, however, I've learned

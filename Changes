@@ -23,9 +23,10 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
 =item Changes in DBD::ODBC 1.07 February 19, 2003
 
  Added to Subversion version control hosted by perl.org.  Thanks Robert!  See ODBC.pm POD for more information.
- Added contributing section to ODBC.pm POD -- see more details there
- Fix for Makefile.PL not having tab in front of $(NOOP) (Finally)
- Fix for SQLForeignKeys thanks to Kevin Shepherd
+ Added contributing section to ODBC.pm POD -- see more details there!
+ Added parameter to odbc_errhandler for the NativeError -- thanks to Martin Busek.
+ Fix for Makefile.PL not having tab in front of $(NOOP) (Finally).
+ Fix for SQLForeignKeys thanks to Kevin Shepherd.
 
 =item Changes in DBD::ODBC 1.06 June 19, 2003
 
