@@ -1,4 +1,4 @@
-# $Id: ODBC.pm,v 1.12 1998/08/14 19:29:50 timbo Exp $
+# $Id$
 #
 # Copyright (c) 1994,1995,1996,1998  Tim Bunce
 # portions Copyright (c) 1997,1998  Jeff Urlwin

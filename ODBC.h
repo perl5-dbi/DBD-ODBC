@@ -1,5 +1,5 @@
 /*
- * $Id: ODBC.h,v 1.8 1998/08/08 16:58:30 timbo Exp $
+ * $Id$
  * Copyright (c) 1994,1995,1996,1997  Tim Bunce
  *
  * You may distribute under the terms of either the GNU General Public

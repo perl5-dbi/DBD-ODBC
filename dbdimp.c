@@ -1,4 +1,4 @@
-/* $Id: dbdimp.c,v 1.11 1998/08/14 18:28:20 timbo Exp $
+/* $Id$
  * 
  * portions Copyright (c) 1994,1995,1996,1997  Tim Bunce
  * portions Copyright (c) 1997 Thomas K. Wenrich
