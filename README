@@ -11,11 +11,10 @@ DBD::ODBC -- DBD module interfacing the ODBC databases.
 
    PLEASE READ THE ENTIRE README FILE CAREFULLY !
 
-   WARNING: THIS IS MOSTLY ALPHA SOFTWARE. Your mileage may vary.
 
 *BEFORE* BUILDING, TESTING AND INSTALLING this you will need to:
 
-    Build, test and install Perl 5
+    Build, test and install Perl 5 (as per DBI specifications/compatibility)
     It is very important to TEST it and INSTALL it!
 
     Build, test and install the DBI module (at least DBI 1.201).
@@ -60,6 +59,9 @@ TESTING
   addition to discovering it.
 
 
+  If any of the tests fail and you are using SQL Server and Windows drivers,
+  ensure you updated to MDAC 2.7 or later.
+
 NOTES on ODBC Drivers and Compatibility with DBD-ODBC
 
 This version utilizes at least one "Level 2" ODBC call (SQLDescribeParam).  
@@ -73,6 +75,7 @@ parameters.
 
 In some future version you should be able to use bind_param even on
 level 1 drivers.  This is a VERY low priority!
+
 
 
 KNOWN COMPATIBLE Drivers (w/level 2 calls):
@@ -129,7 +132,7 @@ Tim and Jeff.
 ===============================================================================
 Other info:
 
-DBI 'home page': http://www.arcana.co.uk/technologia/perl/DBI/index.html
+DBI 'home page': http://dbi.perl.org
 
 perldoc DBI
 perldoc DBD::ODBC	(which will include the DBD::ODBC FAQ list)

@@ -1,4 +1,6 @@
 use DBI;
+# $Id$
+
 use DBI::Const;
 
 $\ = "\n";

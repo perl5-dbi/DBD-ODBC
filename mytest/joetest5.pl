@@ -1,4 +1,6 @@
 #!perl -w
+# $Id$
+
 use strict;
 use DBI qw(:sql_types);
 my $dbh=DBI->connect() or die "Can't connect";

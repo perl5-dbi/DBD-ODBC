@@ -41,7 +41,8 @@ our $opt_o = '';
 Getopt::Long::GetOptions("g!" => \$opt_g,
 	   "o=s" => \$opt_o) or die "Invalid arguments";
 
-    print "Overriding ODBC Directory with command line option: $opt_o\n" if $opt_o ;
+print "Overriding ODBC Directory with command line option: $opt_o\n" if $opt_o ;
+print "Setting debug options!\n" if $opt_g ;
 $opts{OPTIMIZE} = '-g -O0' if $opt_g;
 
 print "\nConfiguring DBD::ODBC ...\n
@@ -400,7 +401,7 @@ print SQLH qq{\n};
 close(SQLH);
 
 print "\n";
-WriteMakefile(%opts);
+my $rv = WriteMakefile(%opts);
 
 local($^W)=0;
 print qq{
@@ -415,6 +416,8 @@ print "Warning: DBI_DSN ($ENV{DBI_DSN}) doesn't start with 'dbi:ODBC:'\n"
 	if ($ENV{DBI_DSN} && $ENV{DBI_DSN} !~ m/^dbi:ODBC:/);
 print "\n";
 
+$rv;
+
 sub MY::post_constants {
    my ($self) = shift;
 
@@ -424,7 +427,7 @@ inst_libdbdodbc = ' . File::Spec->catdir($self->{INST_LIB}, 'DBD/ODBC') . '
 changes_pm = ' . File::Spec->catfile($self->{INST_LIB}, 'DBD/ODBC', 'Changes.pm') . '
 
 config :: $(changes_pm)
-    @$(NOOP)
+	@$(NOOP)
 
 $(changes_pm): Changes
 	$(NOECHO) $(MKPATH) $(inst_libdbdodbc)

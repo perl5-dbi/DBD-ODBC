@@ -1,4 +1,6 @@
 #perl -w
+# $Id$
+
 use DBI;
 
 # my $DSN = 'driver=Microsoft Access Driver (*.mdb);dbq=\\\\cheese\\g$\\perltest.mdb'; 

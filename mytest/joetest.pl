@@ -1,4 +1,6 @@
 #!perl -w
+# $Id$
+
 use strict;
 use Getopt::Std;
 use DBI qw(:sql_types);

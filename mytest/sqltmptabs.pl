@@ -1,4 +1,6 @@
 use DBI;
+# $Id$
+
 
 my $dbh = DBI->connect($ENV{DBI_DSN}, $ENV{DBI_USER}, $ENV{DBI_PASS}, { RaiseError => 1});
 my $sth;

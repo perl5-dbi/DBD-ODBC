@@ -1,4 +1,6 @@
 #/usr/bin/perl -w
+# $Id$
+
 use strict;
 use DBI qw (:sql_types);
 use Digest::MD5 qw(md5 md5_hex);

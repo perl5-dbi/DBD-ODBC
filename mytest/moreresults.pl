@@ -1,4 +1,6 @@
 #!perl -w
+# $Id$
+
 #
 # Sorry -- this test is pretty specific to MSSQL Server and Sybase...
 #

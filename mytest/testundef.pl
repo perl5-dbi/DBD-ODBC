@@ -1,4 +1,6 @@
 #perl -w
+# $Id$
+
 use DBI;
 
 my $dbh = DBI->connect()

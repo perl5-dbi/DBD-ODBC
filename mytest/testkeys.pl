@@ -1,4 +1,6 @@
 #!/usr/bin/perl -w -I./t
+# $Id$
+
 
 # use strict;
 use DBI qw(:sql_types);

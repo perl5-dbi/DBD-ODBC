@@ -520,7 +520,11 @@ Allow errors to be handled by the application.  A call-back function supplied
 by the application to handle or ignore messages.  If the error handler returns
 0, the error is ignored, otherwise the error is passed through the normal
 DBI error handling structure(s).
- 
+
+This can also be used for procedures under MS SQL Server (Sybase too, probably)
+to obtain messages from system procedures such as DBCC.  Check t/20SQLServer.t
+and mytest/testerrhandler.pl
+
 =item odbc_SQL_ROWSET_SIZE
 
 Here is the information from the original patch, however, I've learned
