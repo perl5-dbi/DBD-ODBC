@@ -35,7 +35,7 @@ my @data_long = (
 	[ 6, 'bletch2', $longstr3, "{d '2000-05-15'}", "{ts '2000-05-15 00:01:00'}" ],
 );
 my $tab_insert_ok = 1;
-$rc = tab_insert($dbh, \@data);
+$rc = ODBCTEST::tab_insert_bind($dbh, \@data, 1);
 unless ($rc) {
 	warn "Test 4 is known to fail often. It is not a major concern.  It *may* be an indication of being unable to bind datetime values correctly.\n";
 	$tab_insert_ok = 0;
@@ -50,7 +50,7 @@ print "not " unless($rc);
 print "ok 5\n";
 
 print " Test 6: insert long test data\n";
-$rc = tab_insert($dbh, \@data_long);
+$rc = ODBCTEST::tab_insert_bind($dbh, \@data_long, 1);
 unless ($rc) {
 	if ($tab_insert_ok) {
 	    warn "Since test #4 succeeded, this could be indicative of a problem with long inserting, with binding parameters.\n";
@@ -88,7 +88,7 @@ sub tab_select {
     my @data = @{$dref};
     my @row;
 
-    my $sth = $dbh->prepare("SELECT A,B,C,D FROM $ODBCTEST::table_name WHERE A = ?")
+    my $sth = $dbh->prepare("SELECT COL_A,COL_B,COL_C,COL_D FROM $ODBCTEST::table_name WHERE COL_A = ?")
 		or return undef;
     my $bind_val;
     foreach (@data) {
@@ -110,46 +110,13 @@ sub tab_select {
     return 1;
 }	
 
-sub tab_insert {
-    my $dbh = shift;
-    my $dref = shift;
-    my @data = @{$dref};
-
-    my $sth = $dbh->prepare(<<"/");
-INSERT INTO $ODBCTEST::table_name (A, B, C, D)
-VALUES (?, ?, ?, ?)
-/
-    unless ($sth) {
-	warn $DBI::errstr;
-	return 0;
-    }
-    $sth->{PrintError} = 1;
-    foreach (@data) {
-	my @row;
-	@row = ODBCTEST::get_type_for_column($dbh, 'A');
-	$sth->bind_param(1, $_->[0], { TYPE => $row[1] });
-	@row = ODBCTEST::get_type_for_column($dbh, 'B');
-	$sth->bind_param(2, $_->[1], { TYPE => $row[1] });
-	@row = ODBCTEST::get_type_for_column($dbh, 'C');
-	$sth->bind_param(3, $_->[2], { TYPE => $row[1] });
-
-	print "SQL_DATE = ", SQL_DATE, " SQL_TIMESTAMP = ", SQL_TIMESTAMP, "\n";
-	@row = ODBCTEST::get_type_for_column($dbh, 'D');
-	print "TYPE FOUND = $row[1]\n";
-	print "Binding the date value: \"$_->[$row[1] == SQL_DATE ? 3 : 4]\"\n";
-	$sth->bind_param(4, $_->[$row[1] == SQL_DATE ? 3 : 4], { TYPE => $row[1] });
-	return 0 unless $sth->execute;
-    }
-    1;
-}
-
 sub tab_update_long {
     my $dbh = shift;
     my $dref = shift;
     my @data = @{$dref};
 
     my $sth = $dbh->prepare(<<"/");
-UPDATE $ODBCTEST::table_name SET C = ? WHERE A = ?
+UPDATE $ODBCTEST::table_name SET COL_C = ? WHERE COL_A = ?
 /
     unless ($sth) {
 	warn $DBI::errstr;
@@ -159,9 +126,9 @@ UPDATE $ODBCTEST::table_name SET C = ? WHERE A = ?
     foreach (@data) {
 	# change the data...
 	$_->[2] .= "  " . $_->[2];
-	@row = ODBCTEST::get_type_for_column($dbh, 'C');
+	@row = ODBCTEST::get_type_for_column($dbh, 'COL_C');
 	$sth->bind_param(1, $_->[2], { TYPE => $row[1] });
-	@row = ODBCTEST::get_type_for_column($dbh, 'A');
+	@row = ODBCTEST::get_type_for_column($dbh, 'COL_A');
 	$sth->bind_param(2, $_->[0], { TYPE => $row[1] });
 
 	return 0 unless $sth->execute;

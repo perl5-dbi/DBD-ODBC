@@ -6,9 +6,6 @@ use ODBCTEST;
 
 print "1..$tests\n";
 
-my ($longstr) = "THIS IS A STRING LONGER THAN 80 CHARS.  THIS SHOULD BE CHECKED FOR TRUNCATION AND COMPARED WITH ITSELF.";
-my ($longstr2) = $longstr . "  " . $longstr . "  " . $longstr . "  " . $longstr;
-
 print "ok 1\n";
 
 print " Test 2: connecting to the database\n";
@@ -33,7 +30,7 @@ print "not " unless($rc >= 0);
 print "ok 4\n";
 
 print " Test 5: insert test data\n";
-$rc = tab_insert($dbh);
+$rc = ODBCTEST::tab_insert($dbh);
 print "not " unless($rc);
 print "ok 5\n";
 
@@ -46,6 +43,7 @@ print " Tests 7,8: test LongTruncOk\n";
 $rc = undef;
 $dbh->{LongReadLen} = 50;
 $dbh->{LongTruncOk} = 1;
+$dbh->{PrintError} = 0;
 $rc = select_long($dbh);
 print "not " unless($rc);
 print "ok 7\n";
@@ -56,7 +54,7 @@ print "not " if ($rc);
 print "ok 8\n";
 
 print " Test 9: test ColAttributes\n";
-$sth = $dbh->prepare("SELECT * FROM $ODBCTEST::table_name ORDER BY A");
+my $sth = $dbh->prepare("SELECT * FROM $ODBCTEST::table_name ORDER BY COL_A");
 
 if ($sth) {
 	$sth->execute();
@@ -92,7 +90,7 @@ print "not " if (length($DBI::err) < 1);
 print "ok 10\n";
 
 print " Test 11: test date values\n";
-$sth = $dbh->prepare("SELECT D FROM $ODBCTEST::table_name WHERE D > {d '1998-05-13'}");
+$sth = $dbh->prepare("SELECT COL_D FROM $ODBCTEST::table_name WHERE COL_D > {d '1998-05-13'}");
 $sth->execute();
 my $count = 0;
 while (@row = $sth->fetchrow) {
@@ -103,7 +101,7 @@ print "not " if $count != 1;
 print "ok 11\n";
 
 print " Test 12: test group by queries\n";
-$sth = $dbh->prepare("SELECT A, COUNT(*) FROM $ODBCTEST::table_name GROUP BY A");
+$sth = $dbh->prepare("SELECT COL_A, COUNT(*) FROM $ODBCTEST::table_name GROUP BY COL_A");
 $sth->execute();
 $count = 0;
 while (@row = $sth->fetchrow) {
@@ -127,7 +125,25 @@ print " Test 14: test ping method\n";
 print "not " unless $dbh->ping;
 print "ok 14\n";
 
-BEGIN {$tests = 14;}
+print " Test 15: test storing of DBH parameter\n";
+if ($dbh->{odbc_ignore_named_placeholders}) {
+   print "Attrib not 0 to start (", $dbh->{odbc_ignore_named_placeholders}, ")\nnot ";
+} else {
+   $dbh->{odbc_ignore_named_placeholders} = 1;
+   print "Attrib not true (", $dbh->{odbc_ignore_named_placeholders}, ")\nnot " unless $dbh->{odbc_ignore_named_placeholders};
+}
+print "ok 15\n";
+
+print "ok 16\n";
+
+print " Test 17: test get_info\n";
+my $dbname;
+$dbname = $dbh->get_info(17); # SQL_DBMS_NAME
+print " connected to $dbname\n";
+print "\nnot " unless (defined($dbname) && $dbname ne '');
+print "ok 17\n";
+
+BEGIN {$tests = 17;}
 exit(0);
 
 sub tab_select
@@ -138,7 +154,7 @@ sub tab_select
 
     $dbh->{LongReadLen} = 1000;
 
-    my $sth = $dbh->prepare("SELECT * FROM $ODBCTEST::table_name ORDER BY A")
+    my $sth = $dbh->prepare("SELECT * FROM $ODBCTEST::table_name ORDER BY COL_A")
 		or return undef;
     $sth->execute();
     while (@row = $sth->fetchrow())	{
@@ -152,24 +168,24 @@ sub tab_select
     }
     $sth->finish();
     
-    $sth = $dbh->prepare("SELECT A,C FROM $ODBCTEST::table_name WHERE A>=4")
+    $sth = $dbh->prepare("SELECT COL_A,COL_C FROM $ODBCTEST::table_name WHERE COL_A>=4")
 	   or return undef;
     $sth->execute();
     while (@row = $sth->fetchrow()) {
 	if ($row[0] == 4) {
-	    if ($row[1] eq $longstr) {
-		print "retrieved ", length($longstr), " byte string OK\n";
+	    if ($row[1] eq $ODBCTEST::longstr) {
+		print "retrieved ", length($ODBCTEST::longstr), " byte string OK\n";
 	    } else {
 		print "Basic retrieval of longer rows not working!\nRetrieved value = $row[0]\n";
 		return 0;
 	    }
 	} elsif ($row[0] == 5) {
-	    if ($row[1] eq $longstr2) {
-		print "retrieved ", length($longstr2), " byte string OK\n";
+	    if ($row[1] eq $ODBCTEST::longstr2) {
+		print "retrieved ", length($ODBCTEST::longstr2), " byte string OK\n";
 	    } else {
 		print "Basic retrieval of row longer than 255 chars not working!",
 						"\nRetrieved ", length($row[1]), " bytes instead of ", 
-						length($longstr2), "\nRetrieved value = $row[1]\n";
+						length($ODBCTEST::longstr2), "\nRetrieved value = $row[1]\n";
 		return 0;
 	    }
 	}
@@ -178,34 +194,6 @@ sub tab_select
     return 1;
 }
 
-#
-# show various ways of inserting data without binding parameters.
-# Note, these are not necessarily GOOD ways to
-# show this...
-#
-sub tab_insert {
-    my $dbh = shift;
-
-    # qeDBF needs a space after the table name!
-    my $stmt = "INSERT INTO $ODBCTEST::table_name (A, B, C, D) VALUES ("
-	    . join(", ", 3, $dbh->quote("bletch"), $dbh->quote("bletch varchar"), 
-			"{d '1998-05-10'}"). ")";
-    my $sth = $dbh->prepare($stmt) || die "prepare: $stmt: $DBI::errstr";
-    $sth->execute || die "execute: $stmt: $DBI::errstr";
-    $sth->finish;
-
-    $dbh->do(qq{INSERT INTO $ODBCTEST::table_name (A, B, C, D) VALUES (1, 'foo', 'foo varchar', \{d '1998-05-11'\})});
-    $dbh->do(qq{INSERT INTO $ODBCTEST::table_name (A, B, C, D) VALUES (2, 'bar', 'bar varchar', \{d '1998-05-12'\})});
-    $stmt = "INSERT INTO $ODBCTEST::table_name (A, B, C, D) VALUES ("
-	    . join(", ", 4, $dbh->quote("80char"), $dbh->quote($longstr), "{d '1998-05-13'}"). ")";
-    $sth = $dbh->prepare($stmt) || die "prepare: $stmt: $DBI::errstr";
-    $sth->execute || die "execute: $stmt: $DBI::errstr";
-    $stmt = "INSERT INTO $ODBCTEST::table_name (A, B, C, D) VALUES ("
-	    . join(", ", 5, $dbh->quote("gt250char"), $dbh->quote($longstr2), "{d '1998-05-14'}"). ")";
-    $sth = $dbh->prepare($stmt) || die "prepare: $stmt: $DBI::errstr";
-    $sth->execute || die "execute: $stmt: $DBI::errstr";
-    $sth->finish;
-}
 
 sub select_long
 {
@@ -215,7 +203,7 @@ sub select_long
 	my $rc = undef;
 	
 	$dbh->{RaiseError} = 1;
-	$sth = $dbh->prepare("SELECT A,C FROM $ODBCTEST::table_name WHERE A=4");
+	$sth = $dbh->prepare("SELECT COL_A,COL_C FROM $ODBCTEST::table_name WHERE COL_A=4");
 	if ($sth) {
 		$sth->execute();
 		eval {

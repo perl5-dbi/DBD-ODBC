@@ -11,7 +11,7 @@ use ExtUtils::MakeMaker 5.16, qw(&WriteMakefile $Verbose);
 use File::Basename;
 use Getopt::Long;
 
-use DBI 0.93;		# must be installed first
+use DBI 1.201;		# must be installed first
 use DBI::DBD;
 use strict;
 
@@ -22,12 +22,12 @@ my %opts =
     clean	=> { FILES=> 'ODBC.xsi dbdodbc.h' },
     dist	=> {
 	#DIST_DEFAULT=> 'clean distcheck disttest ci tardist',
-	DIST_DEFAULT=> 'clean distcheck ci tardist',
+	DIST_DEFAULT=> 'clean distcheck tardist',
 	PREOP    => '$(MAKE) -f Makefile.old distdir',
 	COMPRESS => 'gzip -v9', SUFFIX => 'gz'
     },
     OBJECT	=> '$(O_FILES)',
-);
+ );
 if ($ExtUtils::MakeMaker::VERSION >= 5.43) {
     $opts{AUTHOR} = 'Tim Bunce and Jeff Urlwin ( http://www.isc.org/dbi-lists.html )';
     $opts{ABSTRACT} = 'ODBC driver for the DBI module.';
@@ -73,12 +73,18 @@ else {
 
     my $odbchome= $::opt_o || $ENV{ODBCHOME};
 
+    $odbchome = VMS::Filespec::unixify($odbchome) if $^O eq 'VMS';
+
     # per patches from Teun Burgers
-    if (!$odbchome && $ENV{WINDIR} && $^O =~ /^cygwin/) {
+    if (!$odbchome && $ENV{WINDIR} && $^O eq 'cygwin') {
 	my $tmp_odbchome = $ENV{WINDIR};
 	$tmp_odbchome =~ s/^([A-Za-z]):*$/\/\/$1/;
 	$tmp_odbchome =~ s/\\/\//g;
 	$odbchome = $tmp_odbchome if (-e "$tmp_odbchome/odbc.ini")
+    }
+
+    if (!$odbchome && -f '/opt/sapdb/interfaces/odbc/lib/libsqlod.a') {
+	$odbchome = '/opt/sapdb/interfaces/odbc/';
     }
 
     unless ($odbchome) {
@@ -107,14 +113,13 @@ else {
     $opts{LIBS} = " -L$lib_d1 -R$lib_d1 -L$lib_d2 -R$lib_d2 -l$libs";
 
     my $myodbc ='';	# edit and hack to suit!
-
-    $myodbc = 'MicroSoft ODBC'
+    $myodbc = 'Microsoft ODBC'
                  if (    -e "$odbchome/system/odbc32.dll" or
 			 -e "$odbchome/system32/odbc32.dll" or
                          -e "$odbchome/odbc32.dll");
     # per patches from Nick Gorham
     $myodbc = 'unixodbc'
-		if <$odbchome/lib/libodbc*>;
+		if <$odbchome/lib/libodbc.*>;
 
     $myodbc = 'iodbc'
 		if (<$odbchome/*iodbc*> || <$odbchome/lib/*iodbc*>);
@@ -127,6 +132,9 @@ else {
 
     $myodbc = 'intersolve'
 		if -f "$odbchome/include/qeodbc.h";
+
+    $myodbc = 'sapdb'
+	        if -f "$odbchome/lib/libsqlod.a";
 
     $myodbc = 'adabas'
 		if $ENV{DBROOT} && $odbchome eq $ENV{DBROOT} && -f "$odbchome/lib/odbclib.a";
@@ -142,14 +150,16 @@ else {
 
     warn "\nUmm, this looks like a $myodbc type of driver manager.\n";
 
-    if ($myodbc =~ /^MicroSoft ODBC/) {
-	print "\nBuilding for MicroSoft under CygWin32\n";
-	$opts{LIBS} = "-lodbc32 -lodbccp32";
+    if ($myodbc eq 'Microsoft ODBC') {
+	print "\nBuilding for Microsoft under Cygwin\n";
+	$opts{LIBS} = "-L/usr/lib/w32api -lodbc32";
+        print SQLH "#include <windows.h>\n";
         print SQLH "#include <sql.h>\n";
         print SQLH "#include <sqlext.h>\n";
-        $opts{dynamic_lib} = {OTHERLDFLAGS => "-lodbc32 -lodbccp32"};
+        print SQLH "#undef WIN32\n";
+        $opts{dynamic_lib} = {OTHERLDFLAGS => "-lodbc32"};
     }
-    if ($myodbc eq 'iodbc') {
+    elsif ($myodbc eq 'iodbc') {
 	my $ilibdir = "$odbchome/lib"; 
 	my @ilibs = <$ilibdir/*iodbc*.*>;
 	@ilibs = grep { /\.($Config{so}|$Config{dlext}|a)$/ } @ilibs;
@@ -185,7 +195,7 @@ else {
 	#print SQLH qq{#include "fixup_t.h"\n};
     }
     elsif ($myodbc eq 'unixodbc') {
-	my @ilibs = <$odbchome/lib/*odbc*.*>;
+	my @ilibs = <$odbchome/lib/libodbc.*>;
 	@ilibs = grep { /\.($Config{so}|$Config{dlext}|a)$/ } @ilibs;
 	die "That's odd, I can't see any unixodbc libs in $odbchome" unless @ilibs;
 	print "We expect to find the sql.h, sqlext.h and (which were\n";
@@ -211,25 +221,40 @@ else {
     elsif ($myodbc eq 'esodbc') {
 	my @ilibs = <$odbchome/*esoobclient.*>;
 	print "Located library @ilibs\n";
-	@ilibs = grep { /\.($Config{so}|$Config{dlext}|a)$/ } @ilibs;
+	# omit . prefix in next grep as some $Config types have . and some don't
+	@ilibs = grep { /($Config{so}|$Config{dlext}|$Config{lib_ext})$/ } @ilibs;
 	die "That's odd, I can't see any esoobclient libs in $odbchome" unless @ilibs;
 	print "We expect to find the sql.h and sqlext.h files (which were\n";
-	print "supplied with esoobclient) in \$ODBCHOME\include directory alongside\n";
+	print "supplied with esoobclient) in \$ODBCHOME/include directory alongside\n";
 	print "the @ilibs library.\n\n";
 	my $ilibpath = $ilibs[0]; # XXX if both .so and .a, pick based on LINKTYPE?
 	my $ilibname = basename($ilibpath);
 	print "Using library $ilibname\n";
-	$opts{DEFINE} = "-I$odbchome/include";
+	$opts{INC} .= " -I$odbchome/include";
+	#
+	# ptrmismatch avoids the char/unsigned problems in DBD
+	# outtyplen is one incorrect fprintf in dbiimp.c(200)
+	# promotmatchw - old prototypes problem
+	#
+	$opts{CCFLAGS} .= "/warnings=informational=(outtypelen,ptrmismatch,promotmatchw)"
+	    if ($Config{cc} =~ /DECC/ && $^O eq 'VMS' );
 	if ($ilibname =~ /^esoobclient/) { # no "lib" prefix
 	    $opts{LIBS} = "";
 	    $opts{dynamic_lib} = { OTHERLDFLAGS => "$ilibpath" };
 	}
 	else {
-	    # remove lib prefix and .so suffix so "-l" style link can be used
+	    my $extralibs="";
+	    if (($^O eq 'VMS') && ($ilibname =~ /$Config{lib_ext}$/)) {
+		    $extralibs = " -lcs_share -lsupport -leasyrpc";
+		    print "Adding libraries $extralibs\n";
+	    }
+	    # remove lib prefix and so suffix so "-l" style link can be used
 	    $ilibname =~ s/^lib(esoobclient.*?)\.\w+$/$1/;
-	    $opts{LIBS} = "-L$odbchome -l$ilibname";
-	    warn "Warning: LD_LIBRARY_PATH doesn't include $odbchome\n"
-		unless $ENV{LD_LIBRARY_PATH} =~ /\Q$odbchome/;
+	    $opts{LIBS} = "-L$odbchome -l$ilibname $extralibs";
+	    if ($^O ne "VMS") {
+	       warn "Warning: LD_LIBRARY_PATH doesn't include $odbchome\n"
+		     unless $ENV{LD_LIBRARY_PATH} =~ /\Q$odbchome/;
+	    }
 	}
 	print SQLH qq{#define FAR \n#define EXPORT \n#define CALLBACK \n};
 	print SQLH qq{#include <sqlext.h>\n};
@@ -257,6 +282,19 @@ else {
 	print SQLH qq{#include <odbcsys.h>\n};
 	print SQLH qq{#include <sql.h>\n#include <sqlext.h>\n};
 	$opts{LIBS} = "-L$odbchome/lib -R$odbchome/lib -lempodbc";
+    }
+    elsif ($myodbc eq 'sapdb') {
+	print SQLH "#include <WINDOWS.H>\n";
+	print SQLH "#include <sql.h>\n";
+	print SQLH "#include <sqlext.h>\n";
+	print SQLH "#define HENV SQLHENV\n";
+	print SQLH "#define HDBC SQLHDBC\n";
+	print SQLH "#define HSTMT SQLHSTMT\n";
+	print SQLH "#define DBD_ODBC_NO_SQLDRIVERCONNECT\n";
+	print SQLH qq{#define DBD_ODBC_NO_DATASOURCES\n}; # unless ($^O eq 'MSWin32');
+
+	$opts{INC} .= " -I$odbchome/incl";
+	$opts{LDFROM} = "\$(OBJECT) $odbchome/lib/libsqlod.a";
     }
     elsif ($myodbc eq 'adabas') {
 	print SQLH "#define FAR \n#define EXPORT \n#define CALLBACK \n";

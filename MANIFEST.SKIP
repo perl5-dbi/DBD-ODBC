@@ -9,3 +9,6 @@
 ^tags$
 \.rej$
 \.orig$
+\.exists
+\.obj$
+dbdodbc.h

@@ -1,8 +1,10 @@
 /*
  * $Id$
- * Copyright (c) 1997 Jeff Urlwin
+ * Copyright (c) 1997-2001 Jeff Urlwin
  * portions Copyright (c) 1997  Thomas K. Wenrich
  * portions Copyright (c) 1994,1995,1996  Tim Bunce
+ * portions Copyright (c) 1997-2001 Jeff Urlwin
+ * portions Copyright (c) 2001 Dean Arnold
  *
  * You may distribute under the terms of either the GNU General Public
  * License or the Artistic License, as specified in the Perl README file.
@@ -27,8 +29,12 @@ struct imp_dbh_st {
     dbih_dbc_t com;		/* MUST be first element in structure	*/
     HENV henv;			/* copy from imp_drh for speed		*/
     HDBC hdbc;
+    char odbc_ver[20];  /* ODBC compat. version for driver */
+    int  odbc_ignore_named_placeholders;	/* flag to ignore named parameters */
+    int  odbc_default_bind_type;	/* flag to set default binding type (experimental) */
+    int  odbc_sqldescribeparam_supported; /* flag to see if SQLDescribeParam is supported */
+    int  odbc_sqlmoreresults_supported; /* flag to see if SQLDescribeParam is supported */
 };
-
 
 /* Define sth implementor data structure */
 struct imp_sth_st {
@@ -57,6 +63,15 @@ struct imp_sth_st {
 				 * (unreliable for SELECT)
 				 */
     int eod;			/* End of data seen */
+    SV	*param_sts;			/* ref to param status array for array bound PHs */
+    int params_procd;			/* to recv number of parms processed by an SQLExecute() */
+    UWORD *param_status;		/* row indicators for array binding */
+    SV	*row_sts;			/* ref to row status array for array bound columns */
+    UDWORD rows_fetched;		/* actual number of rows fetched for array binding */
+    UDWORD max_rows;			/* max number of rows per fetch for array binding */
+    UWORD *row_status;			/* row indicators for array binding */
+    int  odbc_ignore_named_placeholders;	/* flag to ignore named parameters */
+    int  odbc_default_bind_type;	/* flag to set default binding type (experimental) */
 };
 #define IMP_STH_EXECUTING	0x0001
 
@@ -79,6 +94,10 @@ struct imp_fbh_st { 	/* field buffer EXPERIMENTAL */
 				 */
     UCHAR *data;		/* points into sth->RowBuffer */
     SDWORD datalen;		/* length returned from fetch for single row. */
+    UDWORD maxcnt;		/* max num of rows to return per fetch */
+    SV *colary;			/* ref to array to recv output data */
+    SDWORD *col_indics;	/* individual column length/NULL indicators for array binding */
+    int is_array;		/* TRUE => bound to array */
 };
 
 
@@ -89,17 +108,22 @@ struct phs_st {  	/* scalar placeholder EXPERIMENTAL	*/
 
     SV  *sv;            /* the scalar holding the value         */
     int sv_type;        /* original sv type at time of bind     */
-	int biggestparam;    /* if sv_type is VARCHAR, size of biggest so far */
+    int biggestparam;    /* if sv_type is VARCHAR, size of biggest so far */
+    int scale;
     bool is_inout;
     IV  maxlen;         /* max possible len (=allocated buffer) */
     char *sv_buf;	/* pointer to sv's data buffer		*/
     int alen_incnull;
 
-    SWORD ftype;        /* external field type	       */
-    SWORD sql_type;     /* the sql type the placeholder should have in SQL	*/
-    SDWORD cbValue;	/* length of returned value */
-                        /* in Input: SQL_NULL_DATA */
-    char name[1];	/* struct is malloc'd bigger as needed	*/
+    SWORD ftype;			/* external field type	       */
+    SWORD sql_type;			/* the sql type the placeholder should have in SQL	*/
+    SWORD tgt_sql_type;			/* the PH SQL type the stmt expects     */
+    SDWORD tgt_len;			/* size or precision the stmt expects */
+    SDWORD cbValue;			/* length of returned value OR SQL_NULL_DATA */
+    SDWORD *indics;			/* ptr to indicator array for param arrays */
+    int is_array;			/* TRUE => parameter array */
+
+    char name[1];			/* struct is malloc'd bigger as needed	*/
 };
 
 
@@ -107,6 +131,7 @@ struct phs_st {  	/* scalar placeholder EXPERIMENTAL	*/
 
 #define dbd_init		odbc_init
 #define dbd_db_login		odbc_db_login
+#define dbd_db_login6		odbc_db_login6
 #define dbd_db_do		odbc_db_do
 #define dbd_db_commit		odbc_db_commit
 #define dbd_db_rollback		odbc_db_rollback

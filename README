@@ -1,6 +1,6 @@
 DBD::ODBC -- DBD module interfacing the ODBC databases.
 
-   $Id: README,v 1.5 1998/08/08 16:58:30 timbo Exp $
+   $Id$
 
    Copyright (c) 1994,1995,1996,1997,1998  Tim Bunce
    portions Copyright (c) 1997,1998 Jeff Urlwin
@@ -23,6 +23,7 @@ DBD::ODBC -- DBD module interfacing the ODBC databases.
 
     Remember to *read* the DBI README file!
 
+    Remember to *read* the ODBC.pm POD documentation!!!
 BUILDING:
 
   set-up these environment variables:
@@ -96,11 +97,11 @@ know so that I can try to make it automatic in a later release.
 This software is supported via the dbi-users mailing list.  For more
 information and to keep informed about progress you can join the a
 mailing list via http://www.fugue.com/dbi (if you are unable to use the
-web you can subscribe by sending a message to dbi-request@fugue.com, it
+web you can subscribe by sending a message to dbi-request@perl.org, it
 may take a few days to be processed).
 
 Please post details of any problems (or changes you needed to make) to
-dbi-users@fugue.com and CC them to me at jurlwin@bellatlantic.net. But note...
+dbi-users@perl.org and CC them to me at jurlwin@bellatlantic.net. But note...
 
 ** IT IS IMPORTANT TO INCLUDE THE FOLLOWING INFORMATION:
 

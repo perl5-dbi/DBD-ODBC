@@ -13,7 +13,7 @@ my $dbh = DBI->connect() || die "Connect failed: $DBI::errstr\n";
 print "ok 2\n";
 
 #### testing set/get of connection attributes
-
+$dbh->{RaiseError} = 0;
 $dbh->{'AutoCommit'} = 1;
 $rc = commitTest($dbh);
 print " ", $DBI->errstr, "" if ($rc < 0);
@@ -26,7 +26,7 @@ print "ok 4\n";
 $dbh->{'AutoCommit'} = 0;
 $rc = commitTest($dbh);
 print $DBI->errstr, "\n" if ($rc < 0);
-print "not" unless ($rc == 0);
+print "not " unless ($rc == 0);
 print "ok 5\n";
 $dbh->{'AutoCommit'} = 1;
 
@@ -57,7 +57,7 @@ sub commitTest {
     my $rc = -1;
     my $sth;
 
-    $dbh->do("DELETE FROM $ODBCTEST::table_name WHERE A = 100") or return undef;
+    $dbh->do("DELETE FROM $ODBCTEST::table_name WHERE COL_A = 100") or return undef;
 
     { # suppress the "commit ineffective" warning
       local($SIG{__WARN__}) = sub { };
@@ -69,7 +69,7 @@ sub commitTest {
 	  local($SIG{__WARN__}) = sub { };
       $dbh->rollback();
     }
-    $sth = $dbh->prepare("SELECT A FROM $ODBCTEST::table_name WHERE A = 100");
+    $sth = $dbh->prepare("SELECT COL_A FROM $ODBCTEST::table_name WHERE COL_A = 100");
     $sth->execute();
     if (@row = $sth->fetchrow()) {
         $rc = 1;
@@ -77,7 +77,8 @@ sub commitTest {
     else {
 	$rc = 0;
     }
-    $sth->finish();
+    # in case not all rows have been returned..there shouldn't be more than one.
+    $sth->finish(); 
     $rc;
 }
 

@@ -40,7 +40,7 @@ $sth->finish();
 print "ok 4\n";
 
 my ($a, $b);
-$sth = $dbh->prepare('SELECT A,B FROM PERL_DBD_TEST');
+$sth = $dbh->prepare('SELECT COL_A, COL_B FROM PERL_DBD_TEST');
 $sth->execute();
 while (@row = $sth->fetchrow())
     {
@@ -77,13 +77,16 @@ while ($sth->fetch())
     }
 print "ok 6\n";
 
+print "calling finish\n";
 $sth->finish();
 
 # turn off error warnings.  We expect one here (invalid transaction state)
+print "resetting attributes\n";
 $dbh->{RaiseError} = 0;
 $dbh->{PrintError} = 0;
+print "disconnecting\n";
 $dbh->disconnect();
-
+print "disconnected\n";
 # make sure there is an invalid transaction state error at the end here.
 # (XXX not reliable, iodbc-2.12 with "INTERSOLV dBase IV ODBC Driver" == -1)
 #print "# DBI::err=$DBI::err\nnot " if $DBI::err ne "25000";

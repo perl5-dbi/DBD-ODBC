@@ -9,7 +9,7 @@
 
 require 5.004;
 
-$DBD::ODBC::VERSION = '0.28';
+$DBD::ODBC::VERSION = '0.39';
 
 {
     package DBD::ODBC;
@@ -21,7 +21,7 @@ $DBD::ODBC::VERSION = '0.28';
 
     my $Revision = substr(q$Revision: 1.12 $, 10);
 
-    require_version DBI 0.86;
+    require_version DBI 1.201;
 
     bootstrap DBD::ODBC $VERSION;
 
@@ -59,7 +59,7 @@ $DBD::ODBC::VERSION = '0.28';
 
     sub connect {
 	my $drh = shift;
-	my($dbname, $user, $auth)= @_;
+	my($dbname, $user, $auth, $attr)= @_;
 	$user = '' unless defined $user;
 	$auth = '' unless defined $auth;
 
@@ -73,7 +73,7 @@ $DBD::ODBC::VERSION = '0.28';
 	# Call ODBC logon func in ODBC.xs file
 	# and populate internal handle data.
 
-	DBD::ODBC::db::_login($this, $dbname, $user, $auth) or return undef;
+	DBD::ODBC::db::_login($this, $dbname, $user, $auth, $attr) or return undef;
 
 	$this;
     }
@@ -117,17 +117,58 @@ $DBD::ODBC::VERSION = '0.28';
 
 
     sub table_info {
-	my($dbh) = @_;		# XXX add qualification
+ 	my($dbh, $catalog, $schema, $table, $type) = @_;
+
+	if ($#_ == 1) {
+	   my $attrs = $_[1];
+	   $catalog = $attrs->{TABLE_CAT};
+	   $schema = $attrs->{TABLE_SCHEM};
+	   $table = $attrs->{TABLE_NAME};
+	   $type = $attrs->{TABLE_TYPE};
+ 	}
+
+	$catalog = "" if (!$catalog);
+	$schema = "" if (!$schema);
+	$table = "" if (!$table);
+	$type = "" if (!$type);
 
 	# create a "blank" statement handle
 	my $sth = DBI::_new_sth($dbh, { 'Statement' => "SQLTables" });
 
-	# XXX use qualification(s) (qual, schema, etc?) here...
-	DBD::ODBC::st::_tables($dbh,$sth, "")
-		or return undef;
+	DBD::ODBC::st::_tables($dbh,$sth, $catalog, $schema, $table, $type)
+	      or return undef;
 	$sth;
     }
 
+    sub primary_key_info {
+       my ($dbh, $catalog, $schema, $table ) = @_;
+ 
+       # create a "blank" statement handle
+       my $sth = DBI::_new_sth($dbh, { 'Statement' => "SQLPrimaryKeys" });
+ 
+       $catalog = "" if (!$catalog);
+       $schema = "" if (!$schema);
+       $table = "" if (!$table);
+       DBD::ODBC::st::_primary_keys($dbh,$sth, $catalog, $schema, $table )
+	     or return undef;
+       $sth;
+    }
+
+    sub foreign_key_info {
+       my ($dbh, $pkcatalog, $pkschema, $pktable, $fkcatalog, $fkschema, $fktable ) = @_;
+ 
+       # create a "blank" statement handle
+       my $sth = DBI::_new_sth($dbh, { 'Statement' => "SQLForeignKeys" });
+ 
+       $pkcatalog = "" if (!$pkcatalog);
+       $pkschema = "" if (!$pkschema);
+       $pktable = "" if (!$pktable);
+       $fkcatalog = "" if (!$fkcatalog);
+       $fkschema = "" if (!$fkschema);
+       $fktable = "" if (!$fktable);
+       _GetForeignKeys($dbh, $sth, $pkcatalog, $pkschema, $pktable, $fkcatalog, $fkschema, $fktable) or return undef;
+       $sth;
+    }
 
     sub ping {
 	my $dbh = shift;
@@ -139,9 +180,16 @@ $DBD::ODBC::VERSION = '0.28';
 	    # JLU added local PrintError handling for completeness.
 	    # it shouldn't print, I think.
 	    local $dbh->{PrintError} = 0 if $dbh->{PrintError};
-	    my $sql = "select col_does_not_exist from table_does_not_exist";
-	    my $ok = $dbh->prepare($sql);
-	    # fixed "my" $state = below.  Was causing problem with ping!
+	    my $sql = "select sysdate from dual1__NOT_FOUND__CANNOT";
+	    my $sth = $dbh->prepare($sql);
+	    # fixed "my" $state = below.  Was causing problem with
+	    # ping!  Also, fetching fields as some drivers (Oracle 8)
+	    # may not actually check the database for activity until
+	    # the query is "described".
+	    # Right now, Oracle8 is the only known version which
+	    # does not actually check the server during prepare.
+	    my $ok = $sth && $sth->execute();
+
 	    $state = $dbh->state;
 	    $DBD::ODBC::err = 0;
 	    $DBD::ODBC::errstr = "";
@@ -149,6 +197,7 @@ $DBD::ODBC::VERSION = '0.28';
 	    return 1 if $ok;
 	}
 	return 1 if $state eq 'S0002';	# Base table not found
+ 	return 1 if $state eq '42S02';  # Base table not found.Solid EE v3.51
 	return 1 if $state eq 'S0022';	# Column not found
 	return 1 if $state eq '37000';  # statement could not be prepared (19991011, JLU)
 	# We assume that any other error means the database
@@ -157,6 +206,55 @@ $DBD::ODBC::VERSION = '0.28';
 	return 0;
     }
 
+    # New support for the next DBI which will have a get_info command.
+    # leaving support for ->func(xxx, GetInfo) (above) for a period of time
+    # to support older applications which used this.
+    sub get_info {
+	my ($dbh, $item) = @_;
+	# handle SQL_DRIVER_HSTMT, SQL_DRIVER_HLIB and
+	# SQL_DRIVER_HDESC specially
+	if ($item == 5 || $item == 135 || $item == 76) {
+	   return undef;
+	}
+	return _GetInfo($dbh, $item);
+    }
+
+    # new override of do method provided by Merijn Broeren
+    # this optimizes "do" to use SQLExecDirect for simple
+    # do statements without parameters.
+    sub do {
+        my($dbh, $statement, $attr, @params) = @_;
+        my $rows = 0;
+
+        if( -1 == $#params )
+        {
+          # No parameters, use execute immediate
+          $rows = ExecDirect( $dbh, $statement );
+          if( 0 == $rows )
+          {
+            $rows = "0E0";
+          }
+          elsif( $rows < -1 )
+          {
+            undef $rows;
+          }
+        }
+        else
+        {
+          $rows = $dbh->SUPER::do( $statement, $attr, @params );
+        }
+        return $rows
+    }
+
+    #
+    # can also be called as $dbh->func($sql, ExecDirect);
+    # if, for some reason, there are compatibility issues
+    # later with DBI's do.
+    #
+    sub ExecDirect {
+       my ($dbh, $sql) = @_;
+       _ExecDirect($dbh, $sql);
+    }
 
     # Call the ODBC function SQLGetInfo
     # Args are:
@@ -166,7 +264,7 @@ $DBD::ODBC::VERSION = '0.28';
     #
     sub GetInfo {
 	my ($dbh, $item) = @_;
-	_GetInfo($dbh, $item);
+	get_info($dbh, $item);
     }
 
     # Call the ODBC function SQLStatistics
@@ -228,6 +326,7 @@ $DBD::ODBC::VERSION = '0.28';
 
     sub type_info_all {
 	my ($dbh, $sqltype) = @_;
+	$sqltype = DBI::SQL_ALL_TYPES unless defined $sqltype;
 	my $sth = DBI::_new_sth($dbh, { 'Statement' => "SQLGetTypeInfo" });
 	_GetTypeInfo($dbh, $sth, $sqltype) or return undef;
 	my $info = $sth->fetchall_arrayref;
@@ -278,8 +377,278 @@ See L<DBI> for more information.
 =head2 Recent Updates
 
 =over 4
+=item B<An Important note about the tests!>
 
-=item B<DBD::DOBC 0.28>
+ Please note that some tests may fail or report they are
+ unsupported on this platform.  Notably Oracle's ODBC driver
+ will fail the "advanced" binding tests in t/08bind2.t.
+ These tests run perfectly under SQL Server 2000. This is
+ normal and expected.  Until Oracle fixes their drivers to
+ do the right thing from an ODBC perspective, it's going to
+ be tough to fix the issue.  The workaround for Oracle is to
+ bind date types with SQL_TIMESTAMP.
+   
+ Also note that some tests may be skipped, such as
+ t/09multi.t, if your driver doesn't seem to support
+ returning multiple result sets.
+
+=item B<DBD::ODBC 0.39>
+
+ Removing iodbcsrc directory as newer/better versions
+ can be found on the web at www.iodbc.org and
+ www.unixodbc.org.  On Linux, I currently build
+ with unixODBC verson 2.2.0.
+ 
+ Added patch for handling setting the ODBC environment
+ during the connect, thanks to Steffen Goeldner
+ 
+ The attached patch makes it possible to choose the
+ ODBC version. E.g.:
+ 
+   my $dbh = DBI->connect( ..., { odbc_version => 3 } )
+ 
+ directs the driver to exhibit ODBC 3.x behavior.
+
+ Fix to SQLColAttributes thanks to Nicolas DeRico
+
+ Changes to the connect sequence.  If SQLDriverConnect
+ is supported and fails, SQLConnect will be called
+ I<unless> (this is the new part) the length of the
+ DSN is > SQL_MAX_DSN_LENGTH or the DSN begins with
+ DSN=
+
+ New test in mytest which demonstrates long binary
+ types.  If you are having trouble inserting images
+ into your database, please check here.
+=item B<DBD::ODBC 0.38>
+
+ Fixed do function (again) thanks to work by Martin Evans.
+ 
+=item B<DBD::ODBC 0.37>
+
+ Patches for get_info where return type is string.  Patches
+ thanks to Steffen Goldner.  Thanks Steffen!
+
+ Patched get_info to NOT attempt to get data for SQL_DRIVER_HSTMT
+ and SQL_DRIVER_HDESC as they expect data in and have limited value
+ (IMHO).
+
+=item B<DBD::ODBC 0.37>
+
+ Further fixed build for ODBC 2.x drivers.  The new SQLExecDirect
+ code had SQLAllocHandle which is a 3.x function, not a 2.x function.
+ Sigh.  I should have caught that the first time.  Signed, the Mad-and-
+ not-thorough-enough-patcher.
+
+ Additionally, a random core dump occurred in the tests, based upon the
+ new SQLExecDirect code.  This has been fixed.
+ 
+ 
+=item B<DBD::ODBC 0.36>
+
+ Fixed build for ODBC 2.x drivers.  The new SQLExecDirect code
+ had SQLFreeHandle which is a 3.x function, not a 2.x function.
+ 
+=item B<DBD::ODBC 0.35>
+
+ Fixed (finally) multiple result sets with differing
+ numbers of columns.  The final fix was to call
+ SQLFreeStmt(SQL_UNBIND) before repreparing
+ the statement for the next query.
+
+ Added more to the multi-statement tests to ensure
+ the data retrieved was what was expected.
+
+ Now, DBD::ODBC overrides DBI's do to call SQLExecDirect
+ for simple statements (those without parameters).
+ Please advise if you run into problems.  Hopefully,
+ this will provide some small speed improvement for
+ simple "do" statements.  You can also call
+ $dbh->func($stmt, ExecDirect).  I'm not sure this has
+ great value unless you need to ensure SQLExecDirect
+ is being called.  Patches thanks to Merijn Broeren.
+ Thanks Merijn!
+   
+=item B<DBD::ODBC 0.34>
+ 
+ Further revamped tests to attempt to determine if SQLDescribeParam
+ will work to handle the binding types.  The t/08bind.t attempts
+ to determine if SQLDescribeParam is supported.  note that Oracle's
+ ODBC driver under NT doesn't work correctly when binding dates
+ using the ODBC date formatting {d } or {ts }.  So, test #3 will
+ fail in t/08bind.t
+
+ New support for primary_key_info thanks to patches by Martin Evans.
+ New support for catalog, schema, table and table_type in table_info
+ thanks to Martin Evans.  Thanks Martin for your work and your
+ continuing testing, suggestions and general support!
+
+ Support for upcoming dbi get_info.
+ 
+=item B<DBD::ODBC 0.33_3>
+
+ Revamped tests to include tests for multiple result sets.
+ The tests are ODBC driver platform specific and will be skipped
+ for drivers which do not support multiple result sets.
+ 
+=item B<DBD::ODBC 0.33_2>
+
+ Finally tested new binding techniques with SQL Server 2000,
+ but there is a nice little bug in their MDAC and ODBC
+ drivers according to the knowledge base article # Q273813, titled
+
+   "FIX: "Incorrect Syntax near the Keyword 'by' "
+   Error Message with Column Names of "C", "CA" or "CAS" (Q273813)
+
+ DBD::ODBC now does not name any of the columns A, B, C, or D
+ they are now COL_A, COL_B, COL_C, COL_D.
+
+ *** NOTE: *** I AM STRONGLY CONSIDERING MAKING THE NEW
+ BINDING the default for future versions.  I do not believe
+ it will break much existing code (if any) as anyone binding
+ to non VARCHAR (without the ODBC driver doing a good conversion
+ from the VARCHAR) will have a problem.  It may be subtle, however,
+ since much code will work, but say, binding dates may not with
+ some drivers.
+   
+ Please comment soon...
+   
+=item B<DBD::ODBC 0.33_1>
+
+*** WARNING: ***
+ 
+ Changes to the binding code to allow the use of SQLDescribeParam
+ to determine if the type of column being bound.  This is
+ experimental and activated by setting
+ 
+  $dbh->{odbc_default_bind_type} = 0; # before creating the query...
+
+ Currently the default value of odbc_default_bind_type = SQL_VARCHAR
+ which mimicks the current behavior.  If you set
+ odbc_default_bind_type to 0, then SQLDescribeParam will be
+ called to determine the columen type.  Not ALL databases
+ handle this correctly.  For example, Oracle returns
+ SQL_VARCHAR for all types and attempts to convert to the
+ correct type for us.  However, if you use the ODBC escaped
+ date/time format such as: {ts '1998-05-13 00:01:00'} then
+ Oracle complains.  If you bind this with a SQL_TIMESTAMP type,
+ however, Oracle's ODBC driver will parse the time/date correctly.
+ Use at your own risk!
+
+ Fix to dbdimp.c to allow quoted identifiers to begin/end
+ with either " or '.
+ The following will not be treated as if they have a bind placeholder:
+   "isEstimated?"
+   '01-JAN-1987 00:00:00'
+   'Does anyone insert a ?'
+
+				    
+=item B<DBD::ODBC 0.32>
+
+ More SAP patches to Makfile.PL to eliminate the call to Data Sources
+
+ A patch to the test (for SAP and potentially others), to allow
+ fallback to SQL_TYPE_DATE in the tests
+ 
+=item B<DBD::ODBC 0.31>
+
+ Added SAP patches to build directly against SAP driver instead of
+ driver manager thanks to Flemming Frandsen (thanks!)
+
+ Added support to fix ping for Oracle8.  May break other databases,
+ so please report this as soon as possible.  The downside is that
+ we need to actually execute the dummy query.
+ 
+
+=item B<DBD::ODBC 0.30>
+
+ Added ping patch for Solid courtesy of Marko Asplund
+
+ Updated disconnect to rollback if autocommit is not on.
+ This should silence some errors when disconnecting.
+
+ Updated SQL_ROWSET_SIZE attribute.  Needed to force it to
+ odbc_SQL_ROWSET_SIZE to obey the DBI rules.
+
+ Added odbc_SQL_DRIVER_ODBC_VER, which obtains the version of
+ the Driver upon connect.  This internal capture of the version is
+ a read-only attributed and is used during array binding of parameters.
+ 
+ Added odbc_ignore_named_placeholders attribute to facilicate
+ creating triggers within SAPDB and Oracle, to name two. The
+ syntax in these DBs is to allow use of :old and :new to
+ access column values before and after updates.  Example:
+
+ $dbh->{odbc_ignore_named_placeholders} = 1; # set it for all future statements
+					  # ignores :foo, :new, etc, but not :1 or ?
+ $dbh->do("create or replace etc :new.D = sysdate etc");
+ 
+
+=item B<DBD::ODBC 0.29>
+
+ Cygwin patches from Neil Lunn (untested by me).  Thanks Neil!
+ 
+SQL_ROWSET_SIZE attribute patch from Andrew Brown 
+> There are only 2 additional lines allowing for the setting of
+> SQL_ROWSET_SIZE as db handle option.
+>
+> The purpose to my madness is simple. SqlServer (7 anyway) by default
+> supports only one select statement at once (using std ODBC cursors).
+> According to the SqlServer documentation you can alter the default setting
+> of
+> three values to force the use of server cursors - in which case multiple
+> selects are possible.
+>
+> The code change allows for:
+> $dbh->{SQL_ROWSET_SIZE} = 2;    # Any value > 1
+>
+> For this very purpose.
+>
+> The setting of SQL_ROWSET_SIZE only affects the extended fetch command as
+> far as I can work out and thus setting this option shouldn't affect
+> DBD::ODBC operations directly in any way.
+>
+> Andrew
+>
+
+VMS and other patches from Martin Evans (thanks!)
+
+[1] a fix for Makefile.PL to build DBD::ODBC on OpenVMS.
+
+[2] fix trace message coredumping after SQLDriverConnect
+
+[3] fix call to SQLCancel which fails to pass the statement handle properly.
+
+[4] consume diagnostics after SQLDriverConnect/SQLConnect call or they remain
+    until the next error occurs and it then looks confusing (this is due to
+    ODBC spec for SQLError). e.g. test 02simple returns a data truncated error
+    only now instead of all the informational diags that are left from the
+    connect call, like the "database changed", "language changed" messages you
+    get from MS SQL Server.
+
+Replaced C++ style comments with C style to support more platforms more easily.
+
+Fixed bug which use the single quote (') instead of a double quote (") for "literal" column names.  This
+   helped when having a colon (:) in the column name.
+
+Fixed bug which would cause DBD::ODBC to core-dump (crash) if DBI tracing level was greater than 3.
+
+Fixed problem where ODBC.pm would have "use of uninitialized variable" if calling DBI's type_info.
+
+Fixed problem where ODBC.xs *may* have an overrun when calling SQLDataSources. 
+
+Fixed problem with DBI 1.14, where fprintf was being called instead of PerlIO_printf for debug information
+
+Fixed problem building with unixODBC per patch from Nick Gorham   
+
+Added ability to bind_param_inout() via patches from Jeremy Cooper.  Haven't figured out a good, non-db specific
+   way to test.  My current test platform attempts to determine the connected database type via
+   ugly hacks and will test, if it thinks it can.  Feel free to patch and send me something...Also, my
+   current Oracle ODBC driver fails miserably and dies.
+
+Updated t/02simple.t to not print an error, when there is not one.
+   
+=item B<DBD::ODBC 0.28>
 
 Added support for SQLSpecialColumns thanks to patch provided by Martin J. Evans [martin@easysoft.com]
 
@@ -629,13 +998,24 @@ to ODBC developers (but I don't want to loose them).
 
 	http://dataramp.com/
 
+	http://www.syware.com
+
+	http://www.microsoft.com/odbc
+
+   For Linux/Unix folks, compatible ODBC driver managers can be found at:
+   
+        http://www.easysoft.com		unixODBC driver manager source
+				        *and* ODBC-ODBC bridge for accessing Win32 ODBC sources from Linux
+
+        http://www.iodbc.org		iODBC driver manager source
+
+   Also, for Linux folks, you can checkout the following for another ODBC-ODBC bridge and support for iODBC.
+
 	http://www.openlink.co.uk 
 		or
 	http://www.openlinksw.com 
 
-	http://www.syware.com
 
-	http://www.microsoft.com/odbc
 
 =head2 Frequently Asked Questions
 Answers to common DBI and DBD::ODBC questions:
@@ -661,7 +1041,9 @@ with many applications.  For Linux/Unix, some hunting is required, but
 you may find something useful at:
 
 	http://www.openlinksw.com
+        http://www.easysoft.com
 	http://www.intersolv.com
+	      
 
 2) ODBC Driver Manager - the piece of software which interacts with the drivers
 for the application.  It "hides" some of the differences between the
@@ -669,7 +1051,8 @@ drivers (i.e. if a function call is not supported by a driver, it 'hides'
 that and informs the application that the call is not supported.
 DBD::ODBC needs this to talk to drivers.  Under Win32, it is built in
 to the OS.  Under Unix/Linux, in most cases, you will want to use freeODBC,
-unixODBC or iODBC.  iODBC is bundled with DBD::ODBC.
+unixODBC or iODBC.  iODBC was bundled with DBD::ODBC, but you will need to find one
+which suits your needs.  Please see www.openlinksw.com, www.easysoft.com or www.iodbc.org
 
 3) DBD::ODBC.  DBD::ODBC uses the driver manager to talk to the ODBC driver(s) on
 your system.  You need both a driver manager and driver installed and tested
@@ -686,11 +1069,12 @@ You can configure the DSN to have use information when you refer to the DSN.
 
 DBD::ODBC comes with one (iODBC).  In the DBD::ODBC source release is a directory named iodbcsrc.  
 There are others.  UnixODBC, FreeODBC and some of the drivers will come with one of these managers.
-For example Openlink's drivers (see below) come with the iODBC driver manager.
+For example Openlink's drivers (see below) come with the iODBC driver manager.  Easysoft
+supplies both ODBC-ODBC bridge software and unixODBC.
 
 =item How do I access a MS SQL Server database from Linux?
 
-Try using drivers from http://www.openlinksw.com
+Try using drivers from http://www.openlinksw.com or www.easysoft.com
 The multi-tier drivers have been tested with Linux and Redhat 5.1.
 
 =item How do I access an MS-Access database from Linux?

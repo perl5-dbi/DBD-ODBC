@@ -24,13 +24,27 @@ _Cancel(sth)
 	ST(0) = odbc_cancel(sth);		
 
 void
-_tables(dbh, sth, qualifier)
+_tables(dbh, sth, catalog, schema, table, type)
 	SV *	dbh
 	SV *	sth
-	char *	qualifier
+	char *	catalog
+	char *	schema
+	char *  table
+	char *	type
 	CODE:
 	/* list all tables and views (0 as last parameter) */
-	ST(0) = dbd_st_tables(dbh, sth, qualifier, 0) ? &sv_yes : &sv_no;
+	ST(0) = dbd_st_tables(dbh, sth, catalog, schema, table, type) ? &sv_yes : &sv_no;
+
+void
+_primary_keys(dbh, sth, catalog, schema, table)
+    SV * 	dbh
+    SV *	sth
+    char *	catalog
+    char *	schema
+    char *	table
+    CODE:
+    ST(0) = dbd_st_primary_keys(dbh, sth, catalog, schema, table) ? &sv_yes : &sv_no;
+
 
 void
 DescribeCol(sth, colno)
@@ -61,6 +75,18 @@ DescribeCol(sth, colno)
 # database level interface
 # ------------------------------------------------------------
 MODULE = DBD::ODBC    PACKAGE = DBD::ODBC::db
+
+void
+_ExecDirect( dbh, stmt )
+SV *        dbh
+SV *        stmt
+CODE:
+{
+   STRLEN lna;
+   char *pstmt = SvOK(stmt) ? SvPV(stmt,lna) : "";
+   ST(0) = sv_2mortal(newSViv( (IV)dbd_db_execdirect( dbh, pstmt ) ) );
+}
+
 
 void
 _columns(dbh, sth, catalog, schema, table, column)
@@ -193,11 +219,12 @@ data_sources(drh, attr = NULL)
 		XSRETURN(0);
 	    }
 	}
-        strcpy(dsn, "DBI:ODBC:");
+	strcpy(dsn, "DBI:ODBC:");
 	while (1) {
             rc = SQLDataSources(imp_drh->henv, fDirection,
                                 dsn+9, /* strlen("DBI:ODBC:") */
-                                sizeof(dsn), &dsn_length,
+                                SQL_MAX_DSN_LENGTH, 
+								&dsn_length,
                                 description, sizeof(description),
                                 &description_length);
        	    if (!SQL_ok(rc)) {
