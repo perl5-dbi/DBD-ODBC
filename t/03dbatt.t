@@ -30,6 +30,7 @@ my @row;
 Test(1);	# loaded DBI ok.
 
 my $dbh = DBI->connect() || die "Connect failed: $DBI::errstr\n";
+$dbh->{LongReadLen} = 1000;
 my $dbname = $dbh->{odbc_SQL_DBMS_NAME};
 Test(1);	 # connected ok
 
@@ -37,17 +38,23 @@ Test(1);	 # connected ok
 $dbh->{RaiseError} = 0;
 $dbh->{'AutoCommit'} = 1;
 $rc = commitTest($dbh);
-print " ", $DBI->errstr, "" if ($rc < 0);
-Test($rc == 1); # print "not " unless ($rc == 1);
-Test($dbname eq $dbh->{odbc_SQL_DBMS_NAME});
+print " ", $DBI->errstr, "" if ($rc < -1);
+if ($rc == -1) {
+    Test(1, " # skipped due to lack of transaction support.");
+} else {
+    Test($rc == 1); # print "not " unless ($rc == 1);
+}
 
 Test($dbh->{AutoCommit});
-Test($dbname eq $dbh->{odbc_SQL_DBMS_NAME});
 
 $dbh->{'AutoCommit'} = 0;
 $rc = commitTest($dbh);
-print $DBI->errstr, "\n" if ($rc < 0);
-Test($rc == 0);
+print $DBI->errstr, "\n" if ($rc < -1);
+if ($rc == -1) {
+    Test(1, " # skipped due to lack of transaction support.");
+} else {
+    Test($rc == 0);
+}
 Test($dbname eq $dbh->{odbc_SQL_DBMS_NAME});
 
 $dbh->{'AutoCommit'} = 1;
@@ -55,8 +62,12 @@ $dbh->{'AutoCommit'} = 1;
 # ------------------------------------------------------------
 
 my $rows = 0;
-# TBD: Check for tables function working.  
+# Check for tables function working.  
 if ($sth = $dbh->table_info()) {
+    my $cols = $sth->{NAME};
+    for (my $i = 0; $i < @$cols; $i++) {
+      print ${$cols}[$i], ": ", $sth->func($i+1, 3, ColAttributes), "\n";
+    }
     while (@row = $sth->fetchrow()) {
         $rows++;
     }
@@ -108,14 +119,22 @@ $dbh->disconnect;
 sub commitTest {
     my $dbh = shift;
     my @row;
-    my $rc = -1;
+    my $rc = -2;
     my $sth;
 
+    # since this test deletes the record, we should do it regardless
+    # of whether or not it the db supports transactions.
     $dbh->do("DELETE FROM $ODBCTEST::table_name WHERE COL_A = 100") or return undef;
 
     { # suppress the "commit ineffective" warning
       local($SIG{__WARN__}) = sub { };
       $dbh->commit();
+    }
+
+    my $supported = $dbh->get_info(46); # SQL_TXN_CAPABLE 
+    print "Transactions supported: $supported\n";
+    if (!$supported) {
+	return -1;
     }
 
     @row = ODBCTEST::get_type_for_column($dbh, 'COL_D');

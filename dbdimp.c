@@ -1583,7 +1583,7 @@ imp_sth_t *imp_sth;
 	t_cbufl += fbh->ColNameLen + 1;
 
 	if (DBIc_DEBUGIV(imp_sth) >= 8) {
-	   PerlIO_printf(DBIc_LOGPIO(imp_dbh), "   colname %d = %s, len = %d (%d)\n", i+1, ColName, fbh->ColNameLen,
+	   PerlIO_printf(DBIc_LOGPIO(imp_dbh), "   colname %d = %s len = %d (%d)\n", i+1, ColName, fbh->ColNameLen,
 			t_cbufl);
 	   PerlIO_flush(DBIc_LOGPIO(imp_dbh));
 	}
@@ -1664,8 +1664,9 @@ imp_sth_t *imp_sth;
 
 	if (DBIc_DEBUGIV(imp_sth) >= 2)
 	    PerlIO_printf(DBIc_LOGPIO(imp_dbh), 
-			  "      col %2d: %-8s len=%3d disp=%3d, prec=%3d scale=%d\n", 
+			  "      col %2d: %-8s (%d) len=%3d disp=%3d, prec=%3d scale=%d\n", 
 			  i+1, S_SqlTypeToString(fbh->ColSqlType),
+			  fbh->ColSqlType,
 			  fbh->ColLength, fbh->ColDisplaySize,
 			  fbh->ColDef, fbh->ColScale);
     }
