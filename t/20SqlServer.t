@@ -390,7 +390,7 @@ eval {$dbh->do("DROP PROCEDURE PERL_DBD_PROC1");};
 eval {$dbh->do("CREATE PROCEDURE PERL_DBD_PROC1 AS return 1;");}; 
 
 $sth1 = $dbh->prepare ("{ ? = call PERL_DBD_PROC1 }"); 
-my $output = undef; 
+$output = undef; 
 $iErrCount = 0; 
 $sth1->bind_param_inout(1, \$output, 50, DBI::SQL_INTEGER); 
 
