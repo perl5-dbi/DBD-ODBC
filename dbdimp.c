@@ -339,14 +339,21 @@ imp_dbh_t *imp_dbh;
 /*
  * quick dumb function to handle case insensitivity for DSN= or DRIVER=
  * in DSN...note this is becuase strncmpi is not available on all
- * platforms using that name (VC++ most notably).
+ * platforms using that name (VC++, Debian, etc most notably).
+ * Note, also, strupr doesn't seem to have a standard name, either...
  */
-#if defined(WIN32) && !defined(strncmpi)
-#define strncmpi _strnicmp
-#endif
 
 int dsnHasDriverOrDSN(char *dsn) {
-   return (strncmpi(dsn, "DSN=", 4) == 0 || strncmpi(dsn, "DRIVER=", 7) == 0);
+
+   char upper_dsn[512];
+   char *cp = upper_dsn;
+   strncpy(upper_dsn, dsn, sizeof(upper_dsn)-1);
+   upper_dsn[sizeof(upper_dsn)-1] = '\0';
+   while (*cp != '\0') {
+      *cp = toupper(*cp);
+      cp++;
+   }
+   return (strncmp(upper_dsn, "DSN=", 4) == 0 || strncmp(upper_dsn, "DRIVER=", 7) == 0);
 }
 
 /*------------------------------------------------------------

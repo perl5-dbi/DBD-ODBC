@@ -9,7 +9,7 @@
 
 require 5.004;
 
-$DBD::ODBC::VERSION = '1.03';
+$DBD::ODBC::VERSION = '1.04';
 
 {
     package DBD::ODBC;
@@ -425,7 +425,11 @@ See L<DBI> for more information.
 
  Please note that the change log has been moved to DBD::ODBC::Changes.pm
  To easily access this documentation, use perldoc DBD::ODBC::Changes
- 
+
+ Also, while this document documents features, etc, I'm really trying to keep
+ the FAQ type questions answered in the DBI FAQ itself...
+ DBI FAQ (http://www.xmlproj.com/cgi/fom.cgi)
+   
 =item B<An Important note about the tests!>
 
  Please note that some tests may fail or report they are

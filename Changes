@@ -20,6 +20,14 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
 
 =head1 CHANGES
 
+=item Changes in DBD::ODBC 1.04 January 24, 2003
+
+ It seems that case insensitive string comparison with a limit causes problems for
+ multiple platforms.  strncmpi, strncasecmp, _strcmpin are all functions hit and
+ it seems to be a hit-or-miss.  Hence, I rewrote it to upper case the string
+ then do strncmp, which should be safe...sheesh.  A simple thing turned into
+ a headache...
+
 =item Changes in DBD::ODBC 1.03 January 17, 2003
 
  Add automatic detection of DRIVER= or DSN= to add user id and password to
