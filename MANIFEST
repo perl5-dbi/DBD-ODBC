@@ -60,3 +60,4 @@ mytest/testver.pl
 mytest/testxml.pl
 mytest/timetest.pl
 
+META.yml                                 Module meta-data (added by MakeMaker)
