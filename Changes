@@ -20,6 +20,10 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
 
 =head1 CHANGES
 
+=head2 Changes in DBD::ODBC 1.09 March 10, 2004
+
+Duh.  I forgot to add new dbivport.h to MANIFEST and SVN before submitting.  Fixed.
+
 =head2 Changes in DBD::ODBC 1.08 March 6, 2004
 
 Added check in Makefile.PL to detect if the environment variable LANG is 

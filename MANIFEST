@@ -11,6 +11,7 @@ ODBC.pm
 ODBC.xs
 dbdimp.c
 dbdimp.h
+dbivport.h
 fixup_c.h
 fixup_t.h
 t/01base.t
@@ -60,5 +61,5 @@ mytest/testundef3.pl
 mytest/testver.pl
 mytest/testxml.pl
 mytest/timetest.pl
-mytest/testconnspped.pl
+mytest/testconnspeed.pl
 META.yml                                 Module meta-data (added by MakeMaker)
