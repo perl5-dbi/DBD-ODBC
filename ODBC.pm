@@ -9,7 +9,7 @@
 
 require 5.004;
 
-$DBD::ODBC::VERSION = '1.10';
+$DBD::ODBC::VERSION = '1.11';
 
 {
     package DBD::ODBC;
@@ -620,7 +620,14 @@ to use { odbc_cursortype => DBI::SQL_CURSOR_DYNAMIC } instead.  For example:
 
 See t/20SqlServer.t for an example.
 
-		   
+
+=item odbc_query_timeout 
+
+This allows the end user to set a timeout for queries on the ODBC side.  In your connect, add
+{ odbc_timeout => 30 } or set on the dbh before executing the statement.  The default is 0, no timeout.
+Note that some drivers may not support this attribute.
+
+   
 =item odbc_version (applies to connect only!)
 
 This was added prior to the move to ODBC 3.x to allow the caller to "force" ODBC 3.0

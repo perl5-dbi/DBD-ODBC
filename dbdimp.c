@@ -45,6 +45,7 @@ int dbd_st_finish(SV *sth, imp_sth_t *imp_sth);
 #define ODBC_EXEC_DIRECT               0x8339
 #define ODBC_VERSION		       0x833A
 #define ODBC_CURSORTYPE                0x833B
+#define ODBC_QUERY_TIMEOUT             0x833C
 
 /* ODBC_DEFAULT_BIND_TYPE_VALUE is now set to 0, which means that
  * DBD::ODBC will call SQLDescribeParam to find out what type of
@@ -107,6 +108,32 @@ void
    DBIS = dbistate;
 }
 
+static RETCODE odbc_set_query_timeout(imp_sth_t *imp_sth, UV odbc_timeout)
+{
+   RETCODE rc;
+   if (ODBC_TRACE_LEVEL(imp_sth) >= 2) {
+      PerlIO_printf(DBIc_LOGPIO(imp_sth), "   Set timeout to: %d", odbc_timeout);
+   }
+   rc = SQLSetStmtAttr(imp_sth->hstmt,(SQLINTEGER)SQL_ATTR_QUERY_TIMEOUT, (SQLPOINTER)odbc_timeout,(SQLINTEGER)SQL_IS_INTEGER );
+   if (!SQL_ok(rc)) {
+      /* raise warnings if setting fails, but don't die? */
+      if (ODBC_TRACE_LEVEL(imp_sth) >= 2)
+	 PerlIO_printf(DBIc_LOGPIO(imp_sth), "    Failed to set Statement ATTR Query Timeout to %d\n", (int)odbc_timeout);
+   }
+   return rc;
+}
+#if 0
+static UV odbc_get_query_timeout(imp_dbh_t *imp_dbh) {
+   RETCODE rc;
+   UV timeout;
+   rc = SQLGetConnectAttr(imp_dbh->hdbc,(SQLINTEGER)SQL_ATTR_QUERY_TIMEOUT, (SQLPOINTER)&timeout,sizeof(timeout), 0);
+   if (!SQL_ok(rc)) {
+      if (ODBC_TRACE_LEVEL(imp_dbh) >= 2)
+	 PerlIO_printf(DBIc_LOGPIO(imp_dbh), "    Failed to get ATTR query Timeout %d\n", rc);
+   }
+   return timeout;
+}
+#endif
 static void odbc_clear_result_set(SV *sth, imp_sth_t *imp_sth)
 {
    SV *value;
@@ -317,6 +344,11 @@ int dbd_db_execdirect( SV *dbh,
 		    statement);
 
    ret = SQLExecDirect(stmt, (SQLCHAR *)statement, SQL_NTS);
+   if (ODBC_TRACE_LEVEL(imp_dbh) >= 2) {
+      PerlIO_printf(DBIc_LOGPIO(imp_dbh),
+		    "    dbd_db_execdirect (rc = %d)...\n", ret);
+      PerlIO_flush(DBIc_LOGPIO(imp_dbh));
+   }
    if (!SQL_ok(ret) && ret != SQL_NO_DATA) {
       dbd_error2( dbh, ret, "Execute immediate failed", imp_dbh->henv, imp_dbh->hdbc, stmt );
       if (ret < 0)  {
@@ -443,6 +475,8 @@ SV   *attr;
    UV   odbc_version = 0;
    SV **odbc_cursortype_sv;
    UV   odbc_cursortype = 0;
+   SV **odbc_timeout_sv;
+   UV   odbc_timeout = 0;
 
    if (!imp_drh->connects) {
       rc = SQLAllocHandle(SQL_HANDLE_ENV, SQL_NULL_HANDLE, &imp_drh->henv);		
@@ -641,6 +675,7 @@ SV   *attr;
    imp_dbh->odbc_sqlmoreresults_supported = -1; /* flag to see if SQLDescribeParam is supported */
    imp_dbh->odbc_defer_binding = 0;
    imp_dbh->odbc_force_rebind = 0;
+   imp_dbh->odbc_query_timeout = 0; /* default vaule for query timeout is indefinite (0) */
    imp_dbh->odbc_exec_direct = 0;	/* default to not having SQLExecDirect used */
    imp_dbh->RowCacheSize = 1;	/* default value for now */
 
@@ -713,6 +748,11 @@ SV   *attr;
 	    PerlIO_printf(DBIc_LOGPIO(imp_dbh), "    Failed to set SQL_CURSORTYPE to %d\n", (int)odbc_cursortype);
       }
    }
+
+   DBD_ATTRIB_GET_IV(attr, "odbc_query_timeout",15, odbc_timeout_sv, odbc_timeout);
+   if (odbc_timeout) {
+      imp_dbh->odbc_query_timeout = odbc_timeout;
+   }      
    
    imp_drh->connects++;
    DBIc_IMPSET_on(imp_dbh);	/* imp_dbh set up now			*/
@@ -1328,6 +1368,7 @@ SV *attribs;
    imp_sth->odbc_ignore_named_placeholders = imp_dbh->odbc_ignore_named_placeholders;
    imp_sth->odbc_default_bind_type = imp_dbh->odbc_default_bind_type;
    imp_sth->odbc_force_rebind = imp_dbh->odbc_force_rebind;
+   imp_sth->odbc_query_timeout = imp_dbh->odbc_query_timeout;
 
    if (!DBIc_ACTIVE(imp_dbh)) {
       dbd_error(sth, 0, "Can not allocate statement when disconnected from the database");
@@ -1407,6 +1448,18 @@ SV *attribs;
 	 imp_sth->hstmt = SQL_NULL_HSTMT;
 	 return 0;
       }
+   }
+
+   /* 
+    * If odbc_query_timeout is set
+    * we need to set the SQL_ATTR_QUERY_TIMEOUT
+    */
+   if (imp_sth->odbc_query_timeout){
+      odbc_set_query_timeout(imp_sth, imp_sth->odbc_query_timeout);
+      if (!SQL_ok(rc)) {
+	 dbd_error(sth, rc, "set_query_timeout");
+      }
+      /* don't fail if the query timeout can't be set. */
    }
 
    DBIc_IMPSET_on(imp_sth);
@@ -2910,6 +2963,7 @@ static db_params S_db_storeOptions[] =  {
    { "odbc_exec_direct", ODBC_EXEC_DIRECT },
    { "odbc_version", ODBC_VERSION },
    { "odbc_cursortype", ODBC_CURSORTYPE },
+   { "odbc_query_timeout", ODBC_QUERY_TIMEOUT },
    { NULL },
 };
 
@@ -2970,6 +3024,7 @@ SV *valuesv;
 	 vParam = (UDWORD) SvPV(valuesv, plen);
 	 break;
 
+
       case ODBC_IGNORE_NAMED_PLACEHOLDERS:
 	 bSetSQLConnectionOption = FALSE;
 	 /*
@@ -2997,6 +3052,11 @@ SV *valuesv;
 	  */
 	 imp_dbh->odbc_force_rebind = SvIV(valuesv);
 
+	 break;
+
+      case ODBC_QUERY_TIMEOUT:
+	 bSetSQLConnectionOption = FALSE;
+	 imp_dbh->odbc_query_timeout = SvIV(valuesv);
 	 break;
 
       case ODBC_EXEC_DIRECT:
@@ -3125,7 +3185,7 @@ SV *valuesv;
 	 /* set only in connect, nothing to store */
 	 bSetSQLConnectionOption = FALSE;
 	 break;
-	 
+
       default:
 	 on = SvTRUE(valuesv);
 	 vParam = on ? pars->true : pars->false;
@@ -3167,6 +3227,7 @@ static db_params S_db_fetchOptions[] =  {
    { "odbc_err_handler", ODBC_ERR_HANDLER },
    { "odbc_SQL_DBMS_NAME", SQL_DBMS_NAME },
    { "odbc_exec_direct", ODBC_EXEC_DIRECT },
+   { "odbc_query_timeout", ODBC_QUERY_TIMEOUT },
    { NULL }
 };
 
@@ -3220,6 +3281,13 @@ SV *keysv;
 	 retsv = newSViv(imp_dbh->odbc_ignore_named_placeholders);
 	 break;
 
+      case ODBC_QUERY_TIMEOUT:
+	 /*
+	  * fetch current value of query timeout
+	  */
+	 retsv = newSViv(imp_dbh->odbc_query_timeout);
+	 break;
+	 
       case ODBC_DEFAULT_BIND_TYPE:
 	 /*
 	  * fetch current value of default bind type.
@@ -3334,6 +3402,7 @@ static T_st_params S_st_fetch_params[] =
    s_A("odbc_ignore_named_placeholders",0),	/* 13 */
    s_A("odbc_default_bind_type",0),	/* 14 */
    s_A("odbc_force_rebind",0),	/* 15 */
+   s_A("odbc_query_timeout",0),	/* 16 */
    s_A("",0),			/* END */
 };
 
@@ -3342,6 +3411,7 @@ static T_st_params S_st_store_params[] =
    s_A("odbc_ignore_named_placeholders",0),	/* 0 */
    s_A("odbc_default_bind_type",0),	/* 1 */
    s_A("odbc_force_rebind",0),	/* 2 */
+   s_A("odbc_query_timeout",0),	/* 3 */
    s_A("",0),			/* END */
 };
 #undef s_A
@@ -3507,6 +3577,9 @@ SV *keysv;
       case 15: /* force rebind */
 	 retsv = newSViv(imp_sth->odbc_force_rebind);
 	 break;
+      case 16: /* query timeout */
+	 retsv = newSViv(imp_sth->odbc_query_timeout);
+	 break;
       default:
 	 return Nullsv;
    }
@@ -3545,10 +3618,17 @@ SV *valuesv;
 
       case 1:
 	 imp_sth->odbc_default_bind_type = SvIV(valuesv);
+	 return TRUE;
 	 break;
 
       case 2:/*  */
 	 imp_sth->odbc_force_rebind = SvIV(valuesv);
+	 return TRUE;
+	 break;
+
+      case 3:/*  */
+	 imp_sth->odbc_query_timeout = SvIV(valuesv);
+	 return TRUE;
 	 break;
    }
    return FALSE;
