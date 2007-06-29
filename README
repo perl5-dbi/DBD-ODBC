@@ -41,7 +41,8 @@ TESTING
   make install               (if the tests look okay)
 
   Note that the tests currently all pass when using the Microsoft SQL
-  server driver.  See the known compatibility list below.
+  server driver up to SQL Server 2005. See the known compatibility
+  list below.
 
   If the tests from t/09bind.t fail, that is an indication of lack of
   ODBC Level 2 functionality.  This does not (necessarily) mean that
@@ -82,6 +83,7 @@ KNOWN COMPATIBLE Drivers (w/level 2 calls):
 
 Driver						Version				Platform tested
 Microsoft SQL Server		v 2.65.0240			NT 4.0
+Microsoft SQL Server            v 2000.80.528.00                Windows 2000
 Intersolv Oracle7 Driver*	v 3.00.0000			NT 4.0
 
 *full support is optional, via configuration of DSN -- Advanced page.

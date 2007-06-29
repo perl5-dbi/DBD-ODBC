@@ -22,7 +22,31 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
 
 =head2 Changes in DBD::ODBC 1.14 xxxx
 
-Fix bug reported where ping crashes after disconnect thanks to Steffen Goeldner.
+Fix bug reported where ping crashes after disconnect thanks to Steffen
+Goeldner.
+
+Fix bug in dbd_bind_ph which leads to the error Can't change param 1
+maxlen (51->50) after first bind in the 20SqlServer test. This is
+caused by svGROW in Perl 5.8.8 being changed to possibly grow by more
+than you asked (e.g. up to the next longword boundary).
+
+Fix problem with binding undef as an output parameter. Reported by Stephen More
+with IBM's ODBC driver for iSeries.
+
+Removed comment delimiters in comments in dbdimp.h leading to warnings.
+
+Removed some unused variable declarations leading to warnings.
+
+Removed PerlIO_flush calls as it is believed they are not required.
+
+Add logging for whether SQLDescribeParam is supported.
+
+Fixed use of unitialised variable in dbd_bind_ph where an undef is
+bound and tracing is enabled.
+
+Fixed issue with TRACESTATUS change in 20SqlServer.t tests 28, 31, 32
+and 33 leading to those tests failing when testing with SQL Server
+2005 or Express.
 
 =head2 Changes in DBD::ODBC 1.13 November 8, 2004
 

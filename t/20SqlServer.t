@@ -438,7 +438,7 @@ AS
 
    $dbh->{odbc_err_handler} = \&err_handler;
 
-   $sth = $dbh->prepare("dbcc TRACESTATUS(-1)");
+   $sth = $dbh->prepare("dbcc TRACESTATUS(0)");
    $sth->execute;
    cmp_ok($testpass, '>', 0, "dbcc messages being returned");
    $testpass = 0;
