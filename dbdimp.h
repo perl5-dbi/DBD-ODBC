@@ -22,7 +22,7 @@ struct imp_drh_st {
     int connects;		/* connect count */
 };
 
-/* Define dbh implementor data structure 
+/* Define dbh implementor data structure
    This holds everything to describe the database connection.
  */
 struct imp_dbh_st {
@@ -37,8 +37,8 @@ struct imp_dbh_st {
     int  odbc_sqlmoreresults_supported; /* flag to see if SQLMoreResults is supported */
     int	 odbc_defer_binding; /* flag to work around SQLServer bug and defer binding until */
 			    /* last possible moment */
-    int  odbc_force_rebind; /* force rebinding the output columns after each execute to
-       /* resolve some issues where certain stored procs can return
+  int  odbc_force_rebind; /* force rebinding the output columns after each execute to */
+  /* resolve some issues where certain stored procs can return */
        /* multiple result sets */
     int  odbc_query_timeout;
     int  odbc_async_exec; /* flag to set asynchronous execution */
@@ -86,8 +86,8 @@ struct imp_sth_st {
     int  odbc_ignore_named_placeholders;	/* flag to ignore named parameters */
     int  odbc_default_bind_type;	/* flag to set default binding type (experimental) */
     int  odbc_exec_direct;		/* flag for executing SQLExecDirect instead of SQLPrepare and SQLExecute.  Magic happens at SQLExecute() */
-    int  odbc_force_rebind; /* force rebinding the output columns after each execute to
-       /* resolve some issues where certain stored procs can return
+  int  odbc_force_rebind; /* force rebinding the output columns after each execute to */
+			       /* resolve some issues where certain stored procs can return */
        /* multiple result sets */
     int odbc_query_timeout;
 };
@@ -128,11 +128,11 @@ struct phs_st {  	/* scalar placeholder EXPERIMENTAL	*/
     SV  *sv;            /* the scalar holding the value         */
     int sv_type;        /* original sv type at time of bind     */
     int biggestparam;    /* if sv_type is VARCHAR, size of biggest so far */
-    int scale;
+    int scale;                                  /* MJE NEVER USED */
     bool is_inout;
     IV  maxlen;         /* max possible len (=allocated buffer) */
     char *sv_buf;	/* pointer to sv's data buffer		*/
-    int alen_incnull;
+    int alen_incnull;                           /* MJE NEVER USED */
 
     SWORD ftype;			/* external field type	       */
     SWORD sql_type;			/* the sql type the placeholder should have in SQL	*/
