@@ -5,12 +5,12 @@ DBD::ODBC -- DBD module interfacing the ODBC databases.
    Copyright (c) 1994,1995,1996,1997,1998  Tim Bunce
    portions Copyright (c) 1997,1998,1999,2000,2001,2002 Jeff Urlwin
    portions Copyright (c) 1997  Thomas K. Wenrich
+   portions Copyright (c) 2007 Martin J. Evans
 
    You may distribute under the terms of either the GNU General Public
    License or the Artistic License, as specified in the Perl README file.
 
    PLEASE READ THE ENTIRE README FILE CAREFULLY !
-
 
 *BEFORE* BUILDING, TESTING AND INSTALLING this you will need to:
 
@@ -22,7 +22,9 @@ DBD::ODBC -- DBD module interfacing the ODBC databases.
 
     Remember to *read* the DBI README file!
 
-    Remember to *read* the DBD::ODBC.pm POD documentation and the DBD::ODBC::Changes.pm POD documentation!!!
+    Remember to *read* the DBD::ODBC.pm POD documentation and the
+    DBD::ODBC::Changes.pm POD documentation!!!
+
 BUILDING:
 
   set-up these environment variables:
@@ -30,6 +32,12 @@ BUILDING:
     DBI_USER  The username to use to connect to the database
     DBI_PASS  The username to use to connect to the database
     ODBCHOME  (Unix only) The dir your driver manager is installed in
+              or specify this via -o argument to Makefile.PL
+
+  If you want UNICODE support on non-Windows platforms specify -u switch
+  to Makefile.PL. If you don't want UNICODE support on Windows specify
+  the -nou switch to Makefile.PL.
+
   perl Makefile.PL
   make                (or nmake, if VC++ on Win32)
   make test           (or nmake, if VC++ on Win32)
@@ -41,8 +49,8 @@ TESTING
   make install               (if the tests look okay)
 
   Note that the tests currently all pass when using the Microsoft SQL
-  server driver up to SQL Server 2005. See the known compatibility
-  list below.
+  server driver up to SQL Server 2005 any many other ODBC drivers on
+  Windows and UNIX (too numerous to mention here).
 
   If the tests from t/09bind.t fail, that is an indication of lack of
   ODBC Level 2 functionality.  This does not (necessarily) mean that
@@ -59,36 +67,18 @@ TESTING
   the known ODBC drivers.  Please try to "solve" the problem, in
   addition to discovering it.
 
-
   If any of the tests fail and you are using SQL Server and Windows drivers,
   ensure you updated to MDAC 2.7 or later.
 
 NOTES on ODBC Drivers and Compatibility with DBD-ODBC
 
-This version utilizes at least one "Level 2" ODBC call (SQLDescribeParam).  
-This *will* affect compatibility with specific ODBC drivers.  If the
-driver is not level 2 (or does not support the level 2 function(s)
-required), then full compatibility will not be available.
-
-DBD-ODBC currently uses SQLDescribeParam for binding parameters to queries.
-You may (and probably will) have success using DBD-ODBC without binding
-parameters.
-
-In some future version you should be able to use bind_param even on
-level 1 drivers.  This is a VERY low priority!
-
-
-
-KNOWN COMPATIBLE Drivers (w/level 2 calls):
-
-Driver						Version				Platform tested
-Microsoft SQL Server		v 2.65.0240			NT 4.0
-Microsoft SQL Server            v 2000.80.528.00                Windows 2000
-Intersolv Oracle7 Driver*	v 3.00.0000			NT 4.0
-
-*full support is optional, via configuration of DSN -- Advanced page.
-Select "Enable SQLDescribeParam".
-
+This version utilizes at least one "Level 2" ODBC call
+(SQLDescribeParam).  This *will* affect compatibility with specific
+ODBC drivers.  If the driver is not level 2 (or does not support the
+level 2 function(s) required), then full compatibility will not be
+available. The best thing to do is build DBD::ODBC against an ODBC
+driver manager like unixODBC (http://www.unixodbc.org) as it will
+resolve many incompatibilities between ODBC versions for you.
 
 IF YOU HAVE PROBLEMS:
 
@@ -101,12 +91,11 @@ know so that I can try to make it automatic in a later release.
 
 This software is supported via the dbi-users mailing list.  For more
 information and to keep informed about progress you can join the a
-mailing list via http://www.fugue.com/dbi (if you are unable to use the
-web you can subscribe by sending a message to dbi-request@perl.org, it
-may take a few days to be processed).
+mailing list via http://dbi.perl.org (if you are unable to use the
+web you can subscribe by sending a message to dbi-users-subscribe@perl.org.
 
 Please post details of any problems (or changes you needed to make) to
-dbi-users@perl.org and CC them to me at jurl@cpan.org. But note...
+dbi-users@perl.org. But note...
 
 ** IT IS IMPORTANT TO INCLUDE THE FOLLOWING INFORMATION:
 
@@ -129,7 +118,7 @@ Please remember that I'm _very_ busy. Try to help yourself first,
 then try to help me help you by following these guidelines carefully.
 
 Regards,
-Tim and Jeff.
+Tim, Jeff and Martin.
 
 ===============================================================================
 Other info:

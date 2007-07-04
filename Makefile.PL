@@ -7,7 +7,7 @@
 #
 BEGIN { require 5.004 }	# 5.004 is required for Win32
 use Config;
-use ExtUtils::MakeMaker 5.16, qw(&WriteMakefile $Verbose);
+use ExtUtils::MakeMaker 5.16, qw(&WriteMakefile $Verbose prompt);
 use File::Basename;
 use Getopt::Long;
 use File::Spec;
@@ -16,6 +16,8 @@ use DBI 1.21;		# must be installed first ...
 use DBI::DBD;
 use strict;
 
+$| = 1;
+$^W = 1;
 my %opts =
 (
     NAME	=> 'DBD::ODBC',
@@ -29,6 +31,7 @@ my %opts =
 	COMPRESS => 'gzip -v9', SUFFIX => 'gz'
     },
     OBJECT	=> '$(O_FILES)',
+    DEFINE => ''
  );
 if ($ExtUtils::MakeMaker::VERSION >= 5.43) {
     $opts{AUTHOR} = 'Tim Bunce and Jeff Urlwin mailto:dbi-users@perl.org';
@@ -39,10 +42,36 @@ if ($ExtUtils::MakeMaker::VERSION >= 5.43) {
 
 our $opt_g = 0;
 our $opt_o = '';
-Getopt::Long::GetOptions("g!" => \$opt_g,
-	   "o=s" => \$opt_o) or die "Invalid arguments";
+our $opt_u = undef;
 
-print "Overriding ODBC Directory with command line option: $opt_o\n" if $opt_o ;
+Getopt::Long::GetOptions("g!" => \$opt_g,
+                         "o=s" => \$opt_o,
+                         "u!" => \$opt_u) or die "Invalid arguments\n";
+if (($ENV{LANG} || '') =~ m/utf-?8/i) {
+    print <<"EOF";
+
+Your LANG environment variable is set to "$ENV{LANG}"\a
+This is known to cause problems in some perl installations - even stopping
+this Makefile.PL to run without errors. If you have problems please try
+re-running with LANG unset or with the utf part of LANG removed.
+
+EOF
+    sleep 4;
+}
+
+if ($Config{useithreads}) {
+    print <<"EOF";
+You are using a Perl configured with threading enabled\a.
+Please read the warnings in DBI about this.
+You should also be aware that on non-Windows platforms ODBC drivers come
+in two forms, thread-safe and non-thread-safe drivers and you may need
+to make sure you are using the right one.
+
+EOF
+    prompt("Press return to continue...");
+}
+print "Overriding ODBC Directory with command line option: $opt_o\n"
+    if $opt_o ;
 if ($opt_g) {
    print "Setting debug options!\n";
    if ($^O eq 'MSWin32') {
@@ -52,6 +81,12 @@ if ($opt_g) {
    }
 }
 
+if (defined($opt_u) && $opt_u) {
+    $opts{DEFINE} .= ' -DWITH_UNICODE';
+    warn "\n\n\nWarning:Building with UNICODE enabled is experimental at present\a\n\n\n";
+    prompt("Press return to continue...");
+    require 5.008001;
+}
 print "\nConfiguring DBD::ODBC ...\n
 >>>\tRemember to actually *READ* the README file!
    \tAnd re-read it if you have any problems.\n
@@ -84,7 +119,10 @@ if ($^O eq 'MSWin32') {
     my $extrainc = "";
     $extrainc = ";$Config{incpath}\\mfc" if $Config{cc} eq 'bcc32';
     $opts{SKIP} = ['processPL'];
-    $opts{DEFINE}  = "";
+    if (!defined($opt_u) || $opt_u) {
+	$opts{DEFINE}  .= " -DWITH_UNICODE";
+	require 5.008001;
+    }
     $opts{INC}  = "-I$dbi_arch_dir" . $extrainc;
     $opts{LIBS} = ["ODBC32.LIB"];
     $opts{macro}->{EXTRALIB} = 'ODBC32.LIB';
@@ -229,7 +267,7 @@ Hmm...I cannot find an ODBC driver manager that I recognize.
 	print "the @ilibs library.\n\n";
 	my $ilibpath = $ilibs[0]; # XXX if both .so and .a, pick based on LINKTYPE?
 	my $ilibname = basename($ilibpath);
-	$opts{DEFINE} = "-I$odbchome/include";
+	$opts{DEFINE} .= " -I$odbchome/include";
 	if ($ilibname =~ /^iodbc/) { # no "lib" prefix
 	    $opts{LIBS} = "";
 	    $opts{dynamic_lib} = { OTHERLDFLAGS => "$ilibpath" };
@@ -260,7 +298,7 @@ Hmm...I cannot find an ODBC driver manager that I recognize.
 	print "the @ilibs library. in \$ODBCHOME/lib\n\n";
 	my $ilibpath = $ilibs[0]; # XXX if both .so and .a, pick based on LINKTYPE?
 	my $ilibname = basename($ilibpath);
-	$opts{DEFINE} = "-I$odbchome/include";
+	$opts{DEFINE} .= " -I$odbchome/include";
 	if ($ilibname =~ /^odbc/) { # no "lib" prefix
 	    $opts{LIBS} = "";
 	    $opts{dynamic_lib} = { OTHERLDFLAGS => "$ilibpath" };
@@ -270,7 +308,8 @@ Hmm...I cannot find an ODBC driver manager that I recognize.
 	    $ilibname =~ s/^lib(odbc.*?)\.\w+$/$1/;
 	    $opts{LIBS} = "-L$odbchome/lib -l$ilibname";
 	    warn "Warning: LD_LIBRARY_PATH doesn't include $odbchome\n"
-		unless $ENV{LD_LIBRARY_PATH} =~ /\Q$odbchome\/lib/;
+		unless (exists($ENV{LD_LIBRARY_PATH}) &&
+                        ($ENV{LD_LIBRARY_PATH} =~ /\Q$odbchome\/lib/));
 	}
 	print SQLH qq{#include <sql.h>\n};
 	print SQLH qq{#include <sqlucode.h>\n};
@@ -322,7 +361,7 @@ Hmm...I cannot find an ODBC driver manager that I recognize.
 	print SQLH qq{#include <sqltypes.h>\n};
     }
     elsif ($myodbc eq 'intersolve') {
-	$opts{DEFINE}  = "";
+	#$opts{DEFINE}  .= "";
   	print SQLH qq{#include <qeodbc.h>\n};
 	if (-f "$odbchome/include/sql.h") {
 	    print "You seem to have the official header files.\n";
@@ -339,7 +378,7 @@ Hmm...I cannot find an ODBC driver manager that I recognize.
     }
     elsif ($myodbc eq 'empress') {
 	$opts{INC} .= " -I$odbchome/include";
-	$opts{DEFINE}  = "";
+	#$opts{DEFINE}  .= "";
 	print SQLH qq{#include <odbcsys.h>\n};
 	print SQLH qq{#include <sql.h>\n#include <sqlext.h>\n};
 	$opts{LIBS} = "-L$odbchome/lib -R$odbchome/lib -lempodbc";
@@ -369,7 +408,7 @@ Hmm...I cannot find an ODBC driver manager that I recognize.
     elsif ($myodbc eq 'udbc') {
         print SQLH qq{#include <libudbc.h>\n};
         $opts{INC} .= " -I$odbchome/include";
-        $opts{DEFINE}  = "";
+        #$opts{DEFINE}  .= "";
         $opts{LIBS} = "-L$odbchome/lib -R$odbchome/lib -ludbc";
     }
     elsif ($myodbc eq 'easysoft') {
@@ -390,7 +429,7 @@ Hmm...I cannot find an ODBC driver manager that I recognize.
 		# JL 2002-12-16: See comments above for environment details.
         $opts{INC}  = "-I$odbchome/incl/cli $opts{INC}";
         $opts{LIBS} = "-L$odbchome/lib/cli -lifcli -lifdmr";
-        $opts{DEFINE} .= "-DNO_WIN32";		# Applies to Unix only, of course
+        $opts{DEFINE} .= " -DNO_WIN32";		# Applies to Unix only, of course
         print SQLH qq{#include <stddef.h>\n};
         print SQLH qq{#include <infxcli.h>\n};
     }
@@ -401,7 +440,7 @@ Hmm...I cannot find an ODBC driver manager that I recognize.
 	print "In which case you will need to edit/hack the Makefile.PL\n";
 	print "to suit your needs. (Specifically to locate your odbc\n";
 	print "library and header files.)\n\n";
-	$opts{DEFINE}  = "";
+	#$opts{DEFINE}  = "";
 	print SQLH qq{#include <sql.h> \n#include <sqlext.h>\n};
     }
 }
@@ -428,7 +467,7 @@ print "\n";
 warn "See README.RH9 if you have problems with a bad Makefile generated here\a\a\a\n"
    if ($ENV{LANG} && $ENV{LANG} =~ /utf8/);
 
-$rv;
+#$rv;
 
 sub MY::post_constants {
    my ($self) = shift;

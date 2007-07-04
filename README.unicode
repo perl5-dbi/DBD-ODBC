@@ -1,0 +1,148 @@
+#
+# $Id$
+#
+# Author Martin J. Evans (mjevans at cpan dot org)
+#
+
+The original Unicode support was written by Alexander Foken and posted
+as a patch. You can find Alexander's original README document in
+README.af (some of this is directly taken from that document).  Around
+DBD::ODBC 1.14 Alexander's original patch was adapted to include
+optional Unicode support for UNIX and introduced into DBD::ODBC.
+
+Enabling/Disabling Unicode support
+==================================
+
+On Windows Unicode support as detailed in ODBC.pm is enabled by
+default and to disable it you will need to specify -nou to Makefile.PL
+to get back to the original behavior of DBD::ODBC before any Unicode
+support was added.
+
+e.g. perl Makfile.PL -nou
+
+On non-Windows platforms Unicode support is disabled by default. To
+enable it specify -u to Makefile.PL when you configure DBD::ODBC.
+
+e.g.
+
+perl Makefile.PL -u
+
+What is supported?
+==================
+
+At the time of writing Unicode support for bound columns and
+parameters has been tested with the SQL Server, Oracle 9.2+ and
+Postgres drivers on Windows and various Easysoft ODBC drivers on UNIX.
+
+DBD::ODBC will convert any UTF8 data bound to a parameter which is a
+wide type (SQL_Wxxx) or has been bound as a wide type to UTF16 before
+calling SQLBindParameter.
+
+DBD::ODBC will bind columns declared as wide types by the ODBC Driver
+as SQL_Wxxx and convert any returned data from UTF16 to UTF8, then set
+the UTF8 flag on the data.
+
+What is not supported?
+======================
+
+At this time Unicode SQL strings are not supported i.e. you cannot
+pass a UTF8 string to $dbh->prepare and expect it to work as it will
+end up being passed to the ODBC APIs SQLPrepare (or SQLExecDirect) as 8
+bit characters and the likelihood is that the ODBC Driver will not
+understand what you mean. Of course, patches are welcome.
+
+Caveats
+=======
+
+For Unicode support on any platform in Perl you will need at least
+Perl 5.8.1 - sorry but this is the way it is with Perl.
+
+The Unicode support in DBD::ODBC expects a WCHAR to be 2 bytes (as it
+is on Windows and as the ODBC specification suggests it is). Until
+ODBC specifies any other Unicode support it is not envisioned this
+will change.  On UNIX there are a few different ODBC driver
+managers. I have only tested the unixODBC driver manager
+(http://www.unixodbc.org) with Unicode support and it was built with
+defaults which set WCHAR as 2 bytes.
+
+The ODBC Driver must expect Unicode data specified in SQLBindParameter
+and SQLBindCol to be UTF16 in local endianess.
+
+You should be aware that once Unicode support is enabled it affects a
+number of DBI methods (some of which you might not expect). For
+instance, when listing tables, columns etc some drivers
+(e.g. Microsoft SQL Server) will report the column types as wide types
+even if the strings actually fit in 7-bit ASCII. As a result, there is
+an overhead for retrieving this column data as 2 bytes per character
+will be transmitted (compared with 1 when Unicode support is not
+enabled) and these strings will be converted into UTF8 but will end up
+fitting (in most cases) into 7bit ASCII so a lot of conversion work
+has been performed for nothing. If you don't have Unicode table and
+column names or Unicode column data in your tables you are best
+disabling Unicode support.
+
+I am at present unsure if ChopBlanks processing on Unicode strings is
+working correctly on UNIX. If nothing else the construct L' ' in
+dbdimp.c might not work with all UNIX compilers. Reports of issues and
+patches welcome.
+
+Oracle
+======
+
+You have to set the environment variables NLS_NCHAR=AL32UTF8 and
+NLS_LANG=AMERICAN_AMERICA.AL32UTF8 (or any other language setting
+ending with ``.AL32UTF8'') before loading DBD::ODBC to make Oracle
+return Unicode data. (See also ``Oracle and Unicode'' in the POD of
+DBD::Oracle.)
+
+On Windows, using the Oracle ODBC Driver you have to enable the "Force
+SQL_WCHAR support" Workaround in the data source configuration to make
+Oracle return Unicode to a non-Unicode application. Alternatively, you
+can include "FWC=T" in your connect string.
+
+Unless you need to use ODBC, if you want Unicode support with Oracle
+you are better off using DBD::Oracle.
+
+PostgreSQL
+==========
+
+Some tests from the original DBD::ODBC 1.13 fail with PostgreSQL
+8.0.3, so you may not want to use DBD::ODBC to connect to PostgreSQL
+8.0.3.
+
+Unicode tests fail because PostgreSQL seems not to give any hints
+about Unicode, so all data is treated as non-Unicode.
+
+Unless you need to use ODBC, if you want Unicode support with Postgres
+you are better off with DBD::Pg as it has a specific attribute named
+pg_enable_utf8 to enable Unicode support.
+
+Easysoft ODBC Drivers
+=====================
+
+We have tested the Easysoft SQL Server, Oracle and ODBC Bridge drivers
+with DBD::ODBC built for Unicode. All work as described without
+modification except for the Oracle driver you will need to set you
+NLS_LANG as mentioned above.
+
+Attributions
+============
+
+A substantial part of the code to translate between UTF8 and UTF16
+came from the unicode web site (Unicode Inc) and was authored by Mark
+E. Davis and updated by various (see ConvertUTF.c). This code was
+modified in minor ways to allow ConvertUTF16toUTF8 and
+ConvertUTF8toUTF16 to accept NULL target pointers and return the
+number of bytes required in the target string for the conversion.
+
+A substantial part (most in fact) of the original Unicode support in
+DBD::ODBC was written by Alexander Foken and simply changed to support
+UNIX as well as Windows by me.
+
+Patches/Problems
+================
+
+Please see the main README. The best place to discuss DBD::ODBC is on
+the dbi-users mailing list.
+
+

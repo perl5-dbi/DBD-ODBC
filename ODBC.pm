@@ -9,7 +9,7 @@
 
 require 5.004;
 
-$DBD::ODBC::VERSION = '1.14';
+$DBD::ODBC::VERSION = '1.14_1';
 
 {
     package DBD::ODBC;
@@ -628,7 +628,53 @@ Note that some drivers may not support this attribute.
 
 See t/20SqlServer.t for an example.
 
-   
+=item odbc_has_unicode (applies to database handle only)
+
+A read-only attribute signifying whether DBD::ODBC was built with the
+C macro WITH_UNICODE or not. A value of 1 indicates DBD::ODBC was built
+with WITH_UNICODE else the value returned is 0.
+
+Building WITH_UNICODE affects columns and parameters which are
+SQL_C_WCHAR, SQL_WCHAR, SQL_WVARCHAR, and SQL_WLONGVARCHAR.
+
+When odbc_has_unicode is 1, DBD::ODBC will:
+
+=over 8
+
+=item bind columns the database declares as wide characters as SQL_Wxxx
+
+This means that UNICODE data stored in these columns will be returned
+to Perl in UTF-8 and with the UTF8 flag set.
+
+=item bind parameters the database declares as wide characters as SQL_Wxxx
+
+Parameters bound where the database declares the parameter as being
+a wide character (or where the parameter type is explicitly set to a
+wide type - SQL_Wxxx) can be UTF8 in Perl and will be mapped to UTF16
+before passing to the driver.
+
+=back
+
+NOTE: You will need at least Perl 5.8.1 to use UNICODE with DBD::ODBC.
+
+NOTE: At this time SQL statements are still treated as native encoding
+i.e. DBD::ODBC does not call SQLPrepareW with UNICODE strings. If you
+need a unicode constant in an SQL statement, you have to pass it as
+parameter or use SQL functions to convert your constant from native
+encoding to Unicode.
+
+NOTE: Binding of unicode output parameters is coded but untested.
+
+NOTE: When building DBD::ODBC on Windows ($^O eq 'MSWin32) the 
+WITH_UNICODE macro is automatically added. To disable specify -nou as
+an argument to Makefile.PL (e.g. nmake Makefile.PL -nou). On non-Windows
+platforms the WITH_UNICODE macro is B<not> enabled by default and to enable
+you need to specify the -u argument to Makefile.PL. Please bare in mind
+that some ODBC drivers do not support SQL_Wxxx columns or parameters.
+
+UNICODE support in ODBC Drivers differs considerably. Please read the
+README.unicode file for further details.
+
 =item odbc_version (applies to connect only!)
 
 This was added prior to the move to ODBC 3.x to allow the caller to "force" ODBC 3.0

@@ -2,25 +2,24 @@
 
 DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
 
+(As of $Date$ $Revision$)
+
 =cut
 
 =head1 Todo
 
- I'll be building this list shortly.
- ++ done ++ Make ODBC version 3.0 default!
- ++ done ++ Document more of the DBD::ODBC private attributes/functions.
  Add array parameter binding (per new DBI Spec)
  Add row caching/multiple row fetches to speed selects
  Better/more tests on multiple statement handles which ensure the correct number of rows
  Better/more tests on all queries which ensure the correct number of rows and data
  Better tests on SQLExecDirect/do
- ++ done ++ Change default behaviour to use SQLDescribeParam instead of SQL_VARCHAR.
-
  Keep checking Oracle's ODBC drivers for Windows to fix the Date binding problem
+ Change SQLColAttributes calls (now deprecated) to SQLColAttribute
+ Add support for $sth->more_results based on DBD::ODBC-specific attribute
 
 =head1 CHANGES
 
-=head2 Changes in DBD::ODBC 1.14 xxxx
+=head2 Changes in DBD::ODBC 1.14_01 July 4, 2007
 
 Fix bug reported where ping crashes after disconnect thanks to Steffen
 Goeldner.
@@ -30,8 +29,8 @@ maxlen (51->50) after first bind in the 20SqlServer test. This is
 caused by svGROW in Perl 5.8.8 being changed to possibly grow by more
 than you asked (e.g. up to the next longword boundary).
 
-Fix problem with binding undef as an output parameter. Reported by Stephen More
-with IBM's ODBC driver for iSeries.
+Fix problem with binding undef as an output parameter. Reported by
+Stephen More with IBM's ODBC driver for iSeries.
 
 Removed comment delimiters in comments in dbdimp.h leading to warnings.
 
@@ -47,6 +46,28 @@ bound and tracing is enabled.
 Fixed issue with TRACESTATUS change in 20SqlServer.t tests 28, 31, 32
 and 33 leading to those tests failing when testing with SQL Server
 2005 or Express.
+
+Many compiler warnings fixed - especially for incompatible types.
+
+Add provisional Unicode support - thanks to Alexander Foken. This
+change is very experimental (especially on UNIX). Please see ODBC.pm
+documentation. Also see README.unicode and README.af. New database
+attribute odbc_has_unicode to test if DBD::ODBC was built with UNICODE
+support. New tests for Unicode. New requirement for Perl 5.8.1 if
+Unicode support required. New -[no]u argument to Makefile.PL. New
+warning in Makefile.PL if Unicode support built for UNIX.
+
+Fix use of unitialised var in Makefile.PL.
+
+Fix use of scalar with no effect on Makefile.PL
+
+Added warning to Makefile.PL about building/running with LANG using
+UTF8.
+
+Added warning to Makefile.PL about using thread-safe ODBC drivers.
+
+Updated MANIFEST to include more test code from mytest and remove
+MANIFEST.SKIP etc.
 
 =head2 Changes in DBD::ODBC 1.13 November 8, 2004
 
