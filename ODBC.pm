@@ -856,11 +856,7 @@ Example (using MSSQL Server):
 =head2 Random Links
 
 These are in need of sorting and annotating. Some are relevant only
-to ODBC developers (but I don't want to loose them).
-
-	http://www.ids.net/~bjepson/freeODBC/index.html
-
-	http://dataramp.com/
+to ODBC developers.
 
 	http://www.syware.com
 
@@ -884,7 +880,26 @@ to ODBC developers (but I don't want to loose them).
    
         http://www.atinet.com/support/openrda_samples.asp
  
+   Debugging Perl DBI:
+        http://www.easysoft.com/developer/languages/perl/dbi-debugging.html
 
+   Enabling ODBC support in Perl with Perl DBI and DBD::ODBC
+        http://www.easysoft.com/developer/languages/perl/dbi_dbd_odbc.html
+
+   Perl DBI/DBD::ODBC Tutorial Part 1 - Drivers, Data Sources and Connection
+        http://www.easysoft.com/developer/languages/perl/dbd_odbc_tutorial_part_1.html
+
+   Perl DBI/DBD::ODBC Tutorial Part 2 - Introduction to retrieving data from your database
+        http://www.easysoft.com/developer/languages/perl/index.html
+
+   Perl DBI/DBD::ODBC Tutorial Part 2 - Introduction to retrieving data from your database
+        http://www.easysoft.com/developer/languages/perl/dbd_odbc_tutorial_part_2.html
+
+   Perl DBI/DBD::ODBC Tutorial Part 3 - Connecting Perl on UNIX or Linux to Microsoft SQL Server
+        http://www.easysoft.com/developer/languages/perl/sql_server_unix_tutorial.html
+
+   Perl DBI - Put Your Data On The Web
+        http://www.easysoft.com/developer/languages/perl/tutorial_data_web.html
 
 =head2 Frequently Asked Questions
 
