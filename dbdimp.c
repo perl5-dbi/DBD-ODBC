@@ -1665,7 +1665,6 @@ int more;
 	 imp_sth->done_desc = 0;	/* reset describe flags, so that we re-describe */
 	 if (rc == SQL_NO_DATA) {
 	    imp_sth->moreResults = 0;
-	    dbd_error(h, rc, "dbd_describe/SQLNumResultCols");
 	    break;
 	 }
 	 if (!SQL_ok(rc)) break;
@@ -2256,17 +2255,11 @@ imp_sth_t *imp_sth;
 	       PerlIO_printf(DBIc_LOGPIO(imp_dbh),
 			     "Getting more results: %d\n", rc);
 
-	    if (rc == SQL_SUCCESS_WITH_INFO || rc == SQL_NO_DATA) {
+	    if (rc == SQL_SUCCESS_WITH_INFO) {
 	       dbd_error(sth, rc, "st_fetch/SQLMoreResults");
-	       imp_sth->moreResults = 0;
+	       /* imp_sth->moreResults = 0; */
 	    }
-
-#if 0
-	    if (rc == SQL_NO_DATA || rc == SQL_SUCCESS_WITH_INFO) {
-	       dbd_error(sth, rc, "st_fetch/SQLMoreResults");
-	       imp_sth->moreResults = 0;
-	    }
-#endif
+            
 	    if (SQL_ok(rc)){
 	       /* More results detected.  Clear out the old result */
 	       /* stuff and re-describe the fields.                */

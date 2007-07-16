@@ -76,6 +76,24 @@ Added warning to Makefile.PL about using thread-safe ODBC drivers.
 Updated MANIFEST to include more test code from mytest and remove
 MANIFEST.SKIP etc.
 
+Removed calls to get ODBC errors when SQLMoreResults returns SQL_NO_DATA.
+These are a waste of time since SQL_NO_DATA is expected and there is no
+error diagnostic to retrieve.
+
+Changes to test 17 of 02simple.t which got "not ok 17 - Col count
+matches correct col count" errors with some Postgres ODBC
+drivers. Caused by test expecting column names to come back
+uppercase. Fixes by uppercasing returned column names.
+
+Changes to tests in 03batt.t which correctly expects an ODBC 3 driver
+to return the column names in SQLTables result-set as per ODBC 3.0
+spec. Postgres which reports itself as an ODBC 3.0 driver seems to
+return the ODBC 2 defined column names. Changed tests to catch ODBC
+2.0 names are pass test put issue warning.
+
+For postgres skip test (with warning) checking $sth->{NAME} returns
+empty listafter execute on update
+
 =head2 Changes in DBD::ODBC 1.13 November 8, 2004
 
 Fix inconsistency/bug with odbc_exec_direct vs. odbc_execdirect settings.  Now made consistent with

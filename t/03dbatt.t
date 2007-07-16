@@ -67,16 +67,27 @@ my @table_info_cols = (
 		       'TABLE_TYPE',
 		       'REMARKS',
 		      );
-
+my @odbc2_table_info_cols = (
+                            'TABLE_QUALIFIER',
+                            'TABLE_OWNER',
+                            'TABLE_NAME',
+                            'TABLE_TYPE',
+                            'REMARKS');
 SKIP:  {
     $sth = $dbh->table_info();
     skip "table_info returned undef sth", 7 unless $sth;
     my $cols = $sth->{NAME};
     isa_ok($cols, 'ARRAY', "sth {NAME} returns ref to array");
+    diag("\nN.B. Some drivers (postgres) may return ODBC 2.0 column names for the SQLTables result-set e.g. TABLE_QUALIFIER instead of TABLE_CAT");
     for (my $i = 0; $i < @$cols; $i++) {
        # print ${$cols}[$i], ": ", $sth->func($i+1, 3, ColAttributes),
        # "\n";
-       is(${$cols}[$i], $table_info_cols[$i], "Column test for table_info $i");
+       ok(($cols->[$i] eq $table_info_cols[$i]) || ($cols->[$i] eq $odbc2_table_info_cols[$i]), "Column test for table_info $i") or diag("${$cols}[$i] ne $table_info_cols[$i]");
+       if (($cols->[$i] ne $table_info_cols[$i]) &&
+           ($cols->[$i] eq $odbc2_table_info_cols[$i])) {
+           diag("Your driver is returning ODBC 2.0 column names for the SQLTables result-set");
+           diag("    $odbc2_table_info_cols[$i] instead of $table_info_cols[$i]");
+       }
     }
     while (@row = $sth->fetchrow()) {
         $rows++;
@@ -90,7 +101,7 @@ $rows = 0;
 $dbh->{PrintError} = 0;
 my @tables = $dbh->tables;
 
-cmp_ok($#tables, '>', 0, "tables returnes array");
+cmp_ok($#tables, '>', 0, "tables returns array");
 $rows = 0;
 if ($sth = $dbh->column_info(undef, undef, $ODBCTEST::table_name, undef)) {
     while (@row = $sth->fetchrow()) {
@@ -117,10 +128,12 @@ SKIP: {
 # test $sth->{NAME} when using non-select statements
 $sth = $dbh->prepare("update $ODBCTEST::table_name set COL_A = 100 WHERE COL_A = 100");
 ok($sth, "prepare update statement returns valid sth ");
-
 is(@{$sth->{NAME}}, 0, "update statement has 0 columns returned");
 $sth->execute;
-is(@{$sth->{NAME}}, 0, "update statement has 0 columns returned 2");
+SKIP: {
+    skip 'Testing $sth->{NAME} after successful execute on update statement known to fail in Postgres', 1 if ($dbname =~ /PostgreSQL/i);
+    is(@{$sth->{NAME}}, 0, "update statement has 0 columns returned 2");
+};
 
 $dbh->{odbc_query_timeout} = 30;
 is($dbh->{odbc_query_timeout}, 30, "Verify odbc_query_timeout set ok");

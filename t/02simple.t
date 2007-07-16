@@ -65,7 +65,10 @@ if ($sth) {
    for ($i = 1; $i <= $colcount; $i++) {
 		# $i is colno (1 based) 2 is for SQL_COLUMN_TYPE, 1 is for SQL_COLUMN_NAME
       $coltype = $sth->func($i, 2, ColAttributes);
-      $colname = $sth->func($i, 1, ColAttributes);
+      # NOTE: changed below to uc (uppercase) as keys in TestFieldInfo are
+      # uppercase and databases are not guaranteed to return column names in
+      # uppercase.
+      $colname = uc($sth->func($i, 1, ColAttributes));
       #diag("$i: $colname = $coltype ", $coltype+1-1);
       if (grep { $coltype == $_ } @{$ODBCTEST::TestFieldInfo{$colname}}) {
 	 $is_ok++;
@@ -170,8 +173,10 @@ SKIP: {
    ok(defined($dbh3), "Connection with DSN=");
    $dbh3->disconnect if (defined($dbh3));
 
-   $dbh3 = DBI->connect($connstr . ";UID=$ENV{DBI_USER};PWD=$ENV{DBI_PASS}",undef,undef, {RaiseError=>0, PrintError=>0});
-   ok(defined($dbh3), "Connection with DSN= and uid and pwd are set");
+   my $cs = $connstr . ";UID=$ENV{DBI_USER};PWD=$ENV{DBI_PASS}";
+   $dbh3 = DBI->connect($cs,undef,undef, {RaiseError=>0, PrintError=>0});
+   ok(defined($dbh3), "Connection with DSN= and uid and pwd are set") or
+       diag($cs);
    $dbh3->disconnect if (defined($dbh3));
 
 };
