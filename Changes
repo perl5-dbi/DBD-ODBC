@@ -19,14 +19,7 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
 
 =head1 CHANGES
 
-=head2 Changes in DBD::ODBC 1.14_2 XXXX X, 2007
-
-Removed some dead HTTP links in the pod I could not find equivalents for -
-  let me know if you have working replacements for ones removed
-
-Add some HTTP links to useful tutorials on DBD::ODBC
-
-=head2 Changes in DBD::ODBC 1.14_01 July 4, 2007
+=head2 Changes in DBD::ODBC 1.14 July 17, 2007
 
 Fix bug reported where ping crashes after disconnect thanks to Steffen
 Goeldner.
@@ -99,6 +92,11 @@ Updated FAQ, added a few more questions etc.
 DBD::ODBC requires at least 5.6.0 of Perl.
 
 Many updates to pod documentation.
+
+Removed some dead HTTP links in the pod I could not find equivalents for -
+  let me know if you have working replacements for ones removed
+
+Add some HTTP links to useful tutorials on DBD::ODBC
 
 =head2 Changes in DBD::ODBC 1.13 November 8, 2004
 

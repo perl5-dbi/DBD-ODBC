@@ -9,7 +9,7 @@
 
 require 5.006;
 
-$DBD::ODBC::VERSION = '1.14_2';
+$DBD::ODBC::VERSION = '1.14';
 
 {
     package DBD::ODBC;
@@ -428,7 +428,7 @@ Please note that the change log has been moved to
 DBD::ODBC::Changes.pm. To access this documentation, use
 C<perldoc DBD::ODBC::Changes>.
 
-For FAQs see L</Frequently Asked Quesions> or
+For FAQs see L</Frequently Asked Questions> or
 L<http://dbi.perl.org>.
 
 =item B<An Important note about the tests!>
@@ -475,7 +475,7 @@ Please, before submitting a patch:
    <test your patch>
    svn diff > describe_my_diffs.patch
 
-and send the resuting file to me...
+and send the resulting file to me...
 
 It's probably best to send to dbi-users@perl.org, as I monitor that
 group.
@@ -532,7 +532,7 @@ about this.
 =item odbc_async_exec
 
 Allow asynchronous execution of queries.  Right now, this causes a spin-loop
-(with a small "sleep") until the sql is complete.  This is useful, however,
+(with a small "sleep") until the SQL is complete.  This is useful, however,
 if you want the error handling and asynchronous messages (see the err_handler)
 below.  See t/20SQLServer.t for an example of this.
 
@@ -681,7 +681,7 @@ Since DBD::ODBC is now 3.x, this can be used to force 2.x behavior via something
    
 =item B<Private DBD::ODBC Functions>
 
-=item GetInfo (superceded by get_info(), the DBI standard)
+=item GetInfo (superseded by get_info(), the DBI standard)
 
 This function maps to the ODBC SQLGetInfo call.  This is a Level 1 ODBC
 function.  An example of this is:
@@ -692,7 +692,7 @@ This function returns a scalar value, which can be a numeric or string value.
 This depends upon the argument passed to GetInfo.
 
 
-=item SQLGetTypeInfo (superceded by get_type_info(), the DBI standard)
+=item SQLGetTypeInfo (superseded by get_type_info(), the DBI standard)
 
 This function maps to the ODBC SQLGetTypeInfo call.  This is a Level 1
 ODBC function.  An example of this is:
@@ -716,7 +716,7 @@ obtain strange results.
 =item GetFunctions (now supports ODBC V3)
 
 This function maps to the ODBC API SQLGetFunctions.  This is a Level 1
-API call which returns supported driver funtions.  Depending upon how
+API call which returns supported driver functions.  Depending upon how
 this is called, it will either return a 100 element array of true/false
 values or a single true false value.  If it's called with
 SQL_API_ALL_FUNCTIONS (0), it will return the 100 element array.
@@ -1087,6 +1087,8 @@ or Openlink.
 
 * using FreeTDS an open source TDS library which includes an ODBC Driver.
 
+* using DBD::Sybase and Sybase libraries.
+
 =item How do I access an MS-Access database from Linux?
 
 There are basically two choices I know of:
@@ -1124,7 +1126,7 @@ It should be:
 
 Multiple Active Statements (MAS) are concurrent statements created
 from the same database handle which both have pending actions on them
-(e.g. they both have executed a select statement but not retreived all
+(e.g. they both have executed a select statement but not retrieved all
 the available rows yet).
 
 DBD::ODBC does support MAS but but whether you can actually use MAS is
