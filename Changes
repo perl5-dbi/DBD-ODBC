@@ -94,6 +94,12 @@ return the ODBC 2 defined column names. Changed tests to catch ODBC
 For postgres skip test (with warning) checking $sth->{NAME} returns
 empty listafter execute on update
 
+Updated FAQ, added a few more questions etc.
+
+DBD::ODBC requires at least 5.6.0 of Perl.
+
+Many updates to pod documentation.
+
 =head2 Changes in DBD::ODBC 1.13 November 8, 2004
 
 Fix inconsistency/bug with odbc_exec_direct vs. odbc_execdirect settings.  Now made consistent with

@@ -7,9 +7,9 @@
 # You may distribute under the terms of either the GNU General Public
 # License or the Artistic License, as specified in the Perl README file.
 
-require 5.004;
+require 5.006;
 
-$DBD::ODBC::VERSION = '1.14_1';
+$DBD::ODBC::VERSION = '1.14_2';
 
 {
     package DBD::ODBC;
@@ -422,68 +422,63 @@ See L<DBI> for more information.
 
 =over 4
 
-=item B<Change log/recent updates now in DBD::ODBC::Changes.pm>
+=item B<Change log and FAQs>
 
- Please note that the change log has been moved to DBD::ODBC::Changes.pm
- To easily access this documentation, use perldoc DBD::ODBC::Changes
+Please note that the change log has been moved to
+DBD::ODBC::Changes.pm. To access this documentation, use
+C<perldoc DBD::ODBC::Changes>.
 
- Also, while this document documents features, etc, I'm really trying to keep
- the FAQ type questions answered in the DBI FAQ itself... see
- http://dbi.perl.org for more information.
-   
+For FAQs see L</Frequently Asked Quesions> or
+L<http://dbi.perl.org>.
+
 =item B<An Important note about the tests!>
 
- Please note that some tests may fail or report they are
- unsupported on this platform.  Notably Oracle's ODBC driver
- will fail the "advanced" binding tests in t/08bind2.t.
- These tests run perfectly under SQL Server 2000. This is
- normal and expected.  Until Oracle fixes their drivers to
- do the right thing from an ODBC perspective, it's going to
- be tough to fix the issue.  The workaround for Oracle is to
- bind date types with SQL_TIMESTAMP.
-   
- Also note that some tests may be skipped, such as
- t/09multi.t, if your driver doesn't seem to support
- returning multiple result sets.  This is normal.
+Please note that some tests may fail or report they are unsupported on
+this platform.  Notably Oracle's ODBC driver will fail the "advanced"
+binding tests in t/08bind2.t.  These tests run perfectly under SQL
+Server 2000. This is normal and expected.  Until Oracle fixes their
+drivers to do the right thing from an ODBC perspective, it's going to
+be tough to fix the issue.  The workaround for Oracle is to bind date
+types with SQL_TIMESTAMP.  Also note that some tests may be skipped,
+such as t/09multi.t, if your driver doesn't seem to support returning
+multiple result sets.  This is normal.
 
 =item B<Version Control>
 
- I have recently placed all of the DBD::ODBC source code
- under version control at svn.perl.org.  If you would like
- to use the "bleeding" edge version, you can get the latest
- from svn.perl.org via Subversion version control.  Note that I
- don't guarantee that this version is any different than what
- you get from the tarball from CPAN, but hey, it might be :)
+DBD::ODBC source code is under version control at svn.perl.org.  If
+you would like to use the "bleeding" edge version, you can get the
+latest from svn.perl.org via Subversion version control.  Note there
+is no guarantee that this version is any different than what you get
+from the tarball from CPAN, but hey, it might be :)
 
- You may read about Subversion from:
-   http://subversion.tigris.org
+You may read about Subversion at L<http://subversion.tigris.org>
 
- You can get a subversion client from there and check dbd-odbc out via:
+You can get a subversion client from there and check dbd-odbc out via:
 
    svn checkout http://svn.perl.org/modules/dbd-odbc/trunk <your directory name here>
 
- Which will, after a short bit a of work, grab all the files into your
- local directory tree that you name.  For now, you can authenticate via the guest
- user and guest password.  That will change to be unauthenticated in the future for
- simple read-only checkout.
-				    
+Which will, after a short bit a of work, grab all the files into your
+local directory tree that you name.
+
 =item B<Contributing>
 
- I am usually very open to contributions, but I have tended
- to get behind.  That's one strong reason why I've put everything
- in a shared version control environment.
+I am usually very open to contributions, but I have tended to get
+behind.  That's one strong reason why I've put everything in a shared
+version control environment.
 
- Please use Subversion (see above) to appropriately get the latest
- versions.
+Please use Subversion (see above) to appropriately get the latest
+versions.
 
- Please, before submitting a patch:
-    svn update
-    <test your patch>
-    svn diff > describe_my_diffs.patch
+Please, before submitting a patch:
 
- and send the resuting file to me...
+   svn update
+   <test your patch>
+   svn diff > describe_my_diffs.patch
 
- It's probably best to send to dbi-users@perl.org, as I monitor that group.
+and send the resuting file to me...
+
+It's probably best to send to dbi-users@perl.org, as I monitor that
+group.
  
 =item B<Private DBD::ODBC Attributes>
 
@@ -733,11 +728,13 @@ docs for help with this).
 Support for this function has been added in version 0.17.  It looks to be
 fixed in version 0.20.
 
-Use the DBI statement handle attributes NAME, NULLABLE, TYPE, PRECISION and
-SCALE, unless you have a specific reason.
+Use the DBI statement handle attributes NAME, NULLABLE, TYPE,
+PRECISION and SCALE, unless you have a specific reason.
 
 =item Connect without DSN
-The ability to connect without a full DSN is introduced in version 0.21.
+
+The ability to connect without a full DSN is introduced in version
+0.21.
 
 Example (using MS Access):
 	my $DSN = 'driver=Microsoft Access Driver (*.mdb);dbq=\\\\cheese\\g$\\perltest.mdb';
@@ -834,6 +831,7 @@ the Access driver, for example, is the DBQ value.  That's actually the
 file name of the Access database.
 
 =item Connect without DSN
+
 The ability to connect without a full DSN is introduced in version 0.21.
 
 Example (using MS Access):
@@ -858,74 +856,90 @@ Example (using MSSQL Server):
 These are in need of sorting and annotating. Some are relevant only
 to ODBC developers.
 
-	http://www.syware.com
+L<http://www.syware.com>
 
-	http://www.microsoft.com/odbc
+L<http://www.microsoft.com/odbc>
 
-   For Linux/Unix folks, compatible ODBC driver managers can be found at:
+For Linux/Unix folks, compatible ODBC driver managers can be found at:
    
-        http://www.easysoft.com		unixODBC driver manager source
-				        *and* ODBC-ODBC bridge for accessing Win32 ODBC sources from Linux
+L<http://www.unixodbc.org> (unixODBC source and rpms)
 
-        http://www.iodbc.org		iODBC driver manager source
+L<http://www.iodbc.org> (iODBC driver manager source)
 
-   For Linux/Unix folks, you can checkout the following for another ODBC-ODBC bridge and support for iODBC.
+For Linux/Unix folks, you can checkout the following for ODBC Drivers and
+Bridges:
 
-	http://www.openlink.co.uk 
-		or
-	http://www.openlinksw.com 
+L<http://www.easysoft.com>
 
-   And another:
-        OpenRDA
-   
-        http://www.atinet.com/support/openrda_samples.asp
+L<http://www.openlinksw.com>
+
+L<http://www.datadirect.com>
+
+L<http://www.atinet.com/support/openrda_samples.asp>
  
-   Debugging Perl DBI:
-        http://www.easysoft.com/developer/languages/perl/dbi-debugging.html
+Some useful tutorials:
 
-   Enabling ODBC support in Perl with Perl DBI and DBD::ODBC
-        http://www.easysoft.com/developer/languages/perl/dbi_dbd_odbc.html
+Debugging Perl DBI:
 
-   Perl DBI/DBD::ODBC Tutorial Part 1 - Drivers, Data Sources and Connection
-        http://www.easysoft.com/developer/languages/perl/dbd_odbc_tutorial_part_1.html
+L<http://www.easysoft.com/developer/languages/perl/dbi-debugging.html>
 
-   Perl DBI/DBD::ODBC Tutorial Part 2 - Introduction to retrieving data from your database
-        http://www.easysoft.com/developer/languages/perl/index.html
+Enabling ODBC support in Perl with Perl DBI and DBD::ODBC:
 
-   Perl DBI/DBD::ODBC Tutorial Part 2 - Introduction to retrieving data from your database
-        http://www.easysoft.com/developer/languages/perl/dbd_odbc_tutorial_part_2.html
 
-   Perl DBI/DBD::ODBC Tutorial Part 3 - Connecting Perl on UNIX or Linux to Microsoft SQL Server
-        http://www.easysoft.com/developer/languages/perl/sql_server_unix_tutorial.html
+L<http://www.easysoft.com/developer/languages/perl/dbi_dbd_odbc.html>
 
-   Perl DBI - Put Your Data On The Web
-        http://www.easysoft.com/developer/languages/perl/tutorial_data_web.html
+Perl DBI/DBD::ODBC Tutorial Part 1 - Drivers, Data Sources and Connection:
+
+L<http://www.easysoft.com/developer/languages/perl/dbd_odbc_tutorial_part_1.html>
+
+Perl DBI/DBD::ODBC Tutorial Part 2 - Introduction to retrieving data from your database:
+
+L<http://www.easysoft.com/developer/languages/perl/index.html>
+
+Perl DBI/DBD::ODBC Tutorial Part 3 - Connecting Perl on UNIX or Linux to Microsoft SQL Server:
+
+L<http://www.easysoft.com/developer/languages/perl/sql_server_unix_tutorial.html>
+
+Perl DBI - Put Your Data On The Web:
+
+L<http://www.easysoft.com/developer/languages/perl/tutorial_data_web.html>
 
 =head2 Frequently Asked Questions
 
 Answers to common DBI and DBD::ODBC questions:
 
-=over 4
- 
+=over
+
 =item How do I read more than N characters from a Memo | BLOB | LONG field?
 
-See LongReadLen in the DBI docs.  
+See LongReadLen in the DBI docs.
 
 Example:
-	$dbh->{LongReadLen} = 20000;
-	$sth = $dbh->prepare("select long_col from big_table");
-	$sth->execute;
-	etc
 
-=item What is DBD::ODBC?  Why can't I connect?  Do I need an ODBC driver?  What is the ODBC driver manager?
+ $dbh->{LongReadLen} = 20000;
+ $sth = $dbh->prepare("select long_col from big_table");
+ $sth->execute;
+ etc
+
+=item What is DBD::ODBC?
+
+=item Why can't I connect?
+
+=item Do I need an ODBC driver?
+
+=item What is the ODBC driver manager?
 
 These, general questions lead to needing definitions.
 
-1) ODBC Driver - the driver that the ODBC manager uses to connect
-and interact with the RDBMS.  You DEFINITELY need this to 
-connect to any database.  For Win32, they are plentiful and installed
-with many applications.  For Linux/Unix, some hunting is required, but
-you may find something useful at:
+=over 4
+
+=item ODBC Driver
+
+The ODBC Driver is the driver that the ODBC manager uses to connect
+and interact with the RDBMS.  You B<DEFINITELY> need this to connect to
+any database.  For Win32, they are plentiful and installed with many
+applications.  For Linux/Unix, some hunting is required, but you may
+find something useful at:
 
 	http://www.openlinksw.com
         http://www.easysoft.com
@@ -933,69 +947,210 @@ you may find something useful at:
 	http://www.atinet.com/support/openrda_samples.asp
 	      
 
-2) ODBC Driver Manager - the piece of software which interacts with the drivers
-for the application.  It "hides" some of the differences between the
-drivers (i.e. if a function call is not supported by a driver, it 'hides'
-that and informs the application that the call is not supported.
-DBD::ODBC needs this to talk to drivers.  Under Win32, it is built in
-to the OS.  Under Unix/Linux, in most cases, you will want to use freeODBC,
-unixODBC or iODBC.  iODBC was bundled with DBD::ODBC, but you will need to find one
-which suits your needs.  Please see www.openlinksw.com, www.easysoft.com or www.iodbc.org
+=item ODBC Driver Manager
 
-3) DBD::ODBC.  DBD::ODBC uses the driver manager to talk to the ODBC driver(s) on
-your system.  You need both a driver manager and driver installed and tested
-before working with DBD::ODBC.  You need to have a DSN (see below) configured
-*and* TESTED before being able to test DBD::ODBC.
+The ODBC driver manager is the interface between an ODBC application
+(DBD::ODBC in this case) and the ODBC driver. The driver manager
+principally provides the ODBC API so ODBC applications may link with a
+single shared object (or dll) and be able to talk to a range of ODBC
+drivers. At run time the application provides a connection string
+which defines the ODBC data source it wants to connect to and this in
+turn defines the ODBC driver which will handle this data source. The
+driver manager loads the requested ODBC driver and passes all ODBC API
+calls on to the driver. In this way, an ODBC application can be built
+and distributed without knowing which ODBC driver it will be using.
 
-4) DSN -- Data Source Name.  It's a way of referring to a particular database by any
-name you wish.  The name itself can be configured to hide the gory details of
-which type of driver you need and the connection information you need to provide.
-For example, for some databases, you need to provide a TCP address and port.
-You can configure the DSN to have use information when you refer to the DSN.
+However, this is a rather simplistic description of what the driver
+manager does. The ODBC driver manager also:
+
+* Controls a repository of installed ODBC drivers (on UNIX this is the
+file odbcinst.ini).
+
+* Controls a repository of defined ODBC data sources (on UNIX these are
+the files odbc.ini and .odbc.ini).
+
+* Provides the ODBC driver APIs (SQLGetPrivateProfileString and
+SQLWritePrivateProfileString) to read and write ODBC data source
+attributes.
+
+* Handles ConfigDSN which the driver exports to configure data
+sources.
+
+* Provides APIs to install and uninstall drivers (SQLInstallDriver).
+
+* Maps ODBC versions e.g. so an ODBC 2.0 application can work with an
+ODBC 3.0 driver and vice versa.
+
+* Maps ODBC states between different versions of ODBC.
+
+* Provides a cursor library for drivers which only support
+forward-only cursors.
+
+* Provides SQLDataSources and SQLDrivers so an application can find
+out what ODBC drivers are installed and what ODBC data sources are
+defined.
+
+* Provides an ODBC administrator which driver writers can use to
+install ODBC drivers and users can use to define ODBC data sources.
+
+The ODBC Driver Manager is the piece of software which interacts with
+the drivers for the application.  It "hides" some of the differences
+between the drivers (i.e. if a function call is not supported by a
+driver, it 'hides' that and informs the application that the call is
+not supported.  DBD::ODBC needs this to talk to drivers.
+
+Under Win32, you usually get the ODBC Driver Manager as part of the
+OS.  Under Unix/Linux you may have to find and build the driver
+manager yourself. The two main driver managers for Unix are unixODBC
+(http://www.unixodbc.org) and iODBC (http://www.iodbc.org).
+
+B<It is strongly advised you get an ODBC Driver Manager before trying to
+build DBD::ODBC unless you intend linking DBD::ODBC directly with your
+driver.>
+
+For a reasonable description of ODBC on Unix/Linux see
+L<http://www.easysoft.com/developer/interfaces/odbc/linux.html>
+
+=item DBD::ODBC
+
+DBD::ODBC uses the driver manager to talk to the ODBC driver(s) on
+your system.  You need both a driver manager and driver installed and
+tested before working with DBD::ODBC.  You need to have a DSN (see
+below) configured and B<TESTED> before being able to test DBD::ODBC.
+
+=item DSN (Data Source Name)
+
+
+The DSN is a way of referring to a particular driver and database by
+any name you wish.  The DSN is usually a key to a list of attributes
+the ODBC driver needs to connect to the database (e.g. ip address and
+port) but there is always a key which names the driver so the driver
+manager knows which driver to use with which data source. Do no
+confuse DSNs with ODBC connection strings or DBI's "$data_source" (the
+first argument to L<DBI/connect>.
+
+The $data_source argument to DBI is composed of 'dbi:DRIVER:something_else'
+where DRIVER is the name of the DBD driver you want to use (ODBC of
+course for DBD::ODBC). The "something_else" for DBD::ODBC can be a DSN
+name or it can be a normal ODBC connection string.
+
+An ODBC connection string consists of attribute/value pairs separated
+with semicolons (;). You can replace "something_else" above with a
+normal ODBC connection string but as a special case for DBD::ODBC you can
+just use the DSN name without the usual ODBC connection string prefix
+of "DSN=dsn_name".
+
+e.g.
+
+=over
+
+=item dbi:ODBC:DSN=fred
+
+ODBC connection string using fred DSN
+
+=item dbi:ODBC:fred
+
+Same as above (a special case).
+
+=item dbi:ODBC:Driver={blah blah driver};Host=1.2.3.4;Port=1000;
+
+This is known as a DSN-less connection string for obvious reasons.
+
+=back
 
 =item Where do I get an ODBC driver manager for Unix/Linux?
 
-DBD::ODBC comes with one (iODBC).  In the DBD::ODBC source release is a directory named iodbcsrc.  
-There are others.  UnixODBC, FreeODBC and some of the drivers will come with one of these managers.
-For example Openlink's drivers (see below) come with the iODBC driver manager.  Easysoft
-supplies both ODBC-ODBC bridge software and unixODBC.
+DBD::ODBC used to come bundled with a driver manager but this became
+inconvenient when the driver manager was updated.
+
+The two main ODBC Driver Managers for Unix are unixODBC (L<http://www.unixodbc/org>) and iODBC (L<http://www.iodbc.org>).
+
+If you are running a packaged Linux like RedHat, Ubuntu, Fedora, Suse
+etc etc you'll usually find it packaged with unixODBC and using the
+package manager to install it is fairly straight forward. However,
+make sure that if the driver manager is split into multiple packages
+you install the development package as well as that contains the C
+header files required by DBD::ODBC.
+
+If you cannot find an ODBC Driver Manager package for your OS you can
+download the source tar files for either of the driver managers above
+and build it yourself.
 
 =item How do I access a MS SQL Server database from Linux?
 
-Try using drivers from http://www.openlinksw.com or www.easysoft.com
-The multi-tier drivers have been tested with Linux and Redhat 5.1.
+You have loads of choices (in no particular order):
+
+* using DBI::ProxyServer
+
+* using a commercial ODBC Driver or bridge like the ones from Easysoft
+or Openlink.
+
+* using FreeTDS an open source TDS library which includes an ODBC Driver.
 
 =item How do I access an MS-Access database from Linux?
 
-I believe you can use the multi-tier drivers from http://www.openlinksw.com, however, I have
-not tested this.  Also, I believe there is a commercial solution from http://www.easysoft.com.  I
-have not tested this.
+There are basically two choices I know of:
 
-If someone does have more information, please, please send it to me and I will put it in this
-FAQ.
+* using mdbtools although as of writing it has not been updated since June 2004
+and only provides read access.
 
-=item Almost all of my tests for DBD::ODBC fail.  They complain about not being able to connect
-or the DSN is not found.  
+* a commercial ODBC Bridge like the ones from Easysoft or OpenLink.
 
-Please, please test your configuration of ODBC and driver before trying to test DBD::ODBC.  Most
-of the time, this stems from the fact that the DSN (or ODBC) is not configured properly.  iODBC
-comes with a odbctest program.  Please use it to verify connectivity.
+=item Almost all of my tests for DBD::ODBC fail. They complain about
+not being able to connect or the DSN is not found.
 
-=item For Unix -> Windows DB see Tom Lowery's write-up.
+Please, please test your configuration of ODBC and driver before
+trying to test DBD::ODBC. Most of the time, this stems from the fact
+that the DSN (or ODBC) is not configured properly. unixODBC comes with
+a small program isql and iODBC comes with odbctest and you should use
+these to test your ODBC configuration is working properly first.
 
-http://tlowery.hypermart.net/perl_dbi_dbd_faq.html#HowDoIAccessMSWindowsDB
+=item I'm attempting to bind a Long Var char (or other specific type)
+and the binding is not working.
 
-=item I'm attempting to bind a Long Var char (or other specific type) and the binding is not working.
 The code I'm using is below:
 
 	$sth->bind_param(1, $str, $DBI::SQL_LONGVARCHAR);
                                  ^^^
-The problem is that DBI::SQL_LONGVARCHAR is not the same as $DBI::SQL_LONGVARCHAR and that
-$DBI::SQL_LONGVARCHAR is an error!
+
+The problem is that DBI::SQL_LONGVARCHAR is not the same as
+$DBI::SQL_LONGVARCHAR and that $DBI::SQL_LONGVARCHAR is an error!
 
 It should be:
 
 	$sth->bind_param(1, $str, DBI::SQL_LONGVARCHAR);
 
+=item Does DBD::ODBC support Multiple Active Statements?
+
+Multiple Active Statements (MAS) are concurrent statements created
+from the same database handle which both have pending actions on them
+(e.g. they both have executed a select statement but not retreived all
+the available rows yet).
+
+DBD::ODBC does support MAS but but whether you can actually use MAS is
+down to the ODBC Driver.
+
+By default MS SQL Server did not used to support multiple active
+statements if any of them were select statements. You could get around
+this (with caution) by changing to a dynamic cursor. There is a "hack"
+in DBD::ODBC which can be used to enable MAS but you have to fully
+understand the implications of doing so(see
+L<DBD/ODBC/odbc_SQL_ROWSET_SIZE> and L<DBD/ODBC/odbc_cursortype>).
+
+In MS SQL Server 2005, there is a new thing called MARS (Multiple
+Active Result Sets) which allows multiple active select statements but
+it has some nasty implications it you are also doing transactions.
+
+For other drivers it depends. I believe various Oracle ODBC drivers
+doe support multiple active statements as myodbc does.
+
+Think carefully before using multiple active statements. It is
+probably not portable and there is nearly always a better way of doing
+it.
+
+If anyone wants to report success with a particular driver and
+multiple active statements I will collect them here.
+
+=back
 
 =cut
