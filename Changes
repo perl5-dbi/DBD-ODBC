@@ -19,6 +19,13 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
 
 =head1 CHANGES
 
+=head2 Changes in DBD::ODBC 1.15_1 September 13, 2007
+
+Minor changes to 20SqlServer.t test for SQL Server 2008 (Katmai).
+Timestamps now return an extra 4 digits of precision (all 0000) and
+the driver reported in dbcc messages has a '.' in the version which
+was not handled.
+
 =head2 Changes in DBD::ODBC 1.14 July 17, 2007
 
 Fix bug reported where ping crashes after disconnect thanks to Steffen

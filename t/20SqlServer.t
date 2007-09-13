@@ -113,6 +113,9 @@ SKIP: {
    $sth2->execute  or die ($DBI::errstr);
    my $iErrCount = 0;
    while (my ($i,$time,$str) = $sth2->fetchrow_array()) {
+       if (defined($time)) {
+           $time =~ s/0000$//o;
+       }
       if ((defined($time) && $time ne $data[$i][0]) || defined($time) != defined($data[$i][0])) {
 	 diag("Retrieving: $i, $time string length: " . length($str) . "\t!time ");
 	 $iErrCount++;
@@ -421,15 +424,16 @@ AS
    # print "odbc_async_exec is: $dbh->{odbc_async_exec}\n";
    is($dbh->{odbc_async_exec}, 1, "test odbc_async_exec attribute set");
 
-   # not sure if this should be a test.  May have permissions problems, but it's the only sample
-   # of the error handler stuff I have.
+   # not sure if this should be a test.  May have permissions problems, but
+   # it's the only sample of the error handler stuff I have.
    my $testpass = 0;
    my $lastmsg;
 
    sub err_handler {
       my ($state, $msg, $nativeerr) = @_;
       # Strip out all of the driver ID stuff
-      $msg =~ s/^(\[[\w\s:]*\])+//;
+      # normally something like [SQL Server Native Client 10.0][SQL Server]
+      $msg =~ s/^(\[[\w\s:\.]*\])+//;
       $lastmsg = $msg;
       print "===> state: $state msg: $msg nativeerr: $nativeerr\n";
       $testpass++;
