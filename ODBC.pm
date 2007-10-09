@@ -938,14 +938,8 @@ These, general questions lead to needing definitions.
 The ODBC Driver is the driver that the ODBC manager uses to connect
 and interact with the RDBMS.  You B<DEFINITELY> need this to connect to
 any database.  For Win32, they are plentiful and installed with many
-applications.  For Linux/Unix, some hunting is required, but you may
-find something useful at:
-
-	http://www.openlinksw.com
-        http://www.easysoft.com
-	http://www.intersolv.com
-	http://www.atinet.com/support/openrda_samples.asp
-	      
+applications.  For Linux/Unix, you can find a fairly comprehensive list
+at L<http://www.unixodbc.org/drivers.html>.
 
 =item ODBC Driver Manager
 
@@ -1002,7 +996,7 @@ not supported.  DBD::ODBC needs this to talk to drivers.
 Under Win32, you usually get the ODBC Driver Manager as part of the
 OS.  Under Unix/Linux you may have to find and build the driver
 manager yourself. The two main driver managers for Unix are unixODBC
-(http://www.unixodbc.org) and iODBC (http://www.iodbc.org).
+(L<http://www.unixodbc.org>) and iODBC (L<http://www.iodbc.org>).
 
 B<It is strongly advised you get an ODBC Driver Manager before trying to
 build DBD::ODBC unless you intend linking DBD::ODBC directly with your
@@ -1055,6 +1049,8 @@ Same as above (a special case).
 =item dbi:ODBC:Driver={blah blah driver};Host=1.2.3.4;Port=1000;
 
 This is known as a DSN-less connection string for obvious reasons.
+
+=back
 
 =back
 
@@ -1152,6 +1148,55 @@ it.
 
 If anyone wants to report success with a particular driver and
 multiple active statements I will collect them here.
+
+=item Why do I get "Datetime field overflow" when attempting to insert a
+date into Oracle?
+
+If you are using the Oracle or Microsoft ODBC drivers then you may get
+the following error when inserting dates into an Oracle database:
+
+  [Oracle][ODBC]Datetime field overflow. (SQL-22008)
+
+If you do then check v$nls_parameters and v$parameter to see if you are
+using a date format containing the RR format. e.g.,
+
+  select * from v$nls_parameters where parameter = 'NLS_DATE_FORMAT'
+  select * from v$parameter where name = 'nls_date_format'
+
+If you see a date format like 'DD-MON-RR' (e.g., contains an RR) then
+all I can suggest is you change the date format for your session as I
+have never been able to bind a date using this format. You can do this
+with:
+
+  alter session set nls_date_format='YYYY/MM/DD'
+
+and use any format you like but keep away from 'RR'.
+
+You can find some test code in the file mytest/rtcpan_28821.pl which
+demonstrates this problem. This was originally a rt.cpan issue which
+can be found at L<http://rt.cpan.org/Ticket/Display.html?id=28821>.
+
+As an aside, if anyone is reading this and can shed some light on the problem
+I'd love to hear from you. The technical details are:
+
+  create table rtcpan28821 (a date)
+  insert into rtcpan28821 values('23-MAR-62') fails
+
+Looking at the ODBC trace, SQLDescribeParam returns:
+
+  data type: 93, SQL_TYPE_TIMESTAMP
+  size: 19
+  decimal digits: 0
+  nullable: 1
+
+and DBD::ODBC calls SQLBindParameter with:
+
+  ValueType: SQL_C_CHAR
+  ParameterType: SQL_TYPE_TIMESTAMP
+  ColumnSize: 9
+  DecimalDigits: 0
+  Data: 23-MAR-62
+  BufferLength: 9
 
 =back
 

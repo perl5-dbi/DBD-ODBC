@@ -26,6 +26,9 @@ Timestamps now return an extra 4 digits of precision (all 0000) and
 the driver reported in dbcc messages has a '.' in the version which
 was not handled.
 
+New FAQ entry and test code for "Datetime field overflow" problem in
+Oracle.
+
 =head2 Changes in DBD::ODBC 1.14 July 17, 2007
 
 Fix bug reported where ping crashes after disconnect thanks to Steffen
