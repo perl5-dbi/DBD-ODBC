@@ -73,7 +73,7 @@ struct imp_sth_st {
     UCHAR    *RowBuffer;	/* holds row data; referenced from fbh */
     imp_fbh_t *fbh;		/* array of imp_fbh_t structs	*/
 
-    SDWORD   RowCount;		/* Rows affected by insert, update, delete
+    SQLLEN   RowCount;		/* Rows affected by insert, update, delete
 				 * (unreliable for SELECT)
 				 */
     int eod;			/* End of data seen */
@@ -101,19 +101,19 @@ struct imp_fbh_st { 	/* field buffer EXPERIMENTAL */
     /* field description - SQLDescribeCol() */
     UCHAR *ColName;		/* zero-terminated column name */
     SQLSMALLINT ColNameLen;
-    SQLUINTEGER ColDef;		/* precision */
+    SQLULEN ColDef;		/* precision */
     SQLSMALLINT ColScale;
     SQLSMALLINT ColSqlType;
     SQLSMALLINT ColNullable;
-    SDWORD ColLength;		/* SqlColAttributes(SQL_COLUMN_LENGTH) */
-    SDWORD ColDisplaySize;	/* SqlColAttributes(SQL_COLUMN_DISPLAY_SIZE) */
+    SQLLEN ColLength;		/* SqlColAttributes(SQL_COLUMN_LENGTH) */
+    SQLLEN ColDisplaySize;	/* SqlColAttributes(SQL_COLUMN_DISPLAY_SIZE) */
 
     /* Our storage space for the field data as it's fetched	*/
     SWORD ftype;		/* external datatype we wish to get.
 				 * Used as parameter to SQLBindCol().
 				 */
     UCHAR *data;		/* points into sth->RowBuffer */
-    SDWORD datalen;		/* length returned from fetch for single row. */
+    SQLLEN datalen;		/* length returned from fetch for single row. */
     UDWORD maxcnt;		/* max num of rows to return per fetch */
     SV *colary;			/* ref to array to recv output data */
     SDWORD *col_indics;	/* individual column length/NULL indicators for array binding */
@@ -139,7 +139,7 @@ struct phs_st {  	/* scalar placeholder EXPERIMENTAL	*/
     SWORD sql_type;			/* the sql type the placeholder should have in SQL	*/
     SWORD tgt_sql_type;			/* the PH SQL type the stmt expects     */
     SDWORD tgt_len;			/* size or precision the stmt expects */
-    SDWORD cbValue;			/* length of returned value OR SQL_NULL_DATA */
+    SQLLEN cbValue;			/* length of returned value OR SQL_NULL_DATA */
     SDWORD *indics;			/* ptr to indicator array for param arrays */
     int is_array;			/* TRUE => parameter array */
 

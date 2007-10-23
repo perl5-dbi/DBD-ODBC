@@ -29,6 +29,14 @@ was not handled.
 New FAQ entry and test code for "Datetime field overflow" problem in
 Oracle.
 
+Changed all ODBC code to use new SQLLEN/SQLULEN types where
+Microsoft's headers indicate, principally so DBD::ODBC builds and
+works on win64. NOTE: you will need an ODBC Driver Manager on UNIX
+which knows SQLLEN/SQLULEN types. The unixODBC driver manager uses
+SQLLEN/SQLULEN is versions from at least 2.2.12.
+
+Removed some unused variable declarations from dbdimp.c.
+
 =head2 Changes in DBD::ODBC 1.14 July 17, 2007
 
 Fix bug reported where ping crashes after disconnect thanks to Steffen

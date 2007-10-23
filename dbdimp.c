@@ -359,7 +359,7 @@ int dbd_db_execdirect( SV *dbh,
 {
    D_imp_dbh(dbh);
    SQLRETURN ret;
-   SQLINTEGER rows;
+   SQLLEN rows;
    SQLHSTMT stmt;
 
    if (!DBIc_ACTIVE(imp_dbh)) {
@@ -1625,8 +1625,7 @@ int more;
    int t_cbufl=0;		/* length of all column names */
    SQLSMALLINT i;
    imp_fbh_t *fbh;
-   int t_dbsize = 0;		/* size of native type */
-   int t_dsize = 0;		/* display size */
+   SQLLEN t_dbsize = 0;		/* size of native type */
    SQLSMALLINT num_fields;
    struct imp_dbh_st *imp_dbh = NULL;
    imp_dbh = (struct imp_dbh_st *)(DBIc_PARENT_COM(imp_sth));
@@ -2428,7 +2427,7 @@ int
    SV *sth;
 imp_sth_t *imp_sth;
 {
-   return imp_sth->RowCount;
+   return (int)imp_sth->RowCount;
 }
 
 
@@ -2535,8 +2534,7 @@ static void
 {
    SWORD fNullable;
    SWORD ibScale;
-   UDWORD dp_cbColDef;
-   UWORD supported = 0;
+   SQLULEN dp_cbColDef;
    D_imp_dbh_from_sth;
    RETCODE rc;
    SWORD fSqlType;
@@ -2628,9 +2626,9 @@ static int
    SQLSMALLINT fParamType;
    SQLSMALLINT fCType;
    UCHAR *rgbValue;
-   SQLUINTEGER cbColDef;
+   SQLULEN cbColDef;
    SQLSMALLINT ibScale;
-   SQLINTEGER cbValueMax;
+   SQLLEN cbValueMax;
 
    STRLEN value_len = 0;
 
@@ -3038,7 +3036,7 @@ IV maxlen;			/* ??? */
  * read part of a BLOB from a table.
  * XXX needs more thought
  */
-dbd_st_blob_read(sth, imp_sth, field, offset, len, destrv, destoffset)
+int dbd_st_blob_read(sth, imp_sth, field, offset, len, destrv, destoffset)
 SV *sth;
 imp_sth_t *imp_sth;
 int field;
@@ -3048,7 +3046,7 @@ SV *destrv;
 long destoffset;
 {
    dTHR;
-   SDWORD retl;
+   SQLLEN retl;
    SV *bufsv;
    RETCODE rc;
 
@@ -3062,7 +3060,7 @@ long destoffset;
 
    rc = SQLGetData(imp_sth->hstmt, (SQLSMALLINT)(field+1),
 		   SQL_C_BINARY,
-		   ((UCHAR *)SvPVX(bufsv)) + destoffset, (SDWORD)len, &retl
+		   ((UCHAR *)SvPVX(bufsv)) + destoffset, len, &retl
 		  );
    if (ODBC_TRACE_LEVEL(imp_sth) >= 2)
       PerlIO_printf(DBIc_LOGPIO(imp_sth),
@@ -3164,7 +3162,6 @@ SV *valuesv;
    STRLEN kl;
    STRLEN plen;
    char *key = SvPV(keysv,kl);
-   SV *cachesv = NULL; /* This never seems to be used?!? [dgood 7/02] */
    int on;
    UDWORD vParam;
    const db_params *pars;
@@ -4084,7 +4081,7 @@ I16 *DecimalDigits;
 I16 *Nullable;
 {
    D_imp_sth(sth);
-   SQLUINTEGER ColSize;
+   SQLULEN ColSize;
    RETCODE rc;
    rc = SQLDescribeCol(imp_sth->hstmt, (SQLSMALLINT)colno,
 		       ColumnName, BufferLength, NameLength,
@@ -4093,7 +4090,7 @@ I16 *Nullable;
       dbd_error(sth, rc, "DescribeCol/SQLDescribeCol");
       return 0;
    }
-   *ColumnSize = ColSize;
+   *ColumnSize = (U32)ColSize;
    return 1;
 }
 
@@ -4183,7 +4180,7 @@ int desctype;
    int i;
    char rgbInfoValue[256];
    SWORD cbInfoValue = -2;
-   SDWORD fDesc = -2;
+   SQLLEN fDesc = -2;
 
    for (i = 0; i < 6; i++)
       rgbInfoValue[i] = (char)0xFF;
@@ -4253,7 +4250,7 @@ int desctype;
    return sv_2mortal(retsv);
 }
 
-int	
+int
    odbc_db_columns(dbh, sth, catalog, schema, table, column)
    SV *dbh;
 SV *sth;
