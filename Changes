@@ -16,6 +16,8 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
  Keep checking Oracle's ODBC drivers for Windows to fix the Date binding problem
  Change SQLColAttributes calls (now deprecated) to SQLColAttribute
  Add support for $sth->more_results based on DBD::ODBC-specific attribute
+ Use odbcinst (if it exists to point people at the ini files they need to use)
+ Use odbc_config (if it exists to find out about unixODBC).
 
 =head1 CHANGES
 

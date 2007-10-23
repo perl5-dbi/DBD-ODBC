@@ -25,7 +25,6 @@ my %opts =
     PREREQ_PM => { "Test::Simple" => 0.40 }, # actually Test::More pkg in T::S dist
     clean	=> { FILES=> 'ODBC.xsi dbdodbc.h' },
     dist	=> {
-	#DIST_DEFAULT=> 'clean distcheck disttest ci tardist',
 	DIST_DEFAULT=> 'clean distcheck tardist',
 	PREOP    => '$(MAKE) -f Makefile.old distdir',
 	COMPRESS => 'gzip -v9', SUFFIX => 'gz'
@@ -87,10 +86,13 @@ if (defined($opt_u) && $opt_u) {
     prompt("Press return to continue...");
     require 5.008001;
 }
-print "\nConfiguring DBD::ODBC ...\n
+
+print <<"EOT";
+
 >>>\tRemember to actually *READ* the README file!
    \tAnd re-read it if you have any problems.\n
-";
+
+EOT
 
 my $dbi_dir      = dbd_dbi_dir();
 my $dbi_arch_dir = dbd_dbi_arch_dir();
@@ -450,6 +452,7 @@ print SQLH qq{\n};
 close(SQLH);
 
 print "\n";
+
 my $rv = WriteMakefile(%opts);
 
 local($^W)=0;
@@ -464,15 +467,39 @@ print "Warning: not all required environment variables are set.\n"
 print "Warning: DBI_DSN ($ENV{DBI_DSN}) doesn't start with 'dbi:ODBC:'\n"
 	if ($ENV{DBI_DSN} && $ENV{DBI_DSN} !~ m/^dbi:ODBC:/);
 print "\n";
-warn "See README.RH9 if you have problems with a bad Makefile generated here\a\a\a\n"
-   if ($ENV{LANG} && $ENV{LANG} =~ /utf8/);
 
-#$rv;
+# Following generates
+# Useless use of private variable in void context at Makefile.PL
+# but is required
+$rv;
 
+# ====================================================================
+
+package MY;
+
+use strict;
+use Config;
+
+
+sub postamble {
+    return main::dbd_postamble(@_);
+}
+
+sub const_cccmd {
+    my $self = shift;
+    local($_) = $self->SUPER::const_cccmd(@_);
+
+    # inject the defined local ODBC before default include to ensure
+    # the ODBC driver we want is first
+    if ($^O ne 'MSWin32') {
+        s/-c/-c \$\(DEFINE\)/;
+    }
+    $_;
+}
 sub MY::post_constants {
-   my ($self) = shift;
+    my ($self) = shift;
 
-   '
+    '
 # make Changes file available as installed pod docs "perldoc DBI::Changes"
 inst_libdbdodbc = ' . File::Spec->catdir($self->{INST_LIB}, 'DBD/ODBC') . '
 changes_pm = ' . File::Spec->catfile($self->{INST_LIB}, 'DBD/ODBC', 'Changes.pm') . '
@@ -488,32 +515,6 @@ $(changes_pm): Changes
 
 }
 
-# ====================================================================
-
-{
-    package MY; # SUPER needs package context, $self is not sufficient
-
-    use strict;
-    use Config;
-
-
-    sub postamble {
-       return main::dbd_postamble(@_);
-    }
-
-    sub const_cccmd {
-       my $self = shift;
-       local($_) = $self->SUPER::const_cccmd(@_);
-
-       # inject the defined local ODBC before default include to ensure
-       # the ODBC driver we want is first
-       if ($^O ne 'MSWin32') {
-	  s/-c/-c \$\(DEFINE\)/;
-	  print "Injecting selected odbc driver into cc command\n";
-       }
-       $_;
-    }
-}
-__END__
+# end.
 
 
