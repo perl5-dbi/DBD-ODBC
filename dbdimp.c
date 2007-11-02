@@ -1253,7 +1253,7 @@ char *statement;
 	 imp_sth->all_params_hv = newHV();
       namelen = strlen(name);
 
-      svpp = hv_fetch(imp_sth->all_params_hv, name, namelen, 0);
+      svpp = hv_fetch(imp_sth->all_params_hv, name, (I32)namelen, 0);
       if (svpp == NULL) {
 	 /* create SV holding the placeholder */
 	 phs_sv = newSVpv((char*)&phs_tpl, sizeof(phs_tpl)+namelen+1);
@@ -1262,7 +1262,7 @@ char *statement;
 	 phs->idx = idx;
 
 	 /* store placeholder to all_params_hv */
-	 svpp = hv_store(imp_sth->all_params_hv, name, namelen, phs_sv, 0);
+	 svpp = hv_store(imp_sth->all_params_hv, name, (I32)namelen, phs_sv, 0);
       }
    }
    *dest = '\0';
@@ -1449,10 +1449,10 @@ SV *attribs;
       /* if the attribute is there, let it override what the default
        * value from the dbh is (set above).
        */
-      if ((odbc_exec_direct_sv = DBD_ATTRIB_GET_SVP(attribs, "odbc_execdirect", strlen("odbc_execdirect"))) != NULL) {
+      if ((odbc_exec_direct_sv = DBD_ATTRIB_GET_SVP(attribs, "odbc_execdirect", (I32)strlen("odbc_execdirect"))) != NULL) {
 	 imp_sth->odbc_exec_direct = SvIV(*odbc_exec_direct_sv) != 0;
       }
-      if ((odbc_exec_direct_sv = DBD_ATTRIB_GET_SVP(attribs, "odbc_exec_direct", strlen("odbc_exec_direct"))) != NULL) {
+      if ((odbc_exec_direct_sv = DBD_ATTRIB_GET_SVP(attribs, "odbc_exec_direct", (I32)strlen("odbc_exec_direct"))) != NULL) {
 	 imp_sth->odbc_exec_direct = SvIV(*odbc_exec_direct_sv) != 0;
       }
    }
@@ -1463,7 +1463,7 @@ SV *attribs;
    if (!imp_sth->odbc_exec_direct) {
       /* parse the (possibly edited) SQL statement */
       rc = SQLPrepare(imp_sth->hstmt,
-		      imp_sth->statement, strlen(imp_sth->statement));
+		      imp_sth->statement, (SQLINTEGER)strlen(imp_sth->statement));
       if (ODBC_TRACE_LEVEL(imp_dbh) >= 2)
 	 PerlIO_printf(DBIc_LOGPIO(imp_dbh), "    SQLPrepare returned %d\n\n",
 		       rc);
@@ -2839,7 +2839,7 @@ static int
    }
    else {
       rgbValue = phs->sv_buf;
-      phs->cbValue = (UDWORD) value_len;
+      phs->cbValue = value_len;
       /* not undef, may be a blank string or something */
       if (!phs->is_inout && phs->cbValue == 0) {
 	 cbColDef = 1;
@@ -2858,7 +2858,7 @@ static int
        /* This exceeds the positive size of an SWORD, so we have to use
         * SQLPutData.
         */
-      SQLSMALLINT vl = value_len;
+      SQLLEN vl = value_len;
       ibScale = 32767;
       phs->cbValue = SQL_LEN_DATA_AT_EXEC(vl);
       /* This is lazyness!
@@ -2963,7 +2963,7 @@ IV maxlen;			/* ??? */
    /*
     * all_params_hv created during dbd_preparse.
     */
-   phs_svp = hv_fetch(imp_sth->all_params_hv, name, name_len, 0);
+   phs_svp = hv_fetch(imp_sth->all_params_hv, name, (I32)name_len, 0);
    if (phs_svp == NULL)
       croak("Can't bind unknown placeholder '%s'", name);
    phs = (phs_t*)SvPVX(*phs_svp);	/* placeholder struct	*/
@@ -3203,23 +3203,22 @@ SV *valuesv;
 	  * set value of default bind type.  Default is SQL_VARCHAR,
 	  * but setting to 0 will cause SQLDescribeParam to be used.
 	  */
-	 imp_dbh->odbc_default_bind_type = SvIV(valuesv);
+	 imp_dbh->odbc_default_bind_type = (SQLSMALLINT)SvIV(valuesv);
 
 	 break;
 
       case ODBC_FORCE_REBIND:
 	 bSetSQLConnectionOption = FALSE;
 	 /*
-	  * set value of default bind type.  Default is SQL_VARCHAR,
-	  * but setting to 0 will cause SQLDescribeParam to be used.
+	  * set value to force rebind
 	  */
-	 imp_dbh->odbc_force_rebind = SvIV(valuesv);
+	 imp_dbh->odbc_force_rebind = (int)SvIV(valuesv);
 
 	 break;
 
       case ODBC_QUERY_TIMEOUT:
 	 bSetSQLConnectionOption = FALSE;
-	 imp_dbh->odbc_query_timeout = SvIV(valuesv);
+	 imp_dbh->odbc_query_timeout = (SQLINTEGER)SvIV(valuesv);
 	 break;
 
       case ODBC_EXEC_DIRECT:
@@ -3230,7 +3229,7 @@ SV *valuesv;
 	  * use SQLExecDirect.  This is to support drivers that
 	  * _only_ support SQLExecDirect.
 	  */
-	 imp_dbh->odbc_exec_direct = SvIV(valuesv);
+	 imp_dbh->odbc_exec_direct = (int)SvIV(valuesv);
 
 	 break;
 
@@ -3737,7 +3736,7 @@ SV *keysv;
 	    while( (sv = hv_iternextsv(hv, &key, &retlen)) != NULL ) {
 	       if (sv != &sv_undef) {
 		  phs_t *phs = (phs_t*)(void*)SvPVX(sv);
-		  hv_store(paramvalues, phs->name, strlen(phs->name), newSVsv(phs->sv), 0);
+		  hv_store(paramvalues, phs->name, (I32)strlen(phs->name), newSVsv(phs->sv), 0);
 	       }
 	    }
 	 }
@@ -3802,7 +3801,7 @@ SV *valuesv;
 	 break;
 
       case 2:/*  */
-	 imp_sth->odbc_force_rebind = SvIV(valuesv);
+	 imp_sth->odbc_force_rebind = (int)SvIV(valuesv);
 	 return TRUE;
 	 break;
 

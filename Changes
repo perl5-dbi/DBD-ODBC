@@ -35,8 +35,9 @@ Changed all ODBC code to use new SQLLEN/SQLULEN types where
 Microsoft's headers indicate, principally so DBD::ODBC builds and
 works on win64. NOTE: you will need an ODBC Driver Manager on UNIX
 which knows SQLLEN/SQLULEN types. The unixODBC driver manager uses
-SQLLEN/SQLULEN is versions from at least 2.2.12. Thanks to Nelson
-Oliveira for finding, patching and testing this.
+SQLLEN/SQLULEN in versions from at least 2.2.12. Thanks to Nelson
+Oliveira for finding, patching and testing this and then fixing
+problems with bound parameters on 64 bit Windows.
 
 Removed some unused variable declarations from dbdimp.c.
 
