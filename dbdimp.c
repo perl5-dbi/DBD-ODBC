@@ -1598,7 +1598,7 @@ static const char *
       s_c(SQL_C_TYPE_TIMESTAMP);
    }
 #undef s_c
-   sprintf(s_buf, "(unknown CType %d)", sqltype);
+   sprintf(s_buf, "(CType %d)", sqltype);
    return s_buf;
 }
 
@@ -1615,343 +1615,358 @@ imp_sth_t *imp_sth;
 int more;
 
 {
-   dTHR;
-   SQLRETURN rc;
+    dTHR;
+    SQLRETURN rc;                           /* ODBC fn return value */
 
-   UCHAR *cbuf_ptr;
-   UCHAR *rbuf_ptr;
+    UCHAR *cbuf_ptr;
+    UCHAR *rbuf_ptr;
 
-   int t_cbufl=0;		/* length of all column names */
-   SQLSMALLINT i;
-   imp_fbh_t *fbh;
-   SQLLEN t_dbsize = 0;		/* size of native type */
-   SQLSMALLINT num_fields;
-   struct imp_dbh_st *imp_dbh = NULL;
-   imp_dbh = (struct imp_dbh_st *)(DBIc_PARENT_COM(imp_sth));
+    int t_cbufl=0;                    /* length of all column names */
+    SQLSMALLINT i;
+    imp_fbh_t *fbh;
+    SQLLEN t_dbsize = 0;                     /* size of native type */
+    SQLSMALLINT num_fields;
+    struct imp_dbh_st *imp_dbh = NULL;
+    imp_dbh = (struct imp_dbh_st *)(DBIc_PARENT_COM(imp_sth));
 
-   if (imp_sth->done_desc)
-      return 1;	/* success, already done it */
+    if (imp_sth->done_desc)
+        return 1;                       /* success, already done it */
 
-   if (ODBC_TRACE_LEVEL(imp_sth) >= 5)
-      PerlIO_printf(DBIc_LOGPIO(imp_sth),
-		    "    dbd_describe %d getting num fields\n",
-		    imp_sth->hstmt);
+    rc = SQLNumResultCols(imp_sth->hstmt, &num_fields);
+    if (!SQL_ok(rc)) {
+        dbd_error(h, rc, "dbd_describe/SQLNumResultCols");
+        return 0;
+    } else if (ODBC_TRACE_LEVEL(imp_sth) >= 2)
+        PerlIO_printf(DBIc_LOGPIO(imp_sth),
+                      "    num fields = %d\n", num_fields);
 
-   rc = SQLNumResultCols(imp_sth->hstmt, &num_fields);
-   if (!SQL_ok(rc)) {
-      dbd_error(h, rc, "dbd_describe/SQLNumResultCols");
-      return 0;
-   }
+    /*
+     * A little extra check to see if SQLMoreResults is supported
+     * before trying to call it.  This is to work around some strange
+     * behavior with SQLServer's driver and stored procedures which
+     * insert data.
+     * */
+    imp_sth->done_desc = 1;	/* assume ok from here on */
+    if (!more) {
+        while (num_fields == 0 &&
+               imp_dbh->odbc_sqlmoreresults_supported == 1) {
+            rc = SQLMoreResults(imp_sth->hstmt);
+            if (ODBC_TRACE_LEVEL(imp_sth) >= 8)
+                PerlIO_printf(
+                    DBIc_LOGPIO(imp_sth),
+                    "    Numfields == 0, SQLMoreResults == %d\n", rc);
+            if (rc == SQL_SUCCESS_WITH_INFO) {
+                AllODBCErrors(imp_sth->henv, imp_sth->hdbc, imp_sth->hstmt,
+                              ODBC_TRACE_LEVEL(imp_sth) >= 8,
+                              DBIc_LOGPIO(imp_dbh));
+            }
+            /* reset describe flags, so that we re-describe */
+            imp_sth->done_desc = 0;
 
-   /*
-    * A little extra check to see if SQLMoreResults is supported
-    * before trying to call it.  This is to work around some strange
-    * behavior with SQLServer's driver and stored procedures which
-    * insert data.
-    * */
-   imp_sth->done_desc = 1;	/* assume ok from here on */
-   if (!more) {
+            if (rc == SQL_NO_DATA) {
+                imp_sth->moreResults = 0;
+                break;
+            } else if (!SQL_ok(rc)) {
+                break;
+            }
+            
+            /* force future executes to rebind automatically */
+            imp_sth->odbc_force_rebind = 1;
+            
+            rc = SQLNumResultCols(imp_sth->hstmt, &num_fields);
+            if (!SQL_ok(rc)) {
+                dbd_error(h, rc, "dbd_describe/SQLNumResultCols");
+                return 0;
+            } else if (ODBC_TRACE_LEVEL(imp_sth) >= 8) {
+                PerlIO_printf(DBIc_LOGPIO(imp_dbh),
+                              "    num fields after MoreResults = %d\n",
+                              num_fields);
+            }
+        } /* end of SQLMoreResults */
+    } /* end of more */
 
-      while (num_fields == 0 && imp_dbh->odbc_sqlmoreresults_supported == 1) {
-	 rc = SQLMoreResults(imp_sth->hstmt);
-	 if (ODBC_TRACE_LEVEL(imp_sth) >= 8)
-	    PerlIO_printf(DBIc_LOGPIO(imp_sth),
-			  "Numfields == 0, SQLMoreResults == %d\n", rc);
-	 if (rc == SQL_SUCCESS_WITH_INFO) {
-	    AllODBCErrors(imp_sth->henv, imp_sth->hdbc, imp_sth->hstmt, ODBC_TRACE_LEVEL(imp_sth) >= 8, DBIc_LOGPIO(imp_dbh));
-	 }
-	 imp_sth->done_desc = 0;	/* reset describe flags, so that we re-describe */
-	 if (rc == SQL_NO_DATA) {
-	    imp_sth->moreResults = 0;
-	    break;
-	 }
-	 if (!SQL_ok(rc)) break;
-	 imp_sth->odbc_force_rebind = 1; /* force future executes to rebind automatically */
-	 rc = SQLNumResultCols(imp_sth->hstmt, &num_fields);
-	 if (ODBC_TRACE_LEVEL(imp_sth) >= 8)
-	    PerlIO_printf(DBIc_LOGPIO(imp_dbh),
-			  "Numfields == 0, SQLNumResultCols == %d\n", rc);
-	 if (!SQL_ok(rc)) {
-	    dbd_error(h, rc, "dbd_describe/SQLNumResultCols");
-	    return 0;
-	 }
-      }
-   }
+    DBIc_NUM_FIELDS(imp_sth) = num_fields;
 
-   DBIc_NUM_FIELDS(imp_sth) = num_fields;
+    if (num_fields == 0) {
+        if (ODBC_TRACE_LEVEL(imp_sth) >= 2)
+            PerlIO_printf(DBIc_LOGPIO(imp_dbh),
+                          "    dbd_describe skipped (no result cols)\n");
+        return 1;
+    }
 
-   if (ODBC_TRACE_LEVEL(imp_sth) >= 2)
-      PerlIO_printf(DBIc_LOGPIO(imp_dbh), "    dbd_describe sql %d: num_fields=%d\n",
-		    imp_sth->hstmt, DBIc_NUM_FIELDS(imp_sth));
+    /* allocate field buffers				*/
+    Newz(42, imp_sth->fbh, num_fields, imp_fbh_t);
 
-   if (num_fields == 0) {
-      if (ODBC_TRACE_LEVEL(imp_sth) >= 2)
-	 PerlIO_printf(DBIc_LOGPIO(imp_dbh),
-		       "    dbd_describe skipped (no result cols) (sql f%d)\n",
-		       imp_sth->hstmt);
-      return 1;
-   }
+    /* Pass 1: Get space needed for field names, display buffer and dbuf */
+    for (fbh=imp_sth->fbh, i=0; i < num_fields; i++, fbh++) {
+        SQLCHAR ColName[256];
 
-   /* allocate field buffers				*/
-   Newz(42, imp_sth->fbh, num_fields, imp_fbh_t);
+        fbh->imp_sth = imp_sth;
+        memset(fbh->szDummyBuffer, 0, sizeof(fbh->szDummyBuffer));
+        rc = SQLDescribeCol(imp_sth->hstmt,
+                            (SQLSMALLINT)(i+1),
+                            ColName,
+                            (SQLSMALLINT)(sizeof(ColName)-1),
+                            &fbh->ColNameLen,
+                            &fbh->ColSqlType,
+                            &fbh->ColDef,
+                            &fbh->ColScale,
+                            &fbh->ColNullable);
+        if (!SQL_ok(rc)) {	/* should never fail */
+            dbd_error(h, rc, "describe/SQLDescribeCol");
+            break;
+        }
 
-   /* Pass 1: Get space needed for field names, display buffer and dbuf */
-   for (fbh=imp_sth->fbh, i=0; i < num_fields; i++, fbh++) {
-      SQLCHAR ColName[256];
+        ColName[fbh->ColNameLen] = '\0';
+        t_cbufl += fbh->ColNameLen + 1;
 
-      fbh->imp_sth = imp_sth;
-      memset(fbh->szDummyBuffer, 0, sizeof(fbh->szDummyBuffer));
-      rc = SQLDescribeCol(imp_sth->hstmt,
-			  (SQLSMALLINT)(i+1),
-			  ColName,
-			  (SQLSMALLINT)(sizeof(ColName)-1),
-			  &fbh->ColNameLen,
-			  &fbh->ColSqlType,
-			  &fbh->ColDef,
-			  &fbh->ColScale,
-			  &fbh->ColNullable);
-      if (!SQL_ok(rc)) {	/* should never fail */
-	 dbd_error(h, rc, "describe/SQLDescribeCol");
-	 break;
-      }
-
-      ColName[fbh->ColNameLen] = '\0';
-
-      t_cbufl += fbh->ColNameLen + 1;
-
-      if (ODBC_TRACE_LEVEL(imp_sth) >= 8)
-	 PerlIO_printf(DBIc_LOGPIO(imp_dbh),
-		       "   colname %d = %s len = %d (%d)\n",
-		       i+1, ColName, fbh->ColNameLen,
-		       t_cbufl);
-
+        if (ODBC_TRACE_LEVEL(imp_sth) >= 8)
+            PerlIO_printf(DBIc_LOGPIO(imp_dbh),
+                          "   DescribeCol column = %d, name = %s, "
+                          "len = %d (total = %d), type = %s, "
+                          "precision = %ld, scale = %d, nullable = %d\n",
+                          i+1, ColName,
+                          fbh->ColNameLen, t_cbufl,
+                          S_SqlTypeToString(fbh->ColSqlType),
+                          fbh->ColDef, fbh->ColScale, fbh->ColNullable);
+            
 #ifdef SQL_COLUMN_DISPLAY_SIZE
-      rc = SQLColAttributes(imp_sth->hstmt,
-			    (SQLSMALLINT)(i+1),SQL_COLUMN_DISPLAY_SIZE,
-			    NULL, 0, NULL ,&fbh->ColDisplaySize);/* TBD: 3.0 update */
-      if (!SQL_ok(rc)) {
-	 dbd_error(h, rc, "describe/SQLColAttributes/SQL_COLUMN_DISPLAY_SIZE");
-	 break;
-      }
-      /* TBD: should we only add a terminator if it's a char??? */
-      fbh->ColDisplaySize += 1; /* add terminator */
+        rc = SQLColAttributes(imp_sth->hstmt,
+                              (SQLSMALLINT)(i+1),SQL_COLUMN_DISPLAY_SIZE,
+                              NULL, 0, NULL ,&fbh->ColDisplaySize);/* TBD: 3.0 update */
+        if (!SQL_ok(rc)) {
+            dbd_error(h, rc, "describe/SQLColAttributes/SQL_COLUMN_DISPLAY_SIZE");
+            break;
+        } else if (ODBC_TRACE_LEVEL(imp_sth) >= 8) {
+            PerlIO_printf(DBIc_LOGPIO(imp_sth),
+                          "     display size = %ld\n", fbh->ColDisplaySize);
+        }
+        
+        /* TBD: should we only add a terminator if it's a char??? */
+        fbh->ColDisplaySize += 1; /* add terminator */
 #else
-      /* XXX we should at least allow an attribute to set this */
-      fbh->ColDisplaySize = 2001; /* XXX! */
+        /* XXX we should at least allow an attribute to set this */
+        fbh->ColDisplaySize = 2001; /* XXX! */
 #endif
 
 #ifdef SQL_COLUMN_LENGTH
-      rc = SQLColAttributes(imp_sth->hstmt,(SQLSMALLINT)(i+1),
-			    SQL_COLUMN_LENGTH,
-			    NULL, 0, NULL ,&fbh->ColLength);
-      if (!SQL_ok(rc)) {
-	 dbd_error(h, rc, "describe/SQLColAttributes/SQL_COLUMN_LENGTH");
-	 break;
-      }
+        rc = SQLColAttributes(imp_sth->hstmt,(SQLSMALLINT)(i+1),
+                              SQL_COLUMN_LENGTH,
+                              NULL, 0, NULL ,&fbh->ColLength);
+        if (!SQL_ok(rc)) {
+            dbd_error(h, rc, "describe/SQLColAttributes/SQL_COLUMN_LENGTH");
+            break;
+        } else if (ODBC_TRACE_LEVEL(imp_sth) >= 8) {
+            PerlIO_printf(DBIc_LOGPIO(imp_sth),
+                          "     column length = %ld\n", fbh->ColLength);
+        }
 # if defined(WITH_UNICODE)
-      fbh->ColLength += 1; /* add extra byte for double nul terminator */
+        fbh->ColLength += 1; /* add extra byte for double nul terminator */
 # endif
 #else
-      /* XXX we should at least allow an attribute to set this */
-      fbh->ColLength = 2001;	/* XXX! */
+        /* XXX we should at least allow an attribute to set this */
+        fbh->ColLength = 2001;	/* XXX! */
 #endif
 
-      /* may want to ensure Display Size at least as large as column
-       * length -- workaround for some drivers which report a shorter
-       * display length
-       * */
-      fbh->ColDisplaySize = fbh->ColDisplaySize > fbh->ColLength ? fbh->ColDisplaySize : fbh->ColLength;
+        /* may want to ensure Display Size at least as large as column
+         * length -- workaround for some drivers which report a shorter
+         * display length
+         * */
+        fbh->ColDisplaySize = fbh->ColDisplaySize > fbh->ColLength ? fbh->ColDisplaySize : fbh->ColLength;
 
-      /* change fetched size for some types
-       */
-      fbh->ftype = SQL_C_CHAR;
-      switch(fbh->ColSqlType)
-      {
-	 /* patch to allow binary types 3/24/99 courtesy of Jon
-	  * Smirl
-	  */
-	 case SQL_VARBINARY:
-	 case SQL_BINARY:
+        /* change fetched size for some types
+         */
+        fbh->ftype = SQL_C_CHAR;
+        switch(fbh->ColSqlType)
+        {
+            /* patch to allow binary types 3/24/99 courtesy of Jon
+             * Smirl
+             */
+          case SQL_VARBINARY:
+          case SQL_BINARY:
 	    fbh->ftype = SQL_C_BINARY;
 	    break;
 #if defined(WITH_UNICODE)
-         case SQL_WCHAR:
-	 case SQL_WVARCHAR:
-	   fbh->ftype = SQL_C_WCHAR;
-	   /* MS SQL returns bytes, Oracle returns characters ... */
-	   fbh->ColDisplaySize*=sizeof(WCHAR);
-	   fbh->ColLength*=sizeof(WCHAR);
-	   break;
+          case SQL_WCHAR:
+          case SQL_WVARCHAR:
+            fbh->ftype = SQL_C_WCHAR;
+            /* MS SQL returns bytes, Oracle returns characters ... */
+            fbh->ColDisplaySize*=sizeof(WCHAR);
+            fbh->ColLength*=sizeof(WCHAR);
+            break;
 #endif /* WITH_UNICODE */
-	 case SQL_LONGVARBINARY:
+          case SQL_LONGVARBINARY:
 	    fbh->ftype = SQL_C_BINARY;
 	    fbh->ColDisplaySize = DBIc_LongReadLen(imp_sth);
 	    break;
 #ifdef SQL_WLONGVARCHAR
-	 case SQL_WLONGVARCHAR:	/* added for SQLServer 7 ntext type */
+          case SQL_WLONGVARCHAR:	/* added for SQLServer 7 ntext type */
 # if defined(WITH_UNICODE)
-	   fbh->ftype = SQL_C_WCHAR;
-	   /* MS SQL returns bytes, Oracle returns characters ... */
-	   fbh->ColLength*=sizeof(WCHAR);
-	   fbh->ColDisplaySize = DBIc_LongReadLen(imp_sth)+1;
-	   break;
+            fbh->ftype = SQL_C_WCHAR;
+            /* MS SQL returns bytes, Oracle returns characters ... */
+            fbh->ColLength*=sizeof(WCHAR);
+            fbh->ColDisplaySize = DBIc_LongReadLen(imp_sth)+1;
+            break;
 # endif	/* WITH_UNICODE */
 #endif
-	 case SQL_LONGVARCHAR:
+          case SQL_LONGVARCHAR:
 	    fbh->ColDisplaySize = DBIc_LongReadLen(imp_sth)+1;
 	    break;
 #ifdef TIMESTAMP_STRUCT	/* XXX! */
-	 case SQL_TIMESTAMP:
-	 case SQL_TYPE_TIMESTAMP:
+          case SQL_TIMESTAMP:
+          case SQL_TYPE_TIMESTAMP:
 	    fbh->ftype = SQL_C_TIMESTAMP;
 	    fbh->ColDisplaySize = sizeof(TIMESTAMP_STRUCT);
 	    break;
 #endif
-      }
+        }
 
-      /* make sure alignment is accounted for on all types, including
-       * chars */
+        /* make sure alignment is accounted for on all types, including
+         * chars */
 #if 0
-      if (fbh->ftype != SQL_C_CHAR) {
-	 t_dbsize += t_dbsize % sizeof(int);     /* alignment (JLU incorrect!) */
-      }
+        if (fbh->ftype != SQL_C_CHAR) {
+            t_dbsize += t_dbsize % sizeof(int);     /* alignment (JLU incorrect!) */
+        }
 #endif
-      t_dbsize += fbh->ColDisplaySize;
-      t_dbsize += (sizeof(int) - (t_dbsize % sizeof(int))) % sizeof(int);     /* alignment -- always pad so the next column is aligned on a word boundary*/
+        t_dbsize += fbh->ColDisplaySize;
+        t_dbsize += (sizeof(int) - (t_dbsize % sizeof(int))) % sizeof(int);     /* alignment -- always pad so the next column is aligned on a word boundary*/
 
-      if (ODBC_TRACE_LEVEL(imp_sth) >= 2)
-	 PerlIO_printf(DBIc_LOGPIO(imp_dbh),
-		       "      col %2d: %-8s (%d) len=%3d disp=%3d, prec=%3d scale=%d\n",
-		       i+1, S_SqlTypeToString(fbh->ColSqlType),
-		       fbh->ColSqlType,
-		       fbh->ColLength, fbh->ColDisplaySize,
-		       fbh->ColDef, fbh->ColScale);
-   }
-   if (!SQL_ok(rc)) {
-      /* dbd_error called above */
-      Safefree(imp_sth->fbh);
-      return 0;
-   }
+        if (ODBC_TRACE_LEVEL(imp_sth) >= 2)
+            PerlIO_printf(DBIc_LOGPIO(imp_dbh),
+                          "     now using col %d: type = %s (%d), len = %d, "
+                          "display size = %d, prec = %d, scale = %d\n",
+                          i+1, S_SqlTypeToString(fbh->ColSqlType),
+                          fbh->ColSqlType,
+                          fbh->ColLength, fbh->ColDisplaySize,
+                          fbh->ColDef, fbh->ColScale);
+    }
+    if (!SQL_ok(rc)) {
+        /* dbd_error called above */
+        Safefree(imp_sth->fbh);
+        return 0;
+    }
 
-   /* allocate a buffer to hold all the column names	*/
-   if (ODBC_TRACE_LEVEL(imp_sth) >= 8)
-      PerlIO_printf(DBIc_LOGPIO(imp_dbh),
-		    "  colname buffer size = %d\n", t_cbufl + num_fields);
+    /* allocate a buffer to hold all the column names	*/
+    if (ODBC_TRACE_LEVEL(imp_sth) >= 8)
+        PerlIO_printf(DBIc_LOGPIO(imp_dbh),
+                      "    colname buffer size = %d\n", t_cbufl + num_fields);
 
-   /* quick fix for FoxPro: allocate extra 255 bytes as Foxpro seems
-    * to clear out the buffer during SQLDescribeCol, as we are passing
-    * the 255 there.  Probably need to fix this and call
-    * SqlDescribeCol with the right size, if known!
-    * */
-   Newz(42, imp_sth->ColNames, t_cbufl + num_fields+255, UCHAR);
-   /* allocate Row memory */
-   Newz(42, imp_sth->RowBuffer, t_dbsize + num_fields, UCHAR);
+    /* quick fix for FoxPro: allocate extra 255 bytes as Foxpro seems
+     * to clear out the buffer during SQLDescribeCol, as we are passing
+     * the 255 there.  Probably need to fix this and call
+     * SqlDescribeCol with the right size, if known!
+     * */
+    Newz(42, imp_sth->ColNames, t_cbufl + num_fields + 255, UCHAR);
+    /* allocate Row memory */
+    Newz(42, imp_sth->RowBuffer, t_dbsize + num_fields, UCHAR);
 
-   /* Second pass:
-   - get column names
-   - bind column output
-*/
+    /* Second pass:
+       - get column names
+       - bind column output
+    */
 
-   cbuf_ptr = imp_sth->ColNames;
-   rbuf_ptr = imp_sth->RowBuffer;
+    cbuf_ptr = imp_sth->ColNames;
+    rbuf_ptr = imp_sth->RowBuffer;
 
-   for(i=0, fbh = imp_sth->fbh; i < num_fields && SQL_ok(rc); i++, fbh++)
-   {
-      /* not sure I need this anymore, since we are trying to align
-       * the columns anyway
-       * */
-      switch(fbh->ftype)
-      {
-	 case SQL_C_BINARY:
-	 case SQL_C_TIMESTAMP:
-	 case SQL_C_TYPE_TIMESTAMP:
+    for(i=0, fbh = imp_sth->fbh; i < num_fields && SQL_ok(rc); i++, fbh++)
+    {
+        /* not sure I need this anymore, since we are trying to align
+         * the columns anyway
+         * */
+        switch(fbh->ftype)
+        {
+          case SQL_C_BINARY:
+          case SQL_C_TIMESTAMP:
+          case SQL_C_TYPE_TIMESTAMP:
 	    /* make sure pointer is on word boundary for Solaris */
 	    rbuf_ptr += (sizeof(int) - ((rbuf_ptr - imp_sth->RowBuffer) % sizeof(int))) % sizeof(int);
 
 	    break;
-      }
+        }
 
-      if (ODBC_TRACE_LEVEL(imp_sth) > 8)
-	 PerlIO_printf(DBIc_LOGPIO(imp_dbh),
-		       "\t\t pre SQLDescribeCol %d: fbh[0]=%x fbh=%x, cbuf_ptr=%x\n",
-		       i, &(imp_sth->fbh[0]), fbh, cbuf_ptr);
-      rc = SQLDescribeCol(imp_sth->hstmt,
-			  (SQLSMALLINT)(i+1),
-			  cbuf_ptr, 255,
-			  &(fbh->ColNameLen), &(fbh->ColSqlType),
-			  &(fbh->ColDef), &(fbh->ColScale), &(fbh->ColNullable)
-			 );
-      if (!SQL_ok(rc)) {	/* should never fail */
-	 dbd_error(h, rc, "describe/SQLDescribeCol");
-	 break;
-      }
+        if (ODBC_TRACE_LEVEL(imp_sth) > 8)
+            PerlIO_printf(DBIc_LOGPIO(imp_dbh),
+                          "\t\tpre SQLDescribeCol %d: fbh[0]=%x fbh=%x, "
+                          "cbuf_ptr=%x\n",
+                          i+1, &(imp_sth->fbh[0]), fbh, cbuf_ptr);
+        rc = SQLDescribeCol(imp_sth->hstmt,
+                            (SQLSMALLINT)(i+1),
+                            cbuf_ptr, 255,
+                            &(fbh->ColNameLen), &(fbh->ColSqlType),
+                            &(fbh->ColDef), &(fbh->ColScale), &(fbh->ColNullable)
+                            );
+        if (!SQL_ok(rc)) {	/* should never fail */
+            dbd_error(h, rc, "describe/SQLDescribeCol");
+            break;
+        }
 
-      fbh->ColName = cbuf_ptr;
-      cbuf_ptr[fbh->ColNameLen] = 0;
-      cbuf_ptr[fbh->ColNameLen+1] = 0;
+        fbh->ColName = cbuf_ptr;
+        cbuf_ptr[fbh->ColNameLen] = 0;
+        cbuf_ptr[fbh->ColNameLen+1] = 0;
 
-      if (ODBC_TRACE_LEVEL(imp_sth) > 8)
-	 PerlIO_printf(DBIc_LOGPIO(imp_dbh),
-		       "\t\t post SQLDescribeCol     col %2d: '%s' (%x)\n",
-		       0, imp_sth->fbh[0].ColName, imp_sth->fbh[0].ColName);
+        if (ODBC_TRACE_LEVEL(imp_sth) > 8)
+            PerlIO_printf(DBIc_LOGPIO(imp_dbh),
+                          "\t\tpost SQLDescribeCol %d: '%s' (%x)\n",
+                          i+1, imp_sth->fbh[0].ColName,
+                          imp_sth->fbh[0].ColName);
 
-      if (ODBC_TRACE_LEVEL(imp_sth) >= 8)
-	  PerlIO_printf(DBIc_LOGPIO(imp_dbh),
-			"   colname %d = %s, len = %d (sp = %d)\n",
-			i+1, fbh->ColName, fbh->ColNameLen,
-			cbuf_ptr - imp_sth->ColNames);
+        if (ODBC_TRACE_LEVEL(imp_sth) >= 8)
+            PerlIO_printf(DBIc_LOGPIO(imp_dbh),
+                          "   colname %d = %s, len = %d (sp = %d)\n",
+                          i+1, fbh->ColName, fbh->ColNameLen,
+                          cbuf_ptr - imp_sth->ColNames);
 
-      cbuf_ptr += fbh->ColNameLen+1;
+        cbuf_ptr += fbh->ColNameLen+1;
 
-      fbh->data = rbuf_ptr;
+        fbh->data = rbuf_ptr;
 
-      if (ODBC_TRACE_LEVEL(imp_sth) > 8)
-	 PerlIO_printf(DBIc_LOGPIO(imp_dbh),
-		       "\t\t pre   SQLBindCol     col %2d: '%s', %x, %x, %x\n",
-		       0, imp_sth->fbh[0].ColName, imp_sth->fbh[0].ColName, fbh->data, imp_sth->ColNames);
+        if (ODBC_TRACE_LEVEL(imp_sth) > 8)
+            PerlIO_printf(DBIc_LOGPIO(imp_dbh),
+                          "\t\tpre SQLBindCol %d: '%s', %x, %x, %x\n",
+                          i+1, imp_sth->fbh[0].ColName, imp_sth->fbh[0].ColName, fbh->data, imp_sth->ColNames);
 
-      rbuf_ptr += fbh->ColDisplaySize;
-      rbuf_ptr += (sizeof(int) - ((rbuf_ptr - imp_sth->RowBuffer) % sizeof(int))) % sizeof(int);     /* alignment -- always pad so the next column is aligned on a word boundary*/
+        rbuf_ptr += fbh->ColDisplaySize;
+        rbuf_ptr += (sizeof(int) - ((rbuf_ptr - imp_sth->RowBuffer) % sizeof(int))) % sizeof(int);     /* alignment -- always pad so the next column is aligned on a word boundary*/
 
-      /* Bind output column variables */
-      rc = SQLBindCol(imp_sth->hstmt,
-		      (SQLSMALLINT)(i+1),
-		      fbh->ftype, fbh->data,
-		      fbh->ColDisplaySize, &fbh->datalen);
+        /* Bind output column variables */
+        rc = SQLBindCol(imp_sth->hstmt,
+                        (SQLSMALLINT)(i+1),
+                        fbh->ftype, fbh->data,
+                        fbh->ColDisplaySize, &fbh->datalen);
 
-      if (ODBC_TRACE_LEVEL(imp_sth) > 8)
-	 PerlIO_printf(DBIc_LOGPIO(imp_dbh),
-		       "\t\t post  SQLBindCol     col %2d: '%s', %x, %x, %x\n",
-		       0, imp_sth->fbh[0].ColName, imp_sth->fbh[0].ColName, fbh->data, imp_sth->ColNames);
+        if (ODBC_TRACE_LEVEL(imp_sth) > 8)
+            PerlIO_printf(DBIc_LOGPIO(imp_dbh),
+                          "\t\tpost SQLBindCol %d: '%s', %x, %x, %x\n",
+                          i+1, imp_sth->fbh[0].ColName, imp_sth->fbh[0].ColName, fbh->data, imp_sth->ColNames);
 
-      if (ODBC_TRACE_LEVEL(imp_sth) >= 2)
-	 PerlIO_printf(DBIc_LOGPIO(imp_dbh),
-		       "      col %2d: '%s' sqltype=%s, ctype=%s, maxlen=%d, (dp = %d, cp = %d)\n",
-		       i+1, fbh->ColName,
-		       S_SqlTypeToString(fbh->ColSqlType),
-		       S_SqlCTypeToString(fbh->ftype),
-		       fbh->ColDisplaySize,
-		       fbh->data - imp_sth->RowBuffer,
-		       fbh->ColName - imp_sth->ColNames);
-      if (!SQL_ok(rc)) {
-	 dbd_error(h, rc, "describe/SQLBindCol");
-	 break;
-      }
+        if (ODBC_TRACE_LEVEL(imp_sth) >= 2)
+            PerlIO_printf(DBIc_LOGPIO(imp_dbh),
+                          "      col %2d: '%s' sqltype=%s, ctype=%s, maxlen=%d, (dp = %d, cp = %d)\n",
+                          i+1, fbh->ColName,
+                          S_SqlTypeToString(fbh->ColSqlType),
+                          S_SqlCTypeToString(fbh->ftype),
+                          fbh->ColDisplaySize,
+                          fbh->data - imp_sth->RowBuffer,
+                          fbh->ColName - imp_sth->ColNames);
+        if (!SQL_ok(rc)) {
+            dbd_error(h, rc, "describe/SQLBindCol");
+            break;
+        }
 
-      if (ODBC_TRACE_LEVEL(imp_sth) > 8)
-	 PerlIO_printf(DBIc_LOGPIO(imp_dbh),
-		       "\t\t DEBUG     col %2d: '%s' \n",
-		       0, imp_sth->fbh[0].ColName);
-   } /* end pass 2 */
+        if (ODBC_TRACE_LEVEL(imp_sth) > 8)
+            PerlIO_printf(DBIc_LOGPIO(imp_dbh),
+                          "\t\t DEBUG     col %2d: '%s' \n",
+                          0, imp_sth->fbh[0].ColName);
+    } /* end pass 2 */
 
 
-   if (!SQL_ok(rc)) {
-      /* dbd_error called above */
-      Safefree(imp_sth->fbh);
-      return 0;
-   }
+    if (!SQL_ok(rc)) {
+        /* dbd_error called above */
+        Safefree(imp_sth->fbh);
+        return 0;
+    }
 
-   return 1;
+    return 1;
 }
 
 
