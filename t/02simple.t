@@ -6,13 +6,14 @@ $| = 1;
 
 use_ok('DBI', qw(:sql_types));
 use_ok('ODBCTEST');
+use_ok('Data::Dumper');
 
 # to help ActiveState's build process along by behaving (somewhat) if a dsn is not provided
 BEGIN {
    if (!defined $ENV{DBI_DSN}) {
       plan skip_all => "DBI_DSN is undefined";
    } else {
-      plan tests => 36;
+      plan tests => 49;
    }
 }
 
@@ -23,6 +24,30 @@ unless($dbh) {
    BAILOUT("Unable to connect to the database ($DBI::errstr)\nTests skipped.\n");
    exit 0;
 }
+
+#
+# test private_attribute_info.
+# connection handles and statement handles should return a hash ref of
+# private attributes
+#
+{
+    my $pai = $dbh->private_attribute_info();
+    diag Data::Dumper->Dump([$pai], [qw(dbc_private_attribute_info)]);
+    ok(defined($pai), 'dbc private_attribute_info result');
+    ok(ref($pai) eq 'HASH', 'dbc private_attribute_info is hashref');
+    ok(scalar(keys %{$pai}) >= 1,
+       'dbc private_attribute_info has some attributes');
+}
+
+{
+    my $sth = $dbh->prepare('select 1');
+    my $pai = $sth->private_attribute_info();
+    diag Data::Dumper->Dump([$pai], [qw(stmt_private_attribute_info)]);
+    ok(defined($pai), 'stmt private_attribute_info result');
+    ok(ref($pai) eq 'HASH', 'stmt private_attribute_info is hashref');
+    ok(scalar(keys %{$pai}) >= 1, 'stmt private_attribute_info has some attributes');
+    $sth->finish;
+}    
 
 $dbh->{AutoCommit} = 1;
 pass("Set Auto commit");
@@ -194,9 +219,17 @@ sub tab_select
 
     $dbh->{LongReadLen} = 1000;
 
-    my $sth = $dbh->prepare("SELECT * FROM $ODBCTEST::table_name ORDER BY COL_A")
+    my $sth = $dbh->prepare("SELECT COL_A, COL_B, COL_C, COL_D FROM $ODBCTEST::table_name ORDER BY COL_A")
 		or return undef;
     $sth->execute();
+    ok($sth->{NUM_OF_FIELDS} == 4, 'NUM_OF_FIELDS');
+    my $columns = $sth->{NAME_uc};
+    diag Data::Dumper->Dump([$columns], [qw(column_names)]);
+    is(scalar(@$columns), 4, 'NAME returns right number of columns');
+    is($columns->[0], 'COL_A', 'column name for column 1');
+    is($columns->[1], 'COL_B', 'column name for column 2');
+    is($columns->[2], 'COL_C', 'column name for column 3');
+    is($columns->[3], 'COL_D', 'column name for column 4');
     while (@row = $sth->fetchrow())	{
        # print "$row[0]|$row[1]|$row[2]|\n";
        ++$rowcount;

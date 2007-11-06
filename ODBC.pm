@@ -68,7 +68,7 @@ $DBD::ODBC::VERSION = '1.15_1';
 	# create a 'blank' dbh
 	my $this = DBI::_new_dbh($drh, {
 	    'Name' => $dbname,
-	    'USER' => $user, 
+	    'USER' => $user,
 	    'CURRENT_USER' => $user,
 	    });
 
@@ -85,6 +85,22 @@ $DBD::ODBC::VERSION = '1.15_1';
 
 {   package DBD::ODBC::db; # ====== DATABASE ======
     use strict;
+
+    sub private_attribute_info {
+        return {
+                odbc_ignore_named_placeholders => undef, # sth and dbh
+                odbc_default_bind_type => undef, # sth and dbh
+                odbc_force_rebind => undef, # sth & dbh
+                odbc_async_exec => undef, # sth and dbh
+                odbc_exec_direct => undef,
+                odbc_SQL_ROWSET_SIZE => undef,
+                SQL_DRIVER_ODBC_VER => undef,
+                odbc_cursortype => undef,
+                odbc_query_timeout => undef, # sth and dbh
+                odbc_has_unicode => undef,
+                odbc_version => undef
+               };
+    }
 
     sub prepare {
 	my($dbh, $statement, @attribs)= @_;
@@ -386,6 +402,16 @@ $DBD::ODBC::VERSION = '1.15_1';
 {   package DBD::ODBC::st; # ====== STATEMENT ======
     use strict;
 
+    sub private_attribute_info {
+        return {
+                odbc_ignore_named_placeholders => undef, # sth and dbh
+                odbc_default_bind_type => undef, # sth and dbh
+                odbc_force_rebind => undef, # sth & dbh
+                odbc_async_exec => undef, # sth and dbh
+                odbc_query_timeout => undef # sth and dbh
+               };
+    }
+
     sub ColAttributes {		# maps to SQLColAttributes
 	my ($sth, $colno, $desctype) = @_;
 	# print "before ColAttributes $colno\n";
@@ -551,18 +577,31 @@ There are currently two ways to get this:
  
 =item odbc_err_handler
 
-Allow errors to be handled by the application.  A call-back function supplied
-by the application to handle or ignore messages.  If the error handler returns
-0, the error is ignored, otherwise the error is passed through the normal
-DBI error handling structure(s).
+Allow errors to be handled by the application.  A call-back function
+supplied by the application to handle or ignore messages.
 
-This can also be used for procedures under MS SQL Server (Sybase too, probably)
-to obtain messages from system procedures such as DBCC.  Check t/20SQLServer.t
-and mytest/testerrhandler.pl
+The callback function receives three parameters: state (string),
+error (string) and the native error code (number).
 
-The callback function takes three parameters: the SQLState, the ErrorMessage and
-the native server error.
- 
+If the error handler returns 0, the error is ignored, otherwise the
+error is passed through the normal DBI error handling.
+
+This can also be used for procedures under MS SQL Server (Sybase too,
+probably) to obtain messages from system procedures such as DBCC.
+Check t/20SQLServer.t and t/10handler.t.
+
+  $dbh->{RaiseError} = 1;
+  sub err_handler {
+     ($state, $msg, $native) = @_;
+     if ($state = '12345')
+         return 0; # ignore this error
+     else
+         return 1; # propagate error
+  }
+  $dbh->{odbc_err_handler} = \$err_handler;
+  # do something to cause an error 
+  $dbh->{odbc_err_handler} = undef; # cancel the handler
+
 =item odbc_SQL_ROWSET_SIZE
 
 Here is the information from the original patch, however, I've learned
@@ -660,12 +699,15 @@ encoding to Unicode.
 
 NOTE: Binding of unicode output parameters is coded but untested.
 
-NOTE: When building DBD::ODBC on Windows ($^O eq 'MSWin32) the 
+NOTE: When building DBD::ODBC on Windows ($^O eq 'MSWin32') the 
 WITH_UNICODE macro is automatically added. To disable specify -nou as
 an argument to Makefile.PL (e.g. nmake Makefile.PL -nou). On non-Windows
 platforms the WITH_UNICODE macro is B<not> enabled by default and to enable
 you need to specify the -u argument to Makefile.PL. Please bare in mind
 that some ODBC drivers do not support SQL_Wxxx columns or parameters.
+
+NOTE: Unicode support on Windows 64 bit platforms is currently
+untested.  Let me know how you get on with it.
 
 UNICODE support in ODBC Drivers differs considerably. Please read the
 README.unicode file for further details.

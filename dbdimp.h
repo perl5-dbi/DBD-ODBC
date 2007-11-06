@@ -30,6 +30,7 @@ struct imp_dbh_st {
     SQLHENV henv;	        /* copy from imp_drh for speed		*/
     SQLHDBC hdbc;
     char odbc_ver[20];  /* ODBC compat. version for driver */
+    SQLSMALLINT max_column_name_len;
     char odbc_dbname[64];
     int  odbc_ignore_named_placeholders;	/* flag to ignore named parameters */
     SQLSMALLINT  odbc_default_bind_type;	/* flag to set default binding type (experimental) */

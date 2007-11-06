@@ -39,7 +39,52 @@ SQLLEN/SQLULEN in versions from at least 2.2.12. Thanks to Nelson
 Oliveira for finding, patching and testing this and then fixing
 problems with bound parameters on 64 bit Windows.
 
+Added private_attribute_info method DBI introduced (see DBI docs)
+and test cases to 02simple.t.
+
+Fairly major changes to dbd_describe in dbdimp.c to reduce ODBC calls
+by 1 SQLDescribeCol call per column when describing result
+sets. Instead of calculating the amount of memory required to hold
+every column name we work on the basis that (num_columns + 1) *
+SQL_MAX_COLUMN_NAME_LEN can hold all column names. However, to avoid
+using a large amount of memory unnecessarily if an ODBC driver
+supports massive column name lengths the maximum size per column is
+restricted to 256.
+
+Changed to avoid using explicit use of DBIc_ERRXXX in favour of newish
+(ok, DBD::ODBC is a bit behind the times in this respect)
+DBIh_SET_ERR_CHAR.  This involved a reworking or the error handling
+and although all test cases still pass I cannot guarantee it has no
+other effects - please let me know if you spot differences in error
+messages.
+
+Fixed bug in 20SqlServer test for multiple results that was passing
+but for the wrong reason (namely, that the odbc_err_handler was being
+called when it should not have been).
+
+Fixed bug in odbc_err_handler that prevented it from being reset so
+you don't have an error handler. Looks like the problem was in
+dbd_db_STORE_attrib where "if(valuesv == &PL_sv_undef)" was used to
+detect undef and I think it should be "if (!SvOK(valuesv))".
+
+Improvements to odbc_err_handler documentation.
+
+Added 10handler.t test cases.
+
+More tests in 02simple.t to check NUM_OF_FIELDS and NAMES_uc.
+
+Bit of a tidy up:
+
 Removed some unused variable declarations from dbdimp.c.
+
+Lots of changes to DBD::ODBC tracing, particularly in dbd_describe,
+and dbd_error2 and login6.
+
+Removed a lot of tracing code in comments or #if 0 as it never gets
+built.
+
+Changed dual tests on SQL_SUCCESS and SQL_SUCCESS_WITH_INFO to use
+SQL_SUCCEEDED.
 
 =head2 Changes in DBD::ODBC 1.14 July 17, 2007
 

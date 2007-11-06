@@ -79,6 +79,7 @@ t/05meth.t
 t/07bind.t
 t/08bind2.t
 t/09multi.t
+t/10handler.t
 t/20SqlServer.t
 t/30Oracle.t
 t/40UnicodeRoundTrip.t

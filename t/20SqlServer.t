@@ -468,7 +468,7 @@ AS
    }
    # need the finish if there are print statements (for now)
    #$sth2->finish;
-
+   $dbh->{odbc_err_handler} = undef;
    $dbh->do("insert into perl_dbd_table1 (i, j) values (1, 2)");
    $dbh->do("insert into perl_dbd_table1 (i, j) values (3, 4)");
 
