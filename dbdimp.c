@@ -653,9 +653,7 @@ SV   *attr;
       }
       return 0;
    } else if (rc == SQL_SUCCESS_WITH_INFO) {
-      /* Consume informational diagnostics */
-      AllODBCErrors(imp_dbh->henv, imp_dbh->hdbc, 0,
-		    (ODBC_TRACE_LEVEL(imp_dbh) > 3), DBIc_LOGPIO(imp_dbh));
+       dbd_error(dbh, rc, "db_login/SQLConnect");
    }
 
    /* DBI spec requires AutoCommit on */

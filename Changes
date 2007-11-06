@@ -21,7 +21,18 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
 
 =head1 CHANGES
 
-=head2 Changes in DBD::ODBC 1.15_1 September 13, 2007
+=head2 Changes in DBD::ODBC 1.15_2 November 6, 2007
+
+If you don't have at least DBI 1.21 it is now a fatal error instead of
+just a warning.
+
+DBI->connect changed so informational diagnostics like "Changed
+database context to 'master'" from SQL Server are available in
+errstr/state. These don't cause DBI->connect to die but you can test
+$h->err eq "" after connect and obtain the informational diagnostics
+from errstr/state if you want them.
+
+=head2 Changes in DBD::ODBC 1.15_1 November 6, 2007
 
 Minor changes to 20SqlServer.t test for SQL Server 2008 (Katmai).
 Timestamps now return an extra 4 digits of precision (all 0000) and
