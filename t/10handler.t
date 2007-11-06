@@ -39,21 +39,21 @@ sub err_handler {
     } else {
         $handler_called++;
     }
-    diag "===> state: $errstate\n";
-    diag "===> msg: $errmsg\n";
-    diag "===> nativeerr: $errnative\n";
+    #diag "===> state: $errstate\n";
+    #diag "===> msg: $errmsg\n";
+    #diag "===> nativeerr: $errnative\n";
     return $handler_return;
 }
 $dbh->{odbc_err_handler} = \&err_handler;
-my $evaret = eval {
+my $evalret = eval {
     # this sql is supposed to be invalid
     my $sth = $dbh->prepare('select * from');
     $sth->execute;
     return 99;
 };
 my $eval = $@;
-diag "eval returned " . ($evalret ? $evalret : "undef") . "\n";
-diag '$@: ' . ($eval ? $eval : "undef") . "\n";
+#diag "eval returned " . ($evalret ? $evalret : "undef") . "\n";
+#diag '$@: ' . ($eval ? $eval : "undef") . "\n";
 ok($handler_called >= 1, 'Error handler called');
 ok($errstate, 'Error handler called - state seen');
 ok($errmsg, 'Error handler called - message seen');
@@ -67,7 +67,7 @@ ok($eval, 'Error handler called - error propagated');
 ($errmsg, $errstate, $errnative, $handler_called) =
     (undef, undef, undef, undef);
 $dbh->{odbc_err_handler} = undef;
-my $evalret = eval {
+$evalret = eval {
     # this sql is supposed to be invalid
     my $sth = $dbh->prepare('select * from');
     $sth->execute;
@@ -84,7 +84,7 @@ ok(!defined($handler_called), 'Handler cancelled');
 $dbh->{odbc_err_handler} = \&err_handler;
 $handler_return = 0;
 
-my $evalret = eval {
+$evalret = eval {
     # this sql is supposed to be invalid
     my $sth = $dbh->prepare('select * from');
     $sth->execute;
