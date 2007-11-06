@@ -22,7 +22,8 @@ my %opts =
 (
     NAME	=> 'DBD::ODBC',
     VERSION_FROM => 'ODBC.pm',
-    PREREQ_PM => { "Test::Simple" => 0.40 }, # actually Test::More pkg in T::S dist
+    PREREQ_PM => { "Test::Simple" => 0.40,# actually Test::More pkg in T::S dist
+                   "DBI" => 1.21 },
     clean	=> { FILES=> 'ODBC.xsi dbdodbc.h' },
     dist	=> {
 	DIST_DEFAULT=> 'clean distcheck tardist',
@@ -35,8 +36,9 @@ my %opts =
 if ($ExtUtils::MakeMaker::VERSION >= 5.43) {
     $opts{AUTHOR} = 'Tim Bunce and Jeff Urlwin mailto:dbi-users@perl.org';
     $opts{ABSTRACT} = 'ODBC driver for the DBI module.';
-    $opts{PREREQ_PM} = { DBI => 1.21 };
     $opts{CAPI} = 'TRUE' if $Config{archname} =~ /-object\b/i;
+    $opts{PREREQ_PRINT} = 1;
+    $opts{PREREQ_FATAL} = 1;
 }
 
 our $opt_g = 0;
