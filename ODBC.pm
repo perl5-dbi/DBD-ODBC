@@ -98,7 +98,8 @@ $DBD::ODBC::VERSION = '1.15_2';
                 odbc_cursortype => undef,
                 odbc_query_timeout => undef, # sth and dbh
                 odbc_has_unicode => undef,
-                odbc_version => undef
+                odbc_version => undef,
+                odbc_err_handler => undef
                };
     }
 
@@ -444,11 +445,7 @@ See L<DBI> for more information.
 
 =head1 DESCRIPTION
 
-=head2 Notes:
-
-=over 4
-
-=item B<Change log and FAQs>
+=head2 Change log and FAQs
 
 Please note that the change log has been moved to
 DBD::ODBC::Changes.pm. To access this documentation, use
@@ -457,7 +454,7 @@ C<perldoc DBD::ODBC::Changes>.
 For FAQs see L</Frequently Asked Questions> or
 L<http://dbi.perl.org>.
 
-=item B<An Important note about the tests!>
+=head2 Important note about the tests
 
 Please note that some tests may fail or report they are unsupported on
 this platform.  Notably Oracle's ODBC driver will fail the "advanced"
@@ -469,13 +466,13 @@ types with SQL_TIMESTAMP.  Also note that some tests may be skipped,
 such as t/09multi.t, if your driver doesn't seem to support returning
 multiple result sets.  This is normal.
 
-=item B<Version Control>
+=head2 Version Control
 
 DBD::ODBC source code is under version control at svn.perl.org.  If
 you would like to use the "bleeding" edge version, you can get the
 latest from svn.perl.org via Subversion version control.  Note there
 is no guarantee that this version is any different than what you get
-from the tarball from CPAN, but hey, it might be :)
+from the tarball from CPAN, but it might be :)
 
 You may read about Subversion at L<http://subversion.tigris.org>
 
@@ -483,67 +480,52 @@ You can get a subversion client from there and check dbd-odbc out via:
 
    svn checkout http://svn.perl.org/modules/dbd-odbc/trunk <your directory name here>
 
-Which will, after a short bit a of work, grab all the files into your
-local directory tree that you name.
+Which will pull all the files from the subversion trunk to your
+specified directory. If you want to see what has changed since the
+last release of DBD::ODBC read the Changes file or use "svn log" to
+get a list of checked in changes.
 
-=item B<Contributing>
+=head2 Contributing
 
-I am usually very open to contributions, but I have tended to get
-behind.  That's one strong reason why I've put everything in a shared
-version control environment.
-
-Please use Subversion (see above) to appropriately get the latest
-versions.
+Please use Subversion (see above) to get the latest version of
+DBD::ODBC from the trunk and submit any patches against that.
 
 Please, before submitting a patch:
 
    svn update
+   <try and included a test which demonstrates the fix/change working>
    <test your patch>
    svn diff > describe_my_diffs.patch
 
-and send the resulting file to me...
+and send the resulting file to me and cc the dbi-users@perl.org
+mailing list (if you are not a member - why not!).
 
-It's probably best to send to dbi-users@perl.org, as I monitor that
-group.
- 
-=item B<Private DBD::ODBC Attributes>
+=head2 Private attributes common to connection and statement handles
 
-=item odbc_more_results (applies to statement handle only!)
+=head3 odbc_ignore_named_placeholders
 
-Use this attribute to determine if there are more result sets
-available.  SQL Server supports this feature.  Use this as follows:
+Use this if you have special needs (such as Oracle triggers, etc)
+where :new or :name mean something special and are not just place
+holder names You I<must> then use ? for binding parameters.  Example:
 
-do {
-   my @row;
-   while (@row = $sth->fetchrow_array()) {
-      # do stuff here
-   }
-} while ($sth->{odbc_more_results});
-
-Note that with multiple result sets and output parameters (i.e. using
-bind_param_inout, don't expect output parameters to be bound until ALL
-result sets have been retrieved.
-
-=item odbc_ignore_named_placeholders
-
-Use this if you have special needs (such as Oracle triggers, etc) where
-:new or :name mean something special and are not just place holder names
-You I<must> then use ? for binding parameters.  Example:
  $dbh->{odbc_ignore_named_placeholders} = 1;
  $dbh->do("create trigger foo as if :new.x <> :old.x then ... etc");
 
-Without this, DBD::ODBC will think :new and :old are placeholders for binding
-and get confused.
- 
-=item odbc_default_bind_type
+Without this, DBD::ODBC will think :new and :old are placeholders for
+binding and get confused.
 
-This value defaults to 0.  Older versions of DBD::ODBC assumed that the binding
-type was 12 (SQL_VARCHAR).  Newer versions default to 0, which means that
-DBD::ODBC will attempt to query the driver via SQLDescribeParam to determine
-the correct type.  If the driver doesn't support SQLDescribeParam, then DBD::ODBC
-falls back to using SQL_VARCHAR as the default, unless overridden by bind_param()
+=head3 odbc_default_bind_type
 
-=item odbc_force_rebind
+This value defaults to 0.
+
+Older versions of DBD::ODBC assumed that the binding type was 12
+(SQL_VARCHAR).  Newer versions default to 0, which means that
+DBD::ODBC will attempt to query the driver via SQLDescribeParam to
+determine the correct type.  If the driver doesn't support
+SQLDescribeParam, then DBD::ODBC falls back to using SQL_VARCHAR as
+the default, unless overridden by bind_param().
+
+=head3 odbc_force_rebind
 
 This is to handle special cases, especially when using multiple result sets.
 Set this before execute to "force" DBD::ODBC to re-obtain the result set's
@@ -555,27 +537,30 @@ rare that this occurs.  This attribute will be automatically set when
 multiple result sets are triggered.  Most people shouldn't have to worry
 about this.
 
-=item odbc_async_exec
+=head3 odbc_async_exec
 
-Allow asynchronous execution of queries.  Right now, this causes a spin-loop
-(with a small "sleep") until the SQL is complete.  This is useful, however,
-if you want the error handling and asynchronous messages (see the err_handler)
-below.  See t/20SQLServer.t for an example of this.
+Allow asynchronous execution of queries.  This causes a spin-loop
+(with a small "sleep") until the SQL is complete.  This is useful,
+however, if you want the error handling and asynchronous messages (see
+the L</odbc_err_handler> and t/20SQLServer.t for an example of this.
 
-=item odbc_exec_direct
+=head3 odbc_query_timeout
 
-Force DBD::ODBC to use SQLExecDirect instead of SQLPrepare() then SQLExecute.
-There are drivers that only support SQLExecDirect and the DBD::ODBC
-do() override doesn't allow returning result sets.  Therefore, the
-way to do this now is to set the attributed odbc_exec_direct.
-There are currently two ways to get this:
-	$dbh->prepare($sql, { odbc_exec_direct => 1}); 
- and
-	$dbh->{odbc_exec_direct} = 1;
- When $dbh->prepare() is called with the attribute "ExecDirect" set to a non-zero value 
- dbd_st_prepare do NOT call SQLPrepare, but set the sth flag odbc_exec_direct to 1.
- 
-=item odbc_err_handler
+This allows the end user to set a timeout for queries on the ODBC
+side.  Add
+
+  { odbc_query_timeout => 30 }
+
+to you connect or set on the dbh before executing the statement. The
+default is 0, no timeout.
+
+Note that some drivers may not support this attribute.
+
+See t/20SqlServer.t for an example.
+
+=head2 Private connection attributes
+
+=head3 odbc_err_handler
 
 Allow errors to be handled by the application.  A call-back function
 supplied by the application to handle or ignore messages.
@@ -599,16 +584,16 @@ Check t/20SQLServer.t and t/10handler.t.
          return 1; # propagate error
   }
   $dbh->{odbc_err_handler} = \$err_handler;
-  # do something to cause an error 
+  # do something to cause an error
   $dbh->{odbc_err_handler} = undef; # cancel the handler
 
-=item odbc_SQL_ROWSET_SIZE
+=head3 odbc_SQL_ROWSET_SIZE
 
 Here is the information from the original patch, however, I've learned
-since from other sources that this could/has caused SQL Server to "lock up".
-Please use at your own risk!
-   
-SQL_ROWSET_SIZE attribute patch from Andrew Brown 
+since from other sources that this could/has caused SQL Server to
+"lock up".  Please use at your own risk!
+
+SQL_ROWSET_SIZE attribute patch from Andrew Brown
 > There are only 2 additional lines allowing for the setting of
 > SQL_ROWSET_SIZE as db handle option.
 >
@@ -631,38 +616,51 @@ SQL_ROWSET_SIZE attribute patch from Andrew Brown
 > Andrew
 >
 
-=item SQL_DRIVER_ODBC_VER
+=head3 odbc_exec_direct
 
-This, while available via get_info() is captured here.  I may get rid of this
-as I only used it for debugging purposes.  
- 
-=item odbc_cursortype (applies to connect only!)
+Force DBD::ODBC to use SQLExecDirect instead of
+SQLPrepare/SQLExecute.  There are drivers that only support
+SQLExecDirect and the DBD::ODBC do() override does not allow returning
+result sets.  Therefore, the way to do this now is to set the
+attribute odbc_exec_direct.  There are currently two ways to get this:
 
-This allows multiple concurrent statements on SQL*Server.  In your connect, add
-{ odbc_cursortype => 2 }.  If you are using DBI > 1.41, you should also be able
-to use { odbc_cursortype => DBI::SQL_CURSOR_DYNAMIC } instead.  For example:
+    $dbh->prepare($sql, { odbc_exec_direct => 1});
 
- my $dbh = DBI->connect("dbi:ODBC:$DSN", $user, $pass, { RaiseError => 1, odbc_cursortype => 2});
- my $sth = $dbh->prepare("one statement");
- my $sth2 = $dbh->prepare("two statement");
- $sth->execute;
- my @row;
- while (@row = $sth->fetchrow_array) {
-    $sth2->execute($row[0]);
- }
+and
+
+    $dbh->{odbc_exec_direct} = 1;
+
+=head3 SQL_DRIVER_ODBC_VER
+
+This, while available via get_info() is captured here.  I may get rid
+of this as I only used it for debugging purposes.
+
+=head3 odbc_cursortype
+
+This allows multiple concurrent statements on SQL*Server.  In your
+connect, add
+
+  { odbc_cursortype => 2 }.
+
+If you are using DBI > 1.41, you should also be able to use
+
+ { odbc_cursortype => DBI::SQL_CURSOR_DYNAMIC }
+
+instead.  For example:
+
+    my $dbh = DBI->connect("dbi:ODBC:$DSN", $user, $pass,
+                  { RaiseError => 1, odbc_cursortype => 2});
+    my $sth = $dbh->prepare("one statement");
+    my $sth2 = $dbh->prepare("two statement");
+    $sth->execute;
+    my @row;
+    while (@row = $sth->fetchrow_array) {
+       $sth2->execute($row[0]);
+    }
 
 See t/20SqlServer.t for an example.
 
-
-=item odbc_query_timeout 
-
-This allows the end user to set a timeout for queries on the ODBC side.  After your connect, add
-{ odbc_query_timeout => 30 } or set on the dbh before executing the statement.  The default is 0, no timeout.
-Note that some drivers may not support this attribute.
-
-See t/20SqlServer.t for an example.
-
-=item odbc_has_unicode (applies to database handle only)
+=head3 odbc_has_unicode
 
 A read-only attribute signifying whether DBD::ODBC was built with the
 C macro WITH_UNICODE or not. A value of 1 indicates DBD::ODBC was built
@@ -673,7 +671,7 @@ SQL_C_WCHAR, SQL_WCHAR, SQL_WVARCHAR, and SQL_WLONGVARCHAR.
 
 When odbc_has_unicode is 1, DBD::ODBC will:
 
-=over 8
+=over
 
 =item bind columns the database declares as wide characters as SQL_Wxxx
 
@@ -699,7 +697,7 @@ encoding to Unicode.
 
 NOTE: Binding of unicode output parameters is coded but untested.
 
-NOTE: When building DBD::ODBC on Windows ($^O eq 'MSWin32') the 
+NOTE: When building DBD::ODBC on Windows ($^O eq 'MSWin32') the
 WITH_UNICODE macro is automatically added. To disable specify -nou as
 an argument to Makefile.PL (e.g. nmake Makefile.PL -nou). On non-Windows
 platforms the WITH_UNICODE macro is B<not> enabled by default and to enable
@@ -712,96 +710,185 @@ untested.  Let me know how you get on with it.
 UNICODE support in ODBC Drivers differs considerably. Please read the
 README.unicode file for further details.
 
-=item odbc_version (applies to connect only!)
+=head3 odbc_version
 
-This was added prior to the move to ODBC 3.x to allow the caller to "force" ODBC 3.0
-compatibility.  It's probably not as useful now, but it allowed get_info and get_type_info
-to return correct/updated information that ODBC 2.x didn't permit/provide.
-Since DBD::ODBC is now 3.x, this can be used to force 2.x behavior via something like:
-  my $dbh = DBI->connect("dbi:ODBC:$DSN", $user, $pass, { odbc_version => 2});
-       
-   
-=item B<Private DBD::ODBC Functions>
+This was added prior to the move to ODBC 3.x to allow the caller to
+"force" ODBC 3.0 compatibility.  It's probably not as useful now, but
+it allowed get_info and get_type_info to return correct/updated
+information that ODBC 2.x didn't permit/provide.  Since DBD::ODBC is
+now 3.x, this can be used to force 2.x behavior via something like: my
 
-=item GetInfo (superseded by get_info(), the DBI standard)
+  $dbh = DBI->connect("dbi:ODBC:$DSN", $user, $pass,
+                      { odbc_version =>2});
 
-This function maps to the ODBC SQLGetInfo call.  This is a Level 1 ODBC
-function.  An example of this is:
+=head2 Private statement attributes
 
-  $value = $dbh->func(6, GetInfo);
+=head3 odbc_more_results
 
-This function returns a scalar value, which can be a numeric or string value.  
-This depends upon the argument passed to GetInfo.
+Use this attribute to determine if there are more result sets
+available.  SQL Server supports this feature.  Use this as follows:
 
+do {
+   my @row;
+   while (@row = $sth->fetchrow_array()) {
+      # do stuff here
+   }
+} while ($sth->{odbc_more_results});
 
-=item SQLGetTypeInfo (superseded by get_type_info(), the DBI standard)
+Note that with multiple result sets and output parameters (i.e. using
+bind_param_inout, don't expect output parameters to be bound until ALL
+result sets have been retrieved.
 
-This function maps to the ODBC SQLGetTypeInfo call.  This is a Level 1
-ODBC function.  An example of this is:
+=head2 Private DBD::ODBC Functions
+
+You use DBD::ODBC private functions like this:
+
+  $dbh->func(arg, private_function_name);
+
+=head3 GetInfo
+
+B<This private function is now superceded by DBI's get_info method.>
+
+This function maps to the ODBC SQLGetInfo call and the argument
+should be a valid ODBC information type (see ODBC specification).
+e.g.
+
+  $value = $dbh->func(6, 'GetInfo');
+
+which returns the SQL_DRIVER_NAME.
+
+This function returns a scalar value, which can be a numeric or string
+value depending on the information value requested.
+
+=head3 SQLGetTypeInfo
+
+B<This private function is now superceded by DBI's type_info and
+type_info_all methods.>
+
+This function maps to the ODBC SQLGetTypeInfo API and the argument
+should be a SQL type number (e.g. SQL_VARCHAR) or
+SQL_ALL_TYPES. SQLGetTypeInfo returns information about a data type
+supported by the data source.
+
+e.g.
 
   use DBI qw(:sql_types);
 
-  $sth = $dbh->func(SQL_ALL_TYPES, GetInfo);
-  while (@row = $sth->fetch_row) {
-    ...
-  }
+  $sth = $dbh->func(SQL_ALL_TYPES, GetTypeInfo);
+  DBI::dump_results($sth);
 
-This function returns a DBI statement handle, which represents a result
-set containing type names which are compatible with the requested
-type.  SQL_ALL_TYPES can be used for obtaining all the types the ODBC
-driver supports.  NOTE: It is VERY important that the use DBI includes
-the qw(:sql_types) so that values like SQL_VARCHAR are correctly
-interpreted.  This "imports" the sql type names into the program's name
-space.  A very common mistake is to forget the qw(:sql_types) and
+This function returns a DBI statement handle for the SQLGetTypeInfo
+result-set containing many columns of type attributes (see ODBC
+specification).
+
+NOTE: It is VERY important that the use DBI includes the
+qw(:sql_types) so that values like SQL_VARCHAR are correctly
+interpreted.  This "imports" the sql type names into the program's
+name space.  A very common mistake is to forget the qw(:sql_types) and
 obtain strange results.
 
-=item GetFunctions (now supports ODBC V3)
+=head3 GetFunctions
 
-This function maps to the ODBC API SQLGetFunctions.  This is a Level 1
-API call which returns supported driver functions.  Depending upon how
-this is called, it will either return a 100 element array of true/false
-values or a single true false value.  If it's called with
-SQL_API_ALL_FUNCTIONS (0), it will return the 100 element array.
-Otherwise, pass the number referring to the function.  (See your ODBC
-docs for help with this).
+This function maps to the ODBC SQLGetFunctions API which returns
+information on whether a function is supported by the ODBC driver.
 
-=item SQLColumns 
+The argument should be SQL_API_ALL_FUNCTIONS (0) for all functions or
+a valid ODBC function number (e.g. SQL_API_SQLDESCRIBEPARAM which is
+58). See ODBC specification or examine your sqlext.h and sql.h header
+files for all the SQL_API_XXX macros.
 
-Support for this function has been added in version 0.17.  It looks to be
-fixed in version 0.20.
+If called with SQL_API_ALL_FUNCTIONS (0), then a 100 element array is
+returned where each element will contain a '1' if the ODBC function with
+that SQL_API_XXX index is supported or '' if it is not.
 
-Use the DBI statement handle attributes NAME, NULLABLE, TYPE,
-PRECISION and SCALE, unless you have a specific reason.
+If called with a specific SQL_API_XXX value for a single function it will
+return true if the ODBC driver supports that function, otherwise false.
 
-=item Connect without DSN
+e.g.
 
-The ability to connect without a full DSN is introduced in version
-0.21.
 
-Example (using MS Access):
-	my $DSN = 'driver=Microsoft Access Driver (*.mdb);dbq=\\\\cheese\\g$\\perltest.mdb';
-	my $dbh = DBI->connect("dbi:ODBC:$DSN", '','') 
-		or die "$DBI::errstr\n";
+    my @x = $dbh->func(0,"GetFunctions");
+    print "SQLDescribeParam is supported\n" if ($x[58]);
 
-=item SQLStatistics
+or
 
-=item SQLForeignKeys
+    print "SQLDescribeParam is supported\n"
+        if $dbh->func(58, "GetFunctions");
 
-See DBI's get_foreign_keys.
-   
-=item SQLPrimaryKeys
+=head3 GetStatistics
 
-See DBI's get_primary_keys
-   
-=item SQLDataSources
+See the ODBC specification for the SQLStatistics API.
+You call SQLStatistics like this:
 
-Handled, currently (as of 0.21), also see DBI's data_sources()
+  $dbh->func($catalog, $schema, $table, $unique, 'GetStatistics');
 
-=item SQLSpecialColumns
+=head3 GetForeignKeys
+
+B<This private function is now superceded by DBI's foreign_key_info
+method.>
+
+See the ODBC specification for the SQLForeignKeys API.
+You call SQLForeignKeys like this:
+
+  $dbh->func($pcatalog, $pschema, $ptable,
+             $fcatalog, $fschema, $ftable,
+             "GetForeignKeys");
+ 
+=head3 GetPrimaryKeys
+
+B<This private function is now superceded by DBI's primary_key_info
+method.>
+
+See the ODBC specification for the SQLPrimaryKeys API.
+You call SQLPrimaryKeys like this:
+
+  $dbh->func($vatalog, $schema, $table, "GetPrimaryKeys");
+
+=head3 data_sources
+
+B<This private function is now superceded by DBI's data_sources
+method.>
+
+You call data_sources like this:
+
+  @dsns = $dbh->func("data_sources);
+
+Handled since 0.21.
+
+=head3 GetSpecialColumns
+
+See the ODBC specification for the SQLSpecialColumns API.
+You call SQLSpecialColumns like this:
+
+  $dbh->func($identifier, $catalog, $schema, $table, $scope,
+             $nullable, 'GetSpecialColumns');
 
 Handled as of version 0.28
  
-=item Others/todo?
+head3 ColAttributes
+
+B<This private function is now superceded by DBI's statement attributes
+NAME, TYPE, PRECISION, SCLARE, NULLABLE etc).
+
+See the ODBC specification for the SQLColAttributes API.
+You call SQLColAttributes like this:
+
+  $dbh->func($column, $ftype, "ColAttributes");
+
+head3 DescribeCol
+
+B<This private function is now superceded by DBI's statement attributes
+NAME, TYPE, PRECISION, SCLARE, NULLABLE etc).
+
+See the ODBC specification for the SQLDescribeCol API.
+You call SQLDescribeCol like this:
+
+  @info = $dbh->func($column, "DescribeCol");
+
+The returned array contains the column attributes in the order described
+in the ODBC specification for SQLDescribeCol.
+
+=head2 Others/todo?
 
 Level 1
 
@@ -816,9 +903,17 @@ Level 2
     SQLDrivers
     SQLNativeSql
 
-=back
+=head2 Connect without DSN
 
-=head2 Using DBD::ODBC with web servers under Win32. 
+The ability to connect without a full DSN is introduced in version
+0.21.
+
+Example (using MS Access):
+	my $DSN = 'driver=Microsoft Access Driver (*.mdb);dbq=\\\\cheese\\g$\\perltest.mdb';
+	my $dbh = DBI->connect("dbi:ODBC:$DSN", '','') 
+		or die "$DBI::errstr\n";
+
+=head2 Using DBD::ODBC with web servers under Win32.
 
 =over 4
 
@@ -872,7 +967,7 @@ which are typically driver specific.  The important value to change for
 the Access driver, for example, is the DBQ value.  That's actually the
 file name of the Access database.
 
-=item Connect without DSN
+=head2 Connect without DSN
 
 The ability to connect without a full DSN is introduced in version 0.21.
 

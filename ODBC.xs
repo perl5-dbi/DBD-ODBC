@@ -228,7 +228,7 @@ data_sources(drh, attr = NULL)
 		XSRETURN(0);
 	    }
 	}
-	strcpy(dsn, "DBI:ODBC:");
+	strcpy(dsn, "dbi:ODBC:");
 	while (1) {
             rc = SQLDataSources(imp_drh->henv, fDirection,
                                 dsn+9, /* strlen("DBI:ODBC:") */
