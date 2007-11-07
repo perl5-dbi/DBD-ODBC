@@ -868,7 +868,7 @@ Handled as of version 0.28
 head3 ColAttributes
 
 B<This private function is now superceded by DBI's statement attributes
-NAME, TYPE, PRECISION, SCLARE, NULLABLE etc).
+NAME, TYPE, PRECISION, SCLARE, NULLABLE etc).>
 
 See the ODBC specification for the SQLColAttributes API.
 You call SQLColAttributes like this:
@@ -878,7 +878,7 @@ You call SQLColAttributes like this:
 head3 DescribeCol
 
 B<This private function is now superceded by DBI's statement attributes
-NAME, TYPE, PRECISION, SCLARE, NULLABLE etc).
+NAME, TYPE, PRECISION, SCLARE, NULLABLE etc).>
 
 See the ODBC specification for the SQLDescribeCol API.
 You call SQLDescribeCol like this:
