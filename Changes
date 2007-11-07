@@ -32,6 +32,11 @@ errstr/state. These don't cause DBI->connect to die but you can test
 $h->err eq "" after connect and obtain the informational diagnostics
 from errstr/state if you want them.
 
+Fixed problem in 41Unicode.t where utf8 was used before testing we had
+a recent enough Perl - thank you cpan testers.
+
+Changed "our" back to "my" in Makefile.PL - thank you cpan testers.
+
 =head2 Changes in DBD::ODBC 1.15_1 November 6, 2007
 
 Minor changes to 20SqlServer.t test for SQL Server 2008 (Katmai).

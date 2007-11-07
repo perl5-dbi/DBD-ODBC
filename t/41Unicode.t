@@ -15,6 +15,12 @@ my @data;
 my $tests;
 # to help ActiveState's build process along by behaving (somewhat) if a dsn is not provided
 BEGIN {
+	if ($] < 5.008001) {
+		plan skip_all => "Old Perl lacking unicode support";
+	} elsif (!defined $ENV{DBI_DSN}) {
+		plan skip_all => "DBI_DSN is undefined";
+	}
+
 	@data=(
 		"hello ASCII: the quick brown fox jumps over the yellow dog",
 		"Hello Unicode: german umlauts (\x{00C4}\x{00D6}\x{00DC}\x{00E4}\x{00F6}\x{00FC}\x{00DF}) smile (\x{263A}) hebrew shalom (\x{05E9}\x{05DC}\x{05D5}\x{05DD})",
@@ -26,14 +32,7 @@ BEGIN {
 	utf8::is_utf8($data[3]) or die "Perl did not set UTF8 flag on unicode string constant";
 	
 	$tests=7+12*@data;
-
-	if ($] < 5.008001) {
-		plan skip_all => "Old Perl lacking unicode support";
-	} elsif (!defined $ENV{DBI_DSN}) {
-		plan skip_all => "DBI_DSN is undefined";
-	} else {
-		plan tests => $tests,
-	}
+        plan tests => $tests,
 }
 
 my $dbh=DBI->connect();

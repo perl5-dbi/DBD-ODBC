@@ -41,9 +41,9 @@ if ($ExtUtils::MakeMaker::VERSION >= 5.43) {
     $opts{PREREQ_FATAL} = 1;
 }
 
-our $opt_g = 0;
-our $opt_o = '';
-our $opt_u = undef;
+my $opt_g = 0;
+my $opt_o = '';
+my $opt_u = undef;
 
 Getopt::Long::GetOptions("g!" => \$opt_g,
                          "o=s" => \$opt_o,
