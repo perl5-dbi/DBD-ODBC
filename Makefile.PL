@@ -156,15 +156,20 @@ else {
     }
 
     unless ($odbchome) {
-	print "\n";
-	print "The DBD::ODBC module needs to link with an ODBC 'Driver Manager'.\n";
-	print "(The Driver Manager, in turn, needs one or more database specific ODBC drivers.\n";
-	print "The DBD::ODBC module does _not_ include any ODBC drivers!)\n\n";
-	print "You need to indicate where your ODBC Driver Manager is installed.\n";
-	print "You can do this ether by setting the ODBCHOME environment variable\n";
-	print "or by runing 'perl Makefile.PL -o odbcdir'.\n\n";
-	print "If you do not have an ODBC Driver Manager you can try building\n";
-	print "the free iODBC Driver Manager in the iodbcsrc directory.\n\n";
+	print <<'EOT';
+
+The DBD::ODBC module needs to link with an ODBC 'Driver Manager'.
+(The Driver Manager, in turn, needs one or more database specific ODBC
+drivers. The DBD::ODBC module does _not_ include any ODBC drivers!)
+
+You need to indicate where your ODBC Driver Manager is installed.
+You can do this ether by setting the ODBCHOME environment variable
+or by running 'perl Makefile.PL -o odbcdir'.
+
+If you do not have an ODBC Driver Manager you should try to get hold of
+the unixODBC packages for your system or build it from source (see
+http://www.unixodbc.org).
+EOT
 	die "Makefile.PL aborted.\n";
     }
     die "ODBCHOME environment variable ($odbchome) does not refer to a directory.\n"

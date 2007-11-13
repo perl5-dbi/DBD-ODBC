@@ -40,6 +40,12 @@ a recent enough Perl - thank you cpan testers.
 
 Changed "our" back to "my" in Makefile.PL - thank you cpan testers.
 
+Removed all calls to DBIh_EVENT2 in dbdimp.c as it is no longer used
+(see posts on dbi-dev).
+
+Changed text output when a driver manager is not found to stop
+referring to iodbcsrc which is no longer included with DBD::ODBC.
+
 =head2 Changes in DBD::ODBC 1.15_1 November 6, 2007
 
 Minor changes to 20SqlServer.t test for SQL Server 2008 (Katmai).

@@ -342,8 +342,6 @@ imp_drh_t *imp_drh;
    /* The disconnect_all concept is flawed and needs more work */
    if (!dirty && !SvTRUE(perl_get_sv("DBI::PERL_ENDING",0))) {
        DBIh_SET_ERR_CHAR(drh, (imp_xxh_t*)imp_drh, Nullch, 1, "disconnect_all not implemented", Nullch, Nullch);
-      DBIh_EVENT2(drh, ERROR_event,
-		  DBIc_ERR(imp_drh), DBIc_ERRSTR(imp_drh));
       return FALSE;
    }
    return FALSE;
@@ -1113,8 +1111,6 @@ char *what;
       sv_catpv(errstr, what);
       sv_catpv(errstr, " err=-1)");
    }
-
-   DBIh_EVENT2(h, ERROR_event, DBIc_ERR(imp_xxh), errstr);
 
    if (ODBC_TRACE_LEVEL(imp_xxh) >= 2)
       PerlIO_printf(DBIc_LOGPIO(imp_xxh), "%s error %d recorded: %s\n",
