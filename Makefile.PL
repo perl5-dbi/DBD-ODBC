@@ -143,16 +143,33 @@ else {
 
     $odbchome = VMS::Filespec::unixify($odbchome) if $^O eq 'VMS';
 
-    # per patches from Teun Burgers
-    if (!$odbchome && $ENV{WINDIR} && $^O eq 'cygwin') {
-	my $tmp_odbchome = $ENV{WINDIR};
-	$tmp_odbchome =~ s/^([A-Za-z]):*$/\/\/$1/;
-	$tmp_odbchome =~ s/\\/\//g;
-	$odbchome = $tmp_odbchome if (-e "$tmp_odbchome/odbc.ini")
-    }
 
-    if (!$odbchome && -f '/opt/sapdb/interfaces/odbc/lib/libsqlod.a') {
-	$odbchome = '/opt/sapdb/interfaces/odbc/';
+    # if we haven't got odbchome set try and find a driver, driver manager.
+    if (!$odbchome) {
+        if ($ENV{WINDIR} && $^O eq 'cygwin') {
+            # per patches from Teun Burgers
+            my $tmp_odbchome = $ENV{WINDIR};
+            $tmp_odbchome =~ s/^([A-Za-z]):*$/\/\/$1/;
+            $tmp_odbchome =~ s/\\/\//g;
+            $odbchome = $tmp_odbchome if (-e "$tmp_odbchome/odbc.ini")
+        } elsif (-f '/opt/sapdb/interfaces/odbc/lib/libsqlod.a') {
+            $odbchome = '/opt/sapdb/interfaces/odbc/';
+        }
+        # unixODBC - would have liked to use odbc_config but it did not
+        # exist until 2.2.11 and it was broken wrt --cflags in 2.2.11/2.2.12
+        # i.e. --cflags did not include -I/xxx/yyy
+        elsif (-f '/usr/include/sql.h' &&
+                 -f '/usr/include/sqlext.h' &&
+                 -f '/usr/include/sqltypes.h') {
+            $odbchome = '/usr';
+        } elsif (-f '/usr/local/include/sql.h' &&
+                 -f '/usr/local/include/sqlext.h' &&
+                 -f '/usr/local/include/sqltypes.h') {
+            $odbchome = '/usr/local';
+        } elsif (-d '/usr/local/easysoft/unixODBC') {
+            $odbchome = '/usr/local/easysoft/unixODBC';
+        }
+        print "Found what looks like a driver manager in $odbchome\n";
     }
 
     unless ($odbchome) {
@@ -304,7 +321,7 @@ Hmm...I cannot find an ODBC driver manager that I recognize.
 	die "That's odd, I can't see any unixodbc libs in $odbchome" unless @ilibs;
 	print "We expect to find the sql.h, sqlext.h and (which were\n";
 	print "supplied with unixODBC) in \$ODBCHOME/include directory alongside\n";
-	print "the @ilibs library. in \$ODBCHOME/lib\n\n";
+	print "the @ilibs library in \$ODBCHOME/lib\n\n";
 	my $ilibpath = $ilibs[0]; # XXX if both .so and .a, pick based on LINKTYPE?
 	my $ilibname = basename($ilibpath);
 	$opts{DEFINE} .= " -I$odbchome/include";

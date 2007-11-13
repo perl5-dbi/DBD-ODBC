@@ -46,6 +46,9 @@ Removed all calls to DBIh_EVENT2 in dbdimp.c as it is no longer used
 Changed text output when a driver manager is not found to stop
 referring to iodbcsrc which is no longer included with DBD::ODBC.
 
+Changed Makefile.PL to attempt to find unixODBC if -o or ODBCHOME not
+specified.
+
 =head2 Changes in DBD::ODBC 1.15_1 November 6, 2007
 
 Minor changes to 20SqlServer.t test for SQL Server 2008 (Katmai).
