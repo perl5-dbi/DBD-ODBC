@@ -99,4 +99,3 @@ $dbh->disconnect;
 exit 0;
 # get rid of use once warnings
 print $DBI::errstr;
-print $ODBCTEST::table_name;

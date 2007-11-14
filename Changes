@@ -23,7 +23,7 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
 
 =head1 CHANGES
 
-=head2 Changes in DBD::ODBC 1.15_2 November 6, 2007
+=head2 Changes in DBD::ODBC 1.15_2 November 14, 2007
 
 Fix bug in DBD::ODBC's private function data_sources which was
 returning data sources prefixed with "DBI:ODBC" instead of "dbi:ODBC".
@@ -57,6 +57,16 @@ Changed Makefile.PL so if an ODBC driver manager is not found then we
 issue warning and exit cleanly but not generating a Makefile. This
 should stop cpan-testers from flagging a fail because they haven't got
 an ODBC driver manager.
+
+Fix bug introduced in recent checkin where if odbchome is not defined we
+still output a msg using $odbchome.
+
+Changed Makefile.PL so it no longer "use"s DBI/DBI::DBD because this
+makes cpan-testers log a fail if DBI is not installed. Changed to put
+the DBI::DBD use in the CONFIGURE sub so PREREQ_PM will filter out
+machines where DBI is not installed.
+
+Fix a possible typo, used once in 10handler.t.
 
 =head2 Changes in DBD::ODBC 1.15_1 November 6, 2007
 
