@@ -915,12 +915,6 @@ HSTMT hstmt;
    D_imp_xxh(h);
    dTHR;
    
-   if (ODBC_TRACE_LEVEL(imp_xxh) > 3) {
-       PerlIO_printf(DBIc_LOGPIO(imp_xxh),
-                     "dbd_error2(err_rc=%d, what=%s, handles=(%p,%p,%p)\n",
-                     err_rc, (what ? what : "null"), henv, hdbc, hstmt);
-   }
-   
    /*
     * It's a shame to have to add all this stuff with imp_dbh and
     * imp_sth, but imp_dbh is needed to get the odbc_err_handler
@@ -929,6 +923,12 @@ HSTMT hstmt;
    struct imp_dbh_st *imp_dbh = NULL;
    struct imp_sth_st *imp_sth = NULL;
 
+   if (ODBC_TRACE_LEVEL(imp_xxh) > 3) {
+       PerlIO_printf(DBIc_LOGPIO(imp_xxh),
+                     "dbd_error2(err_rc=%d, what=%s, handles=(%p,%p,%p)\n",
+                     err_rc, (what ? what : "null"), henv, hdbc, hstmt);
+   }
+   
    switch(DBIc_TYPE(imp_xxh)) {
       case DBIt_ST:
 	 imp_sth = (struct imp_sth_st *)(imp_xxh);
@@ -1594,6 +1594,7 @@ int more;
     imp_fbh_t *fbh;
     SQLLEN t_dbsize = 0;                     /* size of native type */
     SQLSMALLINT num_fields;
+    SQLCHAR *cur_col_name;
     struct imp_dbh_st *imp_dbh = NULL;
     imp_dbh = (struct imp_dbh_st *)(DBIc_PARENT_COM(imp_sth));
 
@@ -1669,7 +1670,7 @@ int more;
     Newz(42, imp_sth->ColNames,
          (num_fields + 1) * imp_dbh->max_column_name_len + 255, UCHAR);
     
-    SQLCHAR *cur_col_name = imp_sth->ColNames;
+    cur_col_name = imp_sth->ColNames;
     /* Pass 1: Get space needed for field names, display buffer and dbuf */
     for (fbh=imp_sth->fbh, i=0; i < num_fields; i++, fbh++) {
         fbh->imp_sth = imp_sth;
