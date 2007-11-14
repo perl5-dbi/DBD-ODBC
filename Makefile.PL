@@ -187,7 +187,11 @@ If you do not have an ODBC Driver Manager you should try to get hold of
 the unixODBC packages for your system or build it from source (see
 http://www.unixodbc.org).
 EOT
-	die "Makefile.PL aborted.\n";
+        # stop cpan testers from reporting a failure when a driver manager
+        # library is not installed. Do not know if Devel::CheckLib (when
+        # it is released) is going to help here.
+        # see http://www.mail-archive.com/cpan-testers-discuss%40perl.org/msg00043.html
+        exit 0;
     }
     die "ODBCHOME environment variable ($odbchome) does not refer to a directory.\n"
 	unless -d $odbchome;
@@ -460,12 +464,14 @@ Hmm...I cannot find an ODBC driver manager that I recognize.
         print SQLH qq{#include <infxcli.h>\n};
     }
     else {
-	print "\n*** WARNING ***\a\n";
-	print "Unknown driver manager. Using default build process.\n";
-	print "This will almost certainly fail at some point.\n";
-	print "In which case you will need to edit/hack the Makefile.PL\n";
-	print "to suit your needs. (Specifically to locate your odbc\n";
-	print "library and header files.)\n\n";
+	print <<'EOT';
+*** WARNING ***
+Unknown driver manager. Using default build process.
+This will almost certainly fail at some point.
+In which case you will need to edit/hack the Makefile.PL
+to suit your needs. (Specifically to locate your odbc
+library and header files.)
+EOT
 	#$opts{DEFINE}  = "";
 	print SQLH qq{#include <sql.h> \n#include <sqlext.h>\n};
     }

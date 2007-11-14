@@ -19,6 +19,8 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
  Use odbcinst (if it exists to point people at the ini files they need to use)
  Use odbc_config (if it exists to find out about unixODBC).
 
+ Try to produce a Module::Install build.
+
 =head1 CHANGES
 
 =head2 Changes in DBD::ODBC 1.15_2 November 6, 2007
@@ -48,6 +50,13 @@ referring to iodbcsrc which is no longer included with DBD::ODBC.
 
 Changed Makefile.PL to attempt to find unixODBC if -o or ODBCHOME not
 specified.
+
+Updated META.yml based on new 1.2 spec.
+
+Changed Makefile.PL so if an ODBC driver manager is not found then we
+issue warning and exit cleanly but not generating a Makefile. This
+should stop cpan-testers from flagging a fail because they haven't got
+an ODBC driver manager.
 
 =head2 Changes in DBD::ODBC 1.15_1 November 6, 2007
 

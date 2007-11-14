@@ -1,11 +1,35 @@
-# http://module-build.sourceforge.net/META-spec.html
-#XXXXXXX This is a prototype!!!  It will change in the future!!! XXXXX#
+# http://module-build.sourceforge.net/META-spec-v1.2.html
 name:         DBD-ODBC
 version:      1.15_2
 version_from: ODBC.pm
+abstract:
+  ODBC DBD for Per DBI
+author:
+  Tim Bunce
+  Jeff Urlwin
+  Martin J. Evans
+license: perl
+
 installdirs:  site
 requires:
-    DBI:                           1.21
-
+    DBI: 1.21
+#
+# Added build_requires/configure_requires DBI as DBD::ODBC needs DBI::DBD to
+# get postamble etc
+#
+build_requires:
+  DBI: 1.21
+configure_requires:
+  DBI: 1.21
+dynamic_config: 1
+keywords:
+  - ODBC
+  - DBD
+resources:
+  license: http://dev.perl.org/licenses/
+  bugtracker: http://rt.cpan.org/Public/Dist/Display.html?Name=DBD-ODBC
+  MailingList: http://dbi.perl.org/
 distribution_type: module
-generated_by: ExtUtils::MakeMaker version 6.17
+meta-spec:
+  version: 1.2
+  url: http://module-build.sourceforge.net/META-spec-v1.2.html
