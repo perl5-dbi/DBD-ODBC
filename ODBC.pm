@@ -9,7 +9,7 @@
 
 require 5.006;
 
-$DBD::ODBC::VERSION = '1.15_2';
+$DBD::ODBC::VERSION = '1.15_3';
 
 {
     package DBD::ODBC;
@@ -618,11 +618,21 @@ SQL_ROWSET_SIZE attribute patch from Andrew Brown
 
 =head3 odbc_exec_direct
 
-Force DBD::ODBC to use SQLExecDirect instead of
-SQLPrepare/SQLExecute.  There are drivers that only support
-SQLExecDirect and the DBD::ODBC do() override does not allow returning
-result sets.  Therefore, the way to do this now is to set the
-attribute odbc_exec_direct.  There are currently two ways to get this:
+Force DBD::ODBC to use SQLExecDirect instead of SQLPrepare/SQLExecute.
+
+There are drivers that only support SQLExecDirect and the DBD::ODBC
+do() override does not allow returning result sets.  Therefore, the
+way to do this now is to set the attribute odbc_exec_direct.
+
+NOTE: You may also want to use this option if you are creating
+temporary objects (e.g., tables) in MS SQL Server and for some
+reason cannot use the C<do> method. see
+L<http://technet.microsoft.com/en-US/library/ms131667.aspx> which says
+I<Prepared statements cannot be used to create temporary objects on
+SQL Server 2000 or later...>. Without odbc_exec_direct, the temporary
+object will disappear before you can use it.
+
+There are currently two ways to get this:
 
     $dbh->prepare($sql, { odbc_exec_direct => 1});
 
@@ -1222,14 +1232,14 @@ or Openlink.
 
 * using DBD::Sybase and Sybase libraries.
 
-=item How do I access an MS-Access database from Linux?
+=item How do I access a MS-Access database from Linux?
 
-There are basically two choices I know of:
-
-* using mdbtools although as of writing it has not been updated since June 2004
-and only provides read access.
+There are basically two choices:
 
 * a commercial ODBC Bridge like the ones from Easysoft or OpenLink.
+
+* using mdbtools although as of writing it has not been updated since
+June 2004, only provides read access and seems to be a little buggy.
 
 =item Almost all of my tests for DBD::ODBC fail. They complain about
 not being able to connect or the DSN is not found.
@@ -1262,7 +1272,7 @@ from the same database handle which both have pending actions on them
 (e.g. they both have executed a select statement but not retrieved all
 the available rows yet).
 
-DBD::ODBC does support MAS but but whether you can actually use MAS is
+DBD::ODBC does support MAS but whether you can actually use MAS is
 down to the ODBC Driver.
 
 By default MS SQL Server did not used to support multiple active
@@ -1334,6 +1344,31 @@ and DBD::ODBC calls SQLBindParameter with:
   DecimalDigits: 0
   Data: 23-MAR-62
   BufferLength: 9
+
+=item Why do my SQL Server temporary objects disappear?
+
+If you are creating temporary objects (e.g., temporary tables) in
+SQL Server you find they have disappeared when you attempt to use
+them. Temporary objects only have a lifetime of the session they
+are created in but in addition, they cannot be created using
+prepare/execute. e.g., the following fails:
+
+  $s = $h->prepare('select * into #tmp from mytable');
+  $s->execute;
+  $s = $h->selectall_arrayref('select * from #tmp');
+
+with "Invalid object name '#tmp'". Your should read
+L<http://technet.microsoft.com/en-US/library/ms131667.aspx> which
+basically says I<Prepared statements cannot be used to create
+temporary objects on SQL Server 2000 or later...>. The proper way to
+avoid this is to use the C<do> method but if you cannot do that then
+you need to add the L</odbc_exec_direct> attribute to your prepare as
+follows:
+
+  my $s = $h->prepare('select * into #tmp from mytable',
+                      { odbc_exec_direct => 1});
+
+See L</odbc_exec_direct>.
 
 =back
 

@@ -1447,10 +1447,16 @@ SV *attribs;
 	 imp_sth->hstmt = SQL_NULL_HSTMT;
 	 return 0;
       }
+      if (ODBC_TRACE_LEVEL(imp_dbh) >= 2)
+          PerlIO_printf(DBIc_LOGPIO(imp_dbh),
+                        "    dbd_st_prepare'd sql %p, %s\n",
+                        imp_sth->hstmt, imp_sth->statement);
+   } else if (ODBC_TRACE_LEVEL(imp_dbh) >= 2) {
+       PerlIO_printf(DBIc_LOGPIO(imp_dbh),
+                     "    odbc_exec_direct=1, statement (%s) "
+                     "held for later exec\n", imp_sth->statement);
    }
-   if (ODBC_TRACE_LEVEL(imp_dbh) >= 2)
-      PerlIO_printf(DBIc_LOGPIO(imp_dbh), "    dbd_st_prepare'd sql f%d, ExecDirect=%d\n\t%s\n",
-		    imp_sth->hstmt, imp_sth->odbc_exec_direct, imp_sth->statement);
+   
 
    /* init sth pointers */
    imp_sth->henv = imp_dbh->henv;
@@ -1598,6 +1604,10 @@ int more;
     struct imp_dbh_st *imp_dbh = NULL;
     imp_dbh = (struct imp_dbh_st *)(DBIc_PARENT_COM(imp_sth));
 
+    if (ODBC_TRACE_LEVEL(imp_sth) >= 3)
+        PerlIO_printf(DBIc_LOGPIO(imp_sth), "dbd_describe done_desc=%d\n",
+                      imp_sth->done_desc);
+    
     if (imp_sth->done_desc)
         return 1;                       /* success, already done it */
 
@@ -1605,8 +1615,9 @@ int more;
         dbd_error(h, rc, "dbd_describe/SQLNumResultCols");
         return 0;
     } else if (ODBC_TRACE_LEVEL(imp_sth) >= 2)
-        PerlIO_printf(DBIc_LOGPIO(imp_sth),
-                      "    num fields = %d\n", num_fields);
+        PerlIO_printf(
+            DBIc_LOGPIO(imp_sth),
+            "    dbd_describe SQLNumResultCols=0 (rows=%d)\n", num_fields);
 
     /*
      * A little extra check to see if SQLMoreResults is supported
@@ -1622,22 +1633,21 @@ int more;
             if (ODBC_TRACE_LEVEL(imp_sth) >= 8)
                 PerlIO_printf(
                     DBIc_LOGPIO(imp_sth),
-                    "    Numfields == 0, SQLMoreResults == %d\n", rc);
+                    "    Numfields = 0, SQLMoreResults == %d\n", rc);
             if (rc == SQL_SUCCESS_WITH_INFO) {
                 AllODBCErrors(imp_sth->henv, imp_sth->hdbc, imp_sth->hstmt,
                               ODBC_TRACE_LEVEL(imp_sth) >= 8,
                               DBIc_LOGPIO(imp_dbh));
             }
-            /* reset describe flags, so that we re-describe */
-            imp_sth->done_desc = 0;
-
             if (rc == SQL_NO_DATA) {
                 imp_sth->moreResults = 0;
                 break;
             } else if (!SQL_ok(rc)) {
                 break;
             }
-            
+            /* reset describe flags, so that we re-describe */
+            imp_sth->done_desc = 0;
+
             /* force future executes to rebind automatically */
             imp_sth->odbc_force_rebind = 1;
             
@@ -1879,6 +1889,10 @@ imp_sth_t *imp_sth;
    D_imp_dbh_from_sth;
 #endif
    int outparams = 0;
+
+   if (debug >= 3)
+       PerlIO_printf(DBIc_LOGPIO(imp_dbh), "dbd_st_execute\n");
+       
    /*
     * if the handle is active, we need to finish it here.
     * Note that dbd_st_finish already checks to see if it's active.
@@ -1891,8 +1905,7 @@ imp_sth_t *imp_sth;
    outparams = (imp_sth->out_params_av) ? AvFILL(imp_sth->out_params_av)+1 : 0;
    if (debug >= 4) {
       PerlIO_printf(DBIc_LOGPIO(imp_dbh),
-		    "    dbd_st_execute (outparams = %d)...\n",
-		    outparams);
+		    "    dbd_st_execute (outparams = %d)...\n", outparams);
    }
 
 #ifdef DBDODBC_DEFER_BINDING
@@ -1944,20 +1957,20 @@ imp_sth_t *imp_sth;
    }
 
 
-   if (debug >= 2)
-      PerlIO_printf(DBIc_LOGPIO(imp_dbh),
-		    "    dbd_st_execute (for hstmt %d before)...\n",
-		    imp_sth->hstmt);
-
    if (imp_sth->odbc_exec_direct) {
-      /* statement ready for SQLExecDirect */
-      rc = SQLExecDirect(imp_sth->hstmt, imp_sth->statement, SQL_NTS);
+       /* statement ready for SQLExecDirect */
+       if (debug >=5) {
+           PerlIO_printf(
+               DBIc_LOGPIO(imp_dbh),
+               "    odbc_exec_direct=1, using SQLExecDirect\n");
+       }
+       rc = SQLExecDirect(imp_sth->hstmt, imp_sth->statement, SQL_NTS);
    } else {
       rc = SQLExecute(imp_sth->hstmt);
    }
    if (debug >= 8)
       PerlIO_printf(DBIc_LOGPIO(imp_dbh),
-		    "    dbd_st_execute (for hstmt %d after, rc = %d)...\n",
+		    "    dbd_st_execute (for hstmt %p, rc = %d)\n",
 		    imp_sth->hstmt, rc);
    /*
     * If asynchronous execution has been enabled, SQLExecute will
@@ -1971,7 +1984,6 @@ imp_sth_t *imp_sth;
        * to its knees
        */
       sleep(1);
-
       rc = SQLExecute(imp_sth->hstmt);
    }
    /* patches to handle blobs better, via Jochen Wiedmann */
@@ -2015,10 +2027,11 @@ imp_sth_t *imp_sth;
 
       /* SWORD num_fields; */
       RETCODE rc2;
+      rc2 = SQLRowCount(imp_sth->hstmt, &imp_sth->RowCount);
       if (debug >= 7)
 	 PerlIO_printf(DBIc_LOGPIO(imp_dbh),
-		       "    dbd_st_execute getting row count\n");
-      rc2 = SQLRowCount(imp_sth->hstmt, &imp_sth->RowCount);
+		       "    SQLRowCount=%d (rows=%d)\n",
+                       rc2, (SQL_SUCCEEDED(rc2) ? imp_sth->RowCount : -1));
       if (!SQL_ok(rc2)) {
 	 dbd_error(sth, rc2, "st_execute/SQLRowCount");	/* XXX ? */
 	 imp_sth->RowCount = -1;
@@ -2038,21 +2051,6 @@ imp_sth_t *imp_sth;
 	 /* force calling dbd_describe after each execute */
 	 odbc_clear_result_set(sth, imp_sth);
       }
-#if 0
-      if (imp_sth->done_desc) {
-	 rc2 = SQLNumResultCols(imp_sth->hstmt, &num_fields);
-	 if (num_fields != DBIc_NUM_FIELDS(imp_sth)) {
-	    if (debug >= 7)
-	       PerlIO_printf(DBIc_LOGPIO(imp_dbh),
-			     "    dbd_st_execute found different num cols %d != %d, resetting done_desc\n", num_fields,
-			     DBIc_NUM_FIELDS(imp_sth));
-	    imp_sth->done_desc = 0;
-	 }
-      }
-#endif
-      if (debug >= 7)
-	 PerlIO_printf(DBIc_LOGPIO(imp_dbh),
-		       "    dbd_st_execute got row count %ld\n", imp_sth->RowCount);
    } else {
       /* SQL_NO_DATA returned, must have no rows :) */
       /* seem to need to reset the done_desc, but not sure if this is

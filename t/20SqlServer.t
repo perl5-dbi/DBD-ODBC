@@ -141,7 +141,11 @@ SKIP: {
    # $sth = $dbh->prepare($sql);
    # $sth->execute;
    # $sth->finish;
-
+   # See http://technet.microsoft.com/en-US/library/ms131667.aspx
+   # which says
+   # "Prepared statements cannot be used to create temporary objects on SQL
+   # Server 2000 or later..."
+   #
    $sth = $dbh->prepare("INSERT INTO #PERL_DBD_TABLE1 (id, val) VALUES (?, ?)");
    $sth2 = $dbh->prepare("INSERT INTO #PERL_DBD_TABLE1 (id, val) VALUES (?, ?)");
    my @data2 = (undef, 'foo', 'bar', 'blet', undef);
