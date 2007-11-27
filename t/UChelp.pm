@@ -1,10 +1,15 @@
 package UChelp;
 
+#use base 'Exporter';
+use Test::More;
+
+BEGIN {
+    use Exporter();
+    @ISA = qw(Exporter);
+    @EXPORT=qw(&dumpstr &utf_eq_ok);
+}
 use strict;
 use warnings;
-use base 'Exporter';
-our @EXPORT=qw(dumpstr utf_eq_ok);
-use Test::More;
 
 sub dumpstr($)
 {

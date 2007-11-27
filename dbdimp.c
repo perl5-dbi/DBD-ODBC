@@ -1527,7 +1527,9 @@ static const char *
       case SQL_REAL:	return "REAL";
       case SQL_DOUBLE:	return "DOUBLE";
       case SQL_VARCHAR:	return "VARCHAR";
+#ifdef SQL_WCHAR
       case SQL_WCHAR: return "UNICODE CHAR";
+#endif
 #ifdef SQL_WVARCHAR
       case SQL_WVARCHAR: return "UNICODE VARCHAR"; /* added for SQLServer 7 ntext type 2/24/2000 */
 #endif

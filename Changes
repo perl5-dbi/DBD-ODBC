@@ -38,6 +38,11 @@ when creating temporary objects in SQL Server.
 
 Added FAQ on SQL Server temporary tables.
 
+Fixed bug in dbdimp.c which was using SQL_WCHAR without testing it was
+defined - thanks Jergen Dutch.
+
+Fixed use of "our" in UCHelp.pm which fails on older Perls.
+
 =head2 Changes in DBD::ODBC 1.15_2 November 14, 2007
 
 Fix bug in DBD::ODBC's private function data_sources which was
