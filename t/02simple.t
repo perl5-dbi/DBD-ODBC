@@ -100,7 +100,7 @@ is($dbh->{PrintError}, '', "Set Print Error");
 #
 $dbh->{LongTruncOk} = 1;
 $dbh->{LongReadLen} = 50;
-ok(select_long($dbh, \$max_col_len), "Select Long data, LongTruncOk");
+ok(select_long($dbh, \$max_col_len, 1), "Select Long data, LongTruncOk");
 ok(!defined($dbh->err), 'err not set on LongTruncOk handle');
 # NOTE: there is an existing bug in DBD::ODBC that truncates to LongReadLen
 # + 1 instead of LongReadLen. Not fixed yet and failing test causes loads
@@ -111,7 +111,7 @@ ok($max_col_len <= 51, 'Truncated column to LongReadLen');
 # now force an error and ensure we get a long truncated event.
 $dbh->{LongTruncOk} = 0;
 is($dbh->{LongTruncOk}, '', "Set Long TruncOk 0");
-ok(!select_long($dbh, \$max_col_len), "Select Long Data failure");
+ok(!select_long($dbh, \$max_col_len, 0), "Select Long Data failure");
 ok($dbh->err, 'error set on truncated handle');
 ok($dbh->errstr, 'errstr set on truncated handle');
 ok($dbh->state, 'state set on truncated handle');
@@ -286,7 +286,7 @@ sub tab_select
 	    if ($row[1] eq $ODBCTEST::longstr) {
 	       # print "retrieved ", length($ODBCTEST::longstr), " byte string OK\n";
 	    } else {
-	       diag("Basic retrieval of longer rows not working!\nRetrieved value = $row[0] vs $ODBCTEST::longstr\n");
+	       diag("Basic retrieval of longer rows not working!\nRetrieved value = $row[1] vs $ODBCTEST::longstr\n");
 		return 0;
 	    }
 	} elsif ($row[0] == 5) {
@@ -304,15 +304,16 @@ sub tab_select
     return 1;
 }
 
-
+#
+# returns 1 unless the eval around the select fails (e.g. if truncation)
+#
 sub select_long
 {
-    my $dbh = shift;
-    my $max_col = shift;
+    my ($dbh, $max_col, $expect) = @_;
     $$max_col = undef;
     my @row;
     my $sth;
-    my $rc = undef;
+    my $rc = 0;
     my $longest = undef;
 
     $dbh->{RaiseError} = 1;
@@ -331,6 +332,10 @@ sub select_long
             }
         };
         $rc = 1 unless ($@) ;
+    }
+    if ($rc != $expect) {
+        diag("Row " . (map {(defined($_) ? $_ : 'undef') . ','} @row) . "\n");
+        diag("expect=$expect, Longest: $longest\n");
     }
     $$max_col = $longest;
     $rc;

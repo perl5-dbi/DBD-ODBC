@@ -78,7 +78,7 @@ SKIP:  {
     skip "table_info returned undef sth", 7 unless $sth;
     my $cols = $sth->{NAME};
     isa_ok($cols, 'ARRAY', "sth {NAME} returns ref to array");
-    diag("\nN.B. Some drivers (postgres) may return ODBC 2.0 column names for the SQLTables result-set e.g. TABLE_QUALIFIER instead of TABLE_CAT");
+    diag("\nN.B. Some drivers (postgres/cache) may return ODBC 2.0 column names for the SQLTables result-set e.g. TABLE_QUALIFIER instead of TABLE_CAT");
     for (my $i = 0; $i < @$cols; $i++) {
        # print ${$cols}[$i], ": ", $sth->func($i+1, 3, ColAttributes),
        # "\n";

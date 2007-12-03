@@ -43,6 +43,9 @@ defined - thanks Jergen Dutch.
 
 Fixed use of "our" in UCHelp.pm which fails on older Perls.
 
+Minor changes to 02simple.t and 03dbatt.t to fix diagnostics output
+and help debug DBD which does not handle long data properly.
+
 =head2 Changes in DBD::ODBC 1.15_2 November 14, 2007
 
 Fix bug in DBD::ODBC's private function data_sources which was
