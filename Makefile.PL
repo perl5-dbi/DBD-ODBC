@@ -20,8 +20,11 @@ my %opts =
 (
     NAME	=> 'DBD::ODBC',
     VERSION_FROM => 'ODBC.pm',
-    PREREQ_PM => { "Test::Simple" => 0.40,# actually Test::More pkg in T::S dist
-                   "DBI" => 1.21 },
+    # See note below on CONFIGURE. This used to work when could rely on
+    # CONFIGURE being after PREREQ_PM but that is not the case now so the
+    # line below does nothing since 6.33 of MakeMaker.
+    PREREQ_PM => {"Test::Simple" => 0.40,# actually Test::More pkg in T::S dist,
+                  "DBI" => 1.21 },
     clean	=> { FILES=> 'ODBC.xsi dbdodbc.h' },
     dist	=> {
 	DIST_DEFAULT=> 'clean distcheck tardist',
@@ -37,10 +40,20 @@ if ($ExtUtils::MakeMaker::VERSION >= 5.43) {
     $opts{CAPI} = 'TRUE' if $Config{archname} =~ /-object\b/i;
     $opts{PREREQ_PRINT} = 1;
     $opts{PREREQ_FATAL} = 1;
+    # See
+    # http://www.mail-archive.com/cpan-testers-discuss%40perl.org/msg00076.html
+    # In ExtUtils::MakeMaker 6.32 and earlier CONFIGURE was run after PREREQ_PM
+    # so we could safely require DBI::DBD here and PREREQ_PM would fail first
+    # if DBI was not installed. Since 6.33 CONFIGURE is run before PREREQ_PM
+    # so now the require below fails and if we do not exit 0 without generating
+    # a Makefile cpan-testers will fail us if DBI is not found.
     $opts{CONFIGURE} = sub {
-        use DBI::DBD;
+        eval {require DBI::DBD;};
+        if ($@) {
+            warn $@;
+            exit 0;
+        }
         my $dbi_arch_dir = dbd_dbi_arch_dir();
-        #print "CONFIGURE $opts{INC}\n";
         if (exists($opts{INC})) {
             return {INC => "$opts{INC} -I$dbi_arch_dir"};
         } else {

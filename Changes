@@ -46,6 +46,11 @@ Fixed use of "our" in UCHelp.pm which fails on older Perls.
 Minor changes to 02simple.t and 03dbatt.t to fix diagnostics output
 and help debug DBD which does not handle long data properly.
 
+Further changes to Makefile.PL to avoid change in behavior of
+ExtUtils::MakeMaker wrt order of execution of PREREQ_PM and CONFIGURE.
+Now if DBI::DBD is not installed we just warn and exit 0 to avoid a
+cpan-testers failure.
+
 =head2 Changes in DBD::ODBC 1.15_2 November 14, 2007
 
 Fix bug in DBD::ODBC's private function data_sources which was
