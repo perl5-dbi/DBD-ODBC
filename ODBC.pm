@@ -1219,11 +1219,12 @@ If you cannot find an ODBC Driver Manager package for your OS you can
 download the source tar files for either of the driver managers above
 and build it yourself.
 
-=item How do I access a MS SQL Server database from Linux?
+=item How do I access a MS SQL Server database from Linux/UNIX?
 
 You have loads of choices (in no particular order):
 
-* using DBI::ProxyServer
+* using DBI::ProxyServer or DBD::Gofer. You'll need the former if you
+  use transactions.
 
 * using a commercial ODBC Driver or bridge like the ones from Easysoft
 or Openlink.
