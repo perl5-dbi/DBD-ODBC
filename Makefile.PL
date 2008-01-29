@@ -48,18 +48,18 @@ if ($ExtUtils::MakeMaker::VERSION >= 5.43) {
     # so now the require below fails and if we do not exit 0 without generating
     # a Makefile cpan-testers will fail us if DBI is not found.
     $opts{CONFIGURE} = sub {
-        eval {require DBI::DBD;};
+        eval { require DBI::DBD;};
         if ($@) {
             warn $@;
             exit 0;
         } else {
-        my $dbi_arch_dir = dbd_dbi_arch_dir();
-        if (exists($opts{INC})) {
-            return {INC => "$opts{INC} -I$dbi_arch_dir"};
-        } else {
-            return {INC => "-I$dbi_arch_dir"};
+            my $dbi_arch_dir = DBI::DBD::dbd_dbi_arch_dir();
+            if (exists($opts{INC})) {
+                return {INC => "$opts{INC} -I$dbi_arch_dir"};
+            } else {
+                return {INC => "-I$dbi_arch_dir"};
+            }
         }
-    }
     };
 }
 
@@ -532,7 +532,7 @@ use Config;
 
 
 sub postamble {
-    return main::dbd_postamble(@_);
+    return DBI::DBD::dbd_postamble(@_);
 }
 
 sub const_cccmd {

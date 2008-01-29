@@ -23,7 +23,9 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
 
 =head1 CHANGES
 
-=head2 Changes in DBD::ODBC 1.15_3 November 16, 2007
+=head2 Changes in DBD::ODBC 1.15 January 29, 2008
+
+1.15 final release.
 
 Fixed bug reported by Toni Salomaki where DBD::ODBC may call
 SQLNumResultCols after SQLMoreResults returns SQL_NO_DATA. It led to

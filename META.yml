@@ -1,6 +1,6 @@
 # http://module-build.sourceforge.net/META-spec-v1.2.html
 name:         DBD-ODBC
-version:      1.15_3
+version:      1.15
 version_from: ODBC.pm
 abstract:
   ODBC DBD for Per DBI
