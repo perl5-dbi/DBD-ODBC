@@ -39,7 +39,7 @@ if ($ExtUtils::MakeMaker::VERSION >= 5.43) {
     $opts{ABSTRACT} = 'ODBC driver for the DBI module.';
     $opts{CAPI} = 'TRUE' if $Config{archname} =~ /-object\b/i;
     $opts{PREREQ_PRINT} = 1;
-    $opts{PREREQ_FATAL} = 1;
+    #$opts{PREREQ_FATAL} = 1;
     # See
     # http://www.mail-archive.com/cpan-testers-discuss%40perl.org/msg00076.html
     # In ExtUtils::MakeMaker 6.32 and earlier CONFIGURE was run after PREREQ_PM
@@ -52,13 +52,14 @@ if ($ExtUtils::MakeMaker::VERSION >= 5.43) {
         if ($@) {
             warn $@;
             exit 0;
-        }
+        } else {
         my $dbi_arch_dir = dbd_dbi_arch_dir();
         if (exists($opts{INC})) {
             return {INC => "$opts{INC} -I$dbi_arch_dir"};
         } else {
             return {INC => "-I$dbi_arch_dir"};
         }
+    }
     };
 }
 
