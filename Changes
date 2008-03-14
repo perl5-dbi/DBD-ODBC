@@ -2,7 +2,7 @@
 
 DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
 
-(As of $Date$ $Revision$)
+(As of $LastChangedDate$ $Revision: 10667 $)
 
 =cut
 
