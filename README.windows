@@ -1,0 +1,50 @@
+Building DBD::ODBC on Windows
+=============================
+
+Quick hints:
+
+1. Make sure when you run "perl Makefile.PL" that you specify which
+   make you are using (dmake, nmake). You do this with:
+
+   perl Makefile.PL MAKE=nmake
+
+   If you don't, ExtUtils::MakeMaker will generate the Makefile for
+   the default make which may not be the one you are going to use and
+   this will lead to make errors.
+
+2. I've had a number of reports that attempting to build with Borland's
+   make does not work. If that happens to you please don't tell me; get
+   nmake or dmake.
+
+3. If you are not interested in Unicode support disable it as Unicode
+   support is built in by default on Windows builds. You can disable it
+   with -nou as in:
+
+   perl Makefile.PL -nou
+
+4. If you are building DBD::ODBC for use with ActiveState Perl then
+   good luck. I have never managed to build DBD::ODBC in such a way
+   that it works with ActiveState Perl and had to resort to building
+   Perl for Windows from scratch then building DBD::ODBC. This is
+   something to do with the fact that you need the exact same compiler
+   ActiveState uses.
+
+   If you have reliable information on how to do this I would like to
+   know.
+
+64bit Windows
+=============
+
+I have built DBD::ODBC on win64 and the tests to SQL Server completed
+successfully. However, you will need at least version 1.15 if you want
+to run DBD::ODBC on win64 successfully.
+
+If you are running a 32bit Perl on a 64bit Windows machine you will
+need to be aware there are two ODBC administrators and you need to
+create your DSNs with the right one. The ODBC Administrator you get to
+from Control Panel, Administrative Tools, Data Sources is the 64bit
+one and data sources created here will not be visible or useable from
+32bit applications. The ODBC administrator you need to use for 32bit
+applications can be found at X:\windows\syswow64\odbcad32.exe.
+ 
+

@@ -117,13 +117,18 @@ static RETCODE odbc_set_query_timeout(SV *h, HSTMT hstmt, UV odbc_timeout)
    RETCODE rc;
    D_imp_xxh(h);
    if (ODBC_TRACE_LEVEL(imp_xxh) >= 2) {
-      PerlIO_printf(DBIc_LOGPIO(imp_xxh), "   Set timeout to: %d\n", odbc_timeout);
+      PerlIO_printf(DBIc_LOGPIO(imp_xxh),
+                    "   Set timeout to: %d\n", odbc_timeout);
    }
-   rc = SQLSetStmtAttr(hstmt,(SQLINTEGER)SQL_ATTR_QUERY_TIMEOUT, (SQLPOINTER)odbc_timeout,(SQLINTEGER)SQL_IS_INTEGER );
+   rc = SQLSetStmtAttr(hstmt,(SQLINTEGER)SQL_ATTR_QUERY_TIMEOUT,
+                       (SQLPOINTER)odbc_timeout,(SQLINTEGER)SQL_IS_INTEGER);
    if (!SQL_ok(rc)) {
       /* raise warnings if setting fails, but don't die? */
       if (ODBC_TRACE_LEVEL(imp_xxh) >= 2)
-	 PerlIO_printf(DBIc_LOGPIO(imp_xxh), "    Failed to set Statement ATTR Query Timeout to %d\n", (int)odbc_timeout);
+	 PerlIO_printf(
+             DBIc_LOGPIO(imp_xxh),
+             "    Failed to set Statement ATTR Query Timeout to %d\n",
+             (int)odbc_timeout);
    }
    return rc;
 }
@@ -371,8 +376,8 @@ int dbd_db_execdirect( SV *dbh,
    if (ODBC_TRACE_LEVEL(imp_dbh) >= 2)
       PerlIO_printf(DBIc_LOGPIO(imp_dbh), "    SQLExecDirect sql %s\n",
 		    statement);
-
-   if (imp_dbh->odbc_query_timeout) {
+   /* if odbc_query_timeout has been set, set it in the driver */
+   if (imp_dbh->odbc_query_timeout != -1) {
       ret = odbc_set_query_timeout(dbh, stmt, imp_dbh->odbc_query_timeout);
       if (!SQL_ok(ret)) {
 	 dbd_error(dbh, ret, "execdirect set_query_timeout");
@@ -711,7 +716,9 @@ SV   *attr;
    imp_dbh->odbc_sqlmoreresults_supported = -1; /* flag to see if SQLDescribeParam is supported */
    imp_dbh->odbc_defer_binding = 0;
    imp_dbh->odbc_force_rebind = 0;
-   imp_dbh->odbc_query_timeout = 0; /* default vaule for query timeout is indefinite (0) */
+   /* default value for query timeout is -1 which means do not set the
+      query timeout at all. */
+   imp_dbh->odbc_query_timeout = -1;
    imp_dbh->odbc_exec_direct = 0;	/* default to not having SQLExecDirect used */
    imp_dbh->RowCacheSize = 1;	/* default value for now */
 
@@ -792,7 +799,10 @@ SV   *attr;
    if (odbc_timeout) {
       imp_dbh->odbc_query_timeout = odbc_timeout;
       if (ODBC_TRACE_LEVEL(imp_dbh) >= 2)
-	 PerlIO_printf(DBIc_LOGPIO(imp_dbh), "    Setting DBH query timeout to %d\n", (int)odbc_timeout);
+	 PerlIO_printf(
+             DBIc_LOGPIO(imp_dbh),
+             "    Setting DBH query timeout to %d\n",
+             (int)odbc_timeout);
    }
 
    imp_drh->connects++;
@@ -1383,8 +1393,6 @@ SV *attribs;
    dTHR;
    D_imp_dbh_from_sth;
    RETCODE rc;
-   /* SV **svp;
-   char cname[128]; */		/* cursorname */
 
    imp_sth->done_desc = 0;
    imp_sth->henv = imp_dbh->henv;	/* needed for dbd_error */
@@ -1393,15 +1401,23 @@ SV *attribs;
    imp_sth->odbc_default_bind_type = imp_dbh->odbc_default_bind_type;
    imp_sth->odbc_force_rebind = imp_dbh->odbc_force_rebind;
    imp_sth->odbc_query_timeout = imp_dbh->odbc_query_timeout;
+   
    if (ODBC_TRACE_LEVEL(imp_dbh) >= 5)
-      PerlIO_printf(DBIc_LOGPIO(imp_dbh), "    initializing sth query timeout to %d\n", (int)imp_dbh->odbc_query_timeout);
+      PerlIO_printf(
+          DBIc_LOGPIO(imp_dbh),
+          "    initializing sth query timeout to %d\n",
+          (int)imp_dbh->odbc_query_timeout);
 
    if (!DBIc_ACTIVE(imp_dbh)) {
-      dbd_error(sth, 0, "Can not allocate statement when disconnected from the database");
+      dbd_error(
+          sth, 0,
+          "Cannot allocate statement when disconnected from the database");
    }
 
    if (!DBIc_ACTIVE(imp_dbh)) {
-      dbd_error(sth, SQL_ERROR, "Can not allocate statement when disconnected from the database");
+      dbd_error(
+          sth, SQL_ERROR,
+          "Cannot allocate statement when disconnected from the database");
       return 0;
    }
 
@@ -1486,10 +1502,10 @@ SV *attribs;
    }
 
    /*
-    * If odbc_query_timeout is set
+    * If odbc_query_timeout is set (not -1)
     * we need to set the SQL_ATTR_QUERY_TIMEOUT
     */
-   if (imp_sth->odbc_query_timeout){
+   if (imp_sth->odbc_query_timeout != -1){
       odbc_set_query_timeout(sth, imp_sth->hstmt, imp_sth->odbc_query_timeout);
       if (!SQL_ok(rc)) {
 	 dbd_error(sth, rc, "set_query_timeout");
@@ -1500,7 +1516,6 @@ SV *attribs;
    DBIc_IMPSET_on(imp_sth);
    return 1;
 }
-
 
 int
    dbtype_is_string(int bind_type)
@@ -3354,11 +3369,18 @@ SV *keysv;
 	 break;
 
       case ODBC_QUERY_TIMEOUT:
-	 /*
-	  * fetch current value of query timeout
-	  */
-	 retsv = newSViv(imp_dbh->odbc_query_timeout);
-	 break;
+        /*
+         * fetch current value of query timeout
+         *
+         * -1 is our internal flag saying odbc_query_timeout has never been
+         * set so we map it back to the default for ODBC which is 0
+         */
+        if (imp_dbh->odbc_query_timeout == -1) {
+            retsv = newSViv(0);
+        } else {
+            retsv = newSViv(imp_dbh->odbc_query_timeout);
+        }
+        break;
 
       case ODBC_HAS_UNICODE:
 	 /*
@@ -3666,8 +3688,16 @@ SV *keysv;
 	 retsv = newSViv(imp_sth->odbc_force_rebind);
 	 break;
       case 16: /* query timeout */
-	 retsv = newSViv(imp_sth->odbc_query_timeout);
-	 break;
+        /*
+         * -1 is our internal flag saying odbc_query_timeout has never been
+         * set so we map it back to the default for ODBC which is 0
+         */
+        if (imp_sth->odbc_query_timeout == -1) {
+            retsv = newSViv(0);
+        } else {
+            retsv = newSViv(imp_sth->odbc_query_timeout);
+        }
+        break;
       default:
 	 return Nullsv;
    }

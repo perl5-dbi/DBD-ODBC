@@ -6,6 +6,7 @@ dbdimp.h
 dbivport.h
 fixup_c.h
 fixup_t.h
+FAQ
 Makefile.PL
 MANIFEST			This list of files
 META.yml
@@ -72,6 +73,7 @@ README.hpux
 README.informix
 README.RH9
 README.unicode
+README.windows
 t/01base.t
 t/02simple.t
 t/03dbatt.t

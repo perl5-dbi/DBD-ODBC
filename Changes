@@ -23,6 +23,24 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
 
 =head1 CHANGES
 
+=head2 Changes in DBD::ODBC 1.16_1 March 14, 2008
+
+Moved the FAQ entries from ODBC.pm to new FAQ document. You can view
+the FAQ with perldoc DBD::ODBC::FAQ.
+
+Added provisional README.windows document.
+
+Avoid warning when testing ExtUtils::MakeMaker version and it is a
+test release with an underscore in the version.
+
+Change odbc_query_timeout attribute handling so if it is set to 0
+after having set it to a non-zero value the default of no time out is
+restored.
+
+Rewrote pod for odbc_query_timeout.
+
+2 new tests for odbc_query_timeout added to 03dbatt.t.
+
 =head2 Changes in DBD::ODBC 1.15 January 29, 2008
 
 1.15 final release.

@@ -5,6 +5,9 @@
 # You may distribute under the terms of either the GNU General Public
 # License or the Artistic License, as specified in the Perl README file.
 #
+# Test dependencies on CPAN:
+# http://cpandeps.cantrell.org.uk/?module=DBD::ODBC;perl=latest
+#
 BEGIN { require 5.004 }	# 5.004 is required for Win32
 use Config;
 use ExtUtils::MakeMaker 5.16, qw(&WriteMakefile $Verbose prompt);
@@ -34,6 +37,8 @@ my %opts =
     OBJECT	=> '$(O_FILES)',
     DEFINE => ''
  );
+my $eumm = $ExtUtils::MakeMaker::VERSION;
+$eumm =~ tr/_//;
 if ($ExtUtils::MakeMaker::VERSION >= 5.43) {
     $opts{AUTHOR} = 'Tim Bunce, Jeff Urlwin, Martin J. Evans mailto:dbi-users@perl.org';
     $opts{ABSTRACT} = 'ODBC driver for the DBI module.';
@@ -48,18 +53,18 @@ if ($ExtUtils::MakeMaker::VERSION >= 5.43) {
     # so now the require below fails and if we do not exit 0 without generating
     # a Makefile cpan-testers will fail us if DBI is not found.
     $opts{CONFIGURE} = sub {
-        eval { require DBI::DBD;};
+        eval {require DBI::DBD;};
         if ($@) {
             warn $@;
             exit 0;
         } else {
-            my $dbi_arch_dir = DBI::DBD::dbd_dbi_arch_dir();
-            if (exists($opts{INC})) {
-                return {INC => "$opts{INC} -I$dbi_arch_dir"};
-            } else {
-                return {INC => "-I$dbi_arch_dir"};
-            }
+        my $dbi_arch_dir = DBI::DBD::dbd_dbi_arch_dir();
+        if (exists($opts{INC})) {
+            return {INC => "$opts{INC} -I$dbi_arch_dir"};
+        } else {
+            return {INC => "-I$dbi_arch_dir"};
         }
+    }
     };
 }
 
@@ -550,17 +555,26 @@ sub MY::post_constants {
     my ($self) = shift;
 
     '
-# make Changes file available as installed pod docs "perldoc DBI::Changes"
+# make Changes file available as installed pod docs "perldoc DBD::ODBC::Changes"
 inst_libdbdodbc = ' . File::Spec->catdir($self->{INST_LIB}, 'DBD/ODBC') . '
 changes_pm = ' . File::Spec->catfile($self->{INST_LIB}, 'DBD/ODBC', 'Changes.pm') . '
 
-config :: $(changes_pm)
+# make FAQ file available as installed pod docs "perldoc DBD::ODBC::FAQ"
+inst_libdbdodbc = ' . File::Spec->catdir($self->{INST_LIB}, 'DBD/ODBC') . '
+faq_pm = ' . File::Spec->catfile($self->{INST_LIB}, 'DBD/ODBC', 'FAQ.pm') . '
+
+config :: $(changes_pm) ${faq_pm}
 	@$(NOOP)
 
 $(changes_pm): Changes
 	$(NOECHO) $(MKPATH) $(inst_libdbdodbc)
 	$(NOECHO) $(RM_F) $(changes_pm)
 	$(CP) Changes $(changes_pm)
+
+$(faq_pm): FAQ
+	$(NOECHO) $(MKPATH) $(inst_libdbdodbc)
+	$(NOECHO) $(RM_F) $(faq_pm)
+	$(CP) FAQ $(faq_pm)
 ';
 
 }
