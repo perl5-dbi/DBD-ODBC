@@ -192,6 +192,24 @@ $DBD::ODBC::VERSION = '1.16_1';
        $sth;
     }
 
+    sub statistics_info {
+       my ($dbh, $catalog, $schema, $table, $unique, $quick ) = @_;
+
+       # create a "blank" statement handle
+       my $sth = DBI::_new_sth($dbh, { 'Statement' => "SQLStatistics" });
+
+       $catalog = "" if (!$catalog);
+       $schema = "" if (!$schema);
+       $table = "" if (!$table);
+       $unique = 1 if (!$unique);
+       $quick = 1 if (!$quick);
+
+       DBD::ODBC::st::_statistics($dbh, $sth, $catalog, $schema, $table,
+                                 $unique, $quick)
+	     or return undef;
+       $sth;
+    }
+
     sub foreign_key_info {
        my ($dbh, $pkcatalog, $pkschema, $pktable, $fkcatalog, $fkschema, $fktable ) = @_;
 
@@ -841,10 +859,20 @@ or
 
 =head3 GetStatistics
 
+B<This private function is now superceded by DBI's statistics_info
+method.>
+
 See the ODBC specification for the SQLStatistics API.
 You call SQLStatistics like this:
 
   $dbh->func($catalog, $schema, $table, $unique, 'GetStatistics');
+
+Prior to DBD::ODBC 1.16 $unique was not defined as being true/false or
+SQL_INDEX_UNIQUE/SQL_INDEX_ALL. In fact, whatever value you provided
+for $unique was passed through to the ODBC API SQLStatistics call
+unchanged. This changed in 1.16, where $unique became a true/false
+value which is interpreted into SQL_INDEX_UNIQUE for true and
+SQL_INDEX_ALL for false.
 
 =head3 GetForeignKeys
 

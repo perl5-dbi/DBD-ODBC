@@ -45,6 +45,19 @@ _primary_keys(dbh, sth, catalog, schema, table)
     CODE:
     ST(0) = dbd_st_primary_keys(dbh, sth, catalog, schema, table) ? &sv_yes : &sv_no;
 
+void
+_statistics(dbh, sth, catalog, schema, table, unique, quick)
+    SV * 	dbh
+    SV *	sth
+    char *	catalog
+    char *	schema
+    char *	table
+    int         unique
+    int         quick
+
+    CODE:
+    ST(0) = dbd_st_statistics(dbh, sth, catalog, schema, table,
+                              unique, quick) ? &sv_yes : &sv_no;
 
 void
 DescribeCol(sth, colno)
@@ -121,11 +134,12 @@ _GetStatistics(dbh, sth, CatalogName, SchemaName, TableName, Unique)
 	char *	CatalogName
 	char *	SchemaName
 	char *	TableName
-	int		Unique
+	int     Unique
 	CODE:
-	ST(0) = odbc_get_statistics(dbh, sth, CatalogName, SchemaName, TableName, Unique) ? &sv_yes : &sv_no;
+        ST(0) = dbd_st_statistics(dbh, sth, CatalogName, SchemaName,
+                                  TableName, Unique, 0) ? &sv_yes : &sv_no;
 
-void 
+void
 _GetPrimaryKeys(dbh, sth, CatalogName, SchemaName, TableName)
 	SV *	dbh
 	SV *	sth

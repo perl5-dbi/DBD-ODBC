@@ -18,7 +18,6 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
  Add support for $sth->more_results based on DBD::ODBC-specific attribute
  Use odbcinst (if it exists to point people at the ini files they need to use)
  Use odbc_config (if it exists to find out about unixODBC).
- Add statistics_info from DBI spec based on private GetStatistics.
 
  Try to produce a Module::Install build.
 
@@ -51,6 +50,8 @@ Reformatted dbdimp.c to avoid going over 80 columns.
 If you called some methods after disconnecting (e.g., prepare/do and
 any of the DBD::ODBC specific methods via "func") then no error was
 generated.
+
+Added support for DBI's statistics_info method.
 
 =head2 Changes in DBD::ODBC 1.15 January 29, 2008
 

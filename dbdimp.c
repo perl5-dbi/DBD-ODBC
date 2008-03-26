@@ -20,6 +20,7 @@ static const char *S_SqlTypeToString (SWORD sqltype);
 static const char *S_SqlCTypeToString (SWORD sqltype);
 static const char *cSqlTables = "SQLTables(%s,%s,%s,%s)";
 static const char *cSqlPrimaryKeys = "SQLPrimaryKeys(%s,%s,%s)";
+static const char *cSqlStatistics = "SQLStatistics(%s,%s,%s,%d,%d)";
 static const char *cSqlForeignKeys = "SQLForeignKeys(%s,%s,%s,%s,%s,%s)";
 static const char *cSqlColumns = "SQLColumns(%s,%s,%s,%s)";
 static const char *cSqlGetTypeInfo = "SQLGetTypeInfo(%d)";
@@ -1415,6 +1416,77 @@ char *table;
           XXSAFECHAR(catalog), XXSAFECHAR(schema), XXSAFECHAR(table));
 
    dbd_error(sth, rc, "st_primary_key_info/SQLPrimaryKeys");
+
+   if (!SQL_ok(rc)) {
+      SQLFreeHandle(SQL_HANDLE_STMT,imp_sth->hstmt);
+      /* SQLFreeStmt(imp_sth->hstmt, SQL_DROP);*/ /* TBD: 3.0 update */
+      imp_sth->hstmt = SQL_NULL_HSTMT;
+      return 0;
+   }
+
+   return build_results(sth,rc);
+}
+
+int
+dbd_st_statistics(dbh, sth, catalog, schema, table, unique, quick)
+   SV *dbh;
+SV *sth;
+char *catalog;
+char *schema;
+char *table;
+int unique;
+int quick;
+{
+   dTHR;
+   D_imp_dbh(dbh);
+   D_imp_sth(sth);
+   RETCODE rc;
+   int dbh_active;
+   SQLUSMALLINT odbc_unique;
+   SQLUSMALLINT odbc_quick;
+
+   imp_sth->henv = imp_dbh->henv;	/* needed for dbd_error */
+   imp_sth->hdbc = imp_dbh->hdbc;
+
+   imp_sth->done_desc = 0;
+
+   if ((dbh_active = check_connection_active(dbh)) == 0) return 0;
+
+   rc = SQLAllocStmt(imp_dbh->hdbc, &imp_sth->hstmt);/* TBD: 3.0 update */
+   if (rc != SQL_SUCCESS) {
+      dbd_error(sth, rc, "odbc_db_primary_key_info/SQLAllocStmt");
+      return 0;
+   }
+
+   odbc_unique = (unique ? SQL_INDEX_UNIQUE : SQL_INDEX_ALL);
+   odbc_quick = (quick ? SQL_QUICK : SQL_ENSURE);
+   
+   /* just for sanity, later.  Any internals that may rely on this (including */
+   /* debugging) will have valid data */
+   imp_sth->statement = (char *)safemalloc(strlen(cSqlStatistics)+
+					   strlen(XXSAFECHAR(catalog))+
+					   strlen(XXSAFECHAR(schema))+
+					   strlen(XXSAFECHAR(table))+1);
+
+   sprintf(imp_sth->statement,
+	   cSqlStatistics, XXSAFECHAR(catalog), XXSAFECHAR(schema),
+	   XXSAFECHAR(table), unique, quick);
+
+   rc = SQLStatistics(imp_sth->hstmt,
+                      (catalog && *catalog) ? catalog : 0, SQL_NTS,
+                      (schema && *schema) ? schema : 0, SQL_NTS,
+                      (table && *table) ? table : 0, SQL_NTS,
+                      odbc_unique, odbc_quick);
+
+   if (ODBC_TRACE_LEVEL(imp_sth) >= 2)
+      PerlIO_printf(
+          DBIc_LOGPIO(imp_dbh),
+          "SQLStatistics call: cat = %s, schema = %s, table = %s"
+          ", unique=%d, quick = %d\n",
+          XXSAFECHAR(catalog), XXSAFECHAR(schema), XXSAFECHAR(table),
+          odbc_unique, odbc_quick);
+
+   dbd_error(sth, rc, "st_statistics/SQLStatistics");
 
    if (!SQL_ok(rc)) {
       SQLFreeHandle(SQL_HANDLE_STMT,imp_sth->hstmt);
@@ -3919,6 +3991,7 @@ int ftype;
    return sv_2mortal(retsv);
 }
 
+#ifdef THE_FOLLOWING_NO_LONGER_USED_REPLACE_BY_dbd_st_primary_keys
 int
    odbc_get_statistics(dbh, sth, CatalogName, SchemaName, TableName, Unique)
    SV *	 dbh;
@@ -3958,6 +4031,7 @@ int		 Unique;
    }
    return build_results(sth,rc);
 }
+#endif /* THE_FOLLOWING_NO_LONGER_USED_REPLACE_BY_dbd_st_primary_keys */
 
 #ifdef THE_FOLLOWING_NO_LONGER_USED_REPLACE_BY_dbd_st_primary_keys
 int
