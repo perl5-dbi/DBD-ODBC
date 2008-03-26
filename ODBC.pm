@@ -866,7 +866,7 @@ method.>
 See the ODBC specification for the SQLPrimaryKeys API.
 You call SQLPrimaryKeys like this:
 
-  $dbh->func($vatalog, $schema, $table, "GetPrimaryKeys");
+  $dbh->func($catalog, $schema, $table, "GetPrimaryKeys");
 
 =head3 data_sources
 

@@ -133,6 +133,7 @@ _GetPrimaryKeys(dbh, sth, CatalogName, SchemaName, TableName)
 	char *	SchemaName
 	char *	TableName
 	CODE:
+        /* the following will end up in dbdimp.c/dbd_st_primary_keys */
 	ST(0) = odbc_st_primary_keys(dbh, sth, CatalogName, SchemaName, TableName) ? &sv_yes : &sv_no;
 
 void 

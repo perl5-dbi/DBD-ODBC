@@ -18,6 +18,7 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
  Add support for $sth->more_results based on DBD::ODBC-specific attribute
  Use odbcinst (if it exists to point people at the ini files they need to use)
  Use odbc_config (if it exists to find out about unixODBC).
+ Add statistics_info from DBI spec based on private GetStatistics.
 
  Try to produce a Module::Install build.
 
@@ -40,6 +41,16 @@ restored.
 Rewrote pod for odbc_query_timeout.
 
 2 new tests for odbc_query_timeout added to 03dbatt.t.
+
+#ifdeffed out odbc_get_primary_keys in dbdimp.c as it is no longer
+used.  $h->func($catalog, $schema, $table, 'GetPrimaryKeys') ends up
+in dbdimp.c/dbd_st_primary_keys now.
+
+Reformatted dbdimp.c to avoid going over 80 columns.
+
+If you called some methods after disconnecting (e.g., prepare/do and
+any of the DBD::ODBC specific methods via "func") then no error was
+generated.
 
 =head2 Changes in DBD::ODBC 1.15 January 29, 2008
 
