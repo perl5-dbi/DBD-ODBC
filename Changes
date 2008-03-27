@@ -57,6 +57,8 @@ Added support for DBI's statistics_info method.
 Fixed issue with use of true/false as fields names in structure on MAC
 OS X 10.5 (Leopard) thanks to Hayden Stainsby.
 
+Added a README.osx.
+
 =head2 Changes in DBD::ODBC 1.15 January 29, 2008
 
 1.15 final release.
