@@ -3199,8 +3199,8 @@ long destoffset;
 typedef struct {
    const char *str;
    UWORD fOption;
-   UDWORD true;
-   UDWORD false;
+   UDWORD atrue;
+   UDWORD afalse;
 } db_params;
 
 static db_params S_db_storeOptions[] =  {
@@ -3452,7 +3452,7 @@ SV *valuesv;
 
       default:
 	 on = SvTRUE(valuesv);
-	 vParam = on ? pars->true : pars->false;
+	 vParam = on ? pars->atrue : pars->afalse;
 	 break;
    }
 
@@ -3627,7 +3627,7 @@ SV *keysv;
 	       retsv = newSVpv((char *)vParam, 0);
 	       break;
 	    default:
-	       if (vParam == pars->true)
+	       if (vParam == pars->atrue)
 		  retsv = newSViv(1);
 	       else
 		  retsv = newSViv(0);
@@ -4483,11 +4483,6 @@ static int check_connection_active(SV *h)
     }
 
     if (!DBIc_ACTIVE(imp_dbh)) {
-        /*
-        dbd_error(
-            sth, SQL_ERROR,
-            "Cannot allocate statement when disconnected from the database");
-        */
         DBIh_SET_ERR_CHAR(
             h, imp_xxh, Nullch, 1,
             "Cannot allocate statement when disconnected from the database",

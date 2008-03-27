@@ -18,6 +18,7 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
  Add support for $sth->more_results based on DBD::ODBC-specific attribute
  Use odbcinst (if it exists to point people at the ini files they need to use)
  Use odbc_config (if it exists to find out about unixODBC).
+ There is a Columns private ODBC method which is not documented.
 
  Try to produce a Module::Install build.
 
@@ -52,6 +53,9 @@ any of the DBD::ODBC specific methods via "func") then no error was
 generated.
 
 Added support for DBI's statistics_info method.
+
+Fixed issue with use of true/false as fields names in structure on MAC
+OS X 10.5 (Leopard) thanks to Hayden Stainsby.
 
 =head2 Changes in DBD::ODBC 1.15 January 29, 2008
 
