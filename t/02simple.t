@@ -40,7 +40,14 @@ unless($dbh) {
 }
 
 {
-    my $sth = $dbh->prepare('select 1');
+    my $sql;
+    my $drv = $dbh->get_info(17);
+    if ($drv =~ /Oracle/i) {
+        $sql = q/select 1 from dual/;
+    } else {
+        $sql = q/select 1/;
+    }
+    my $sth = $dbh->prepare($sql);
     my $pai = $sth->private_attribute_info();
     #diag Data::Dumper->Dump([$pai], [qw(stmt_private_attribute_info)]);
     ok(defined($pai), 'stmt private_attribute_info result');

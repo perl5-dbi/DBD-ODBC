@@ -59,6 +59,9 @@ OS X 10.5 (Leopard) thanks to Hayden Stainsby.
 
 Added a README.osx.
 
+Changed 02simple.t test which did not work for Oracle due to a "select
+1" in the test. Test changed to do "select 1 from dual" for Oracle.
+
 =head2 Changes in DBD::ODBC 1.15 January 29, 2008
 
 1.15 final release.
