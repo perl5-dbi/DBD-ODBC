@@ -24,6 +24,17 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
 
 =head1 CHANGES
 
+=head2 Changes in DBD::ODBC 1.16_2 April 17, 2008
+
+Small change to the last test in 10handler.t to cope with the prepare
+failing instead of the execute failing - spotted by Andrei Kovalevski with
+the ODBCng Postgres driver.
+
+Changed the 20SqlServer.t test to specifically disable MARS for the
+test to check multiple active statements and added a new test to check
+that when MARS_Connection is enabled multiple active statements are
+allowed.
+
 =head2 Changes in DBD::ODBC 1.16_1 March 14, 2008
 
 Moved the FAQ entries from ODBC.pm to new FAQ document. You can view
