@@ -39,7 +39,7 @@ SKIP:
 
    my($sqlStr) ;
    my @test_colnames = sort(keys(%ODBCTEST::TestFieldInfo));
-   $sqlStr = "select $test_colnames[0] FROM $ODBCTEST::table_name
+   $sqlStr = "select $test_colnames[0] FROM $ODBCTEST::table_name;
 	      select $test_colnames[0] from $ODBCTEST::table_name" ;
    #$sqlStr = "select emp_id from employee where emp_id = 2
    #           select emp_id, emp_name, address1, address2 from employee where emp_id = 2" ;
@@ -78,19 +78,19 @@ SKIP:
    # lets get some dummy data for testing.
    ODBCTEST::tab_insert($dbh);
 
-   $sql = "select $test_colnames[0] from $ODBCTEST::table_name order by $test_colnames[0]
+   $sql = "select $test_colnames[0] from $ODBCTEST::table_name order by $test_colnames[0];
 	   select $test_colnames[0],$test_colnames[1]  from $ODBCTEST::table_name order by $test_colnames[0]";
    @expected_result_cols = (1, 2);
    ok(RunMultiTest($sql, \@expected_result_cols), "Multiple result sets with different column counts (less then more)");
 
 
-   $sql = "select $test_colnames[0],$test_colnames[1]  from $ODBCTEST::table_name order by $test_colnames[0]
+   $sql = "select $test_colnames[0],$test_colnames[1]  from $ODBCTEST::table_name order by $test_colnames[0];
 	   select $test_colnames[0] from $ODBCTEST::table_name order by $test_colnames[0]";
 
    @expected_result_cols = (2, 1);
    ok(RunMultiTest($sql, \@expected_result_cols), "Multiple result sets with different column counts (more then less)");
 
-   $sql = "select " . join(", ", grep {/COL_[ABC]/} @test_colnames) . " from $ODBCTEST::table_name order by $test_colnames[0]
+   $sql = "select " . join(", ", grep {/COL_[ABC]/} @test_colnames) . " from $ODBCTEST::table_name order by $test_colnames[0];
 	   select $test_colnames[0] from $ODBCTEST::table_name order by $test_colnames[0]";
 
    @expected_result_cols = ($#test_colnames, 1);
