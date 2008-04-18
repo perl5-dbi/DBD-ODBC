@@ -11,7 +11,7 @@ use_ok('Data::Dumper');
 my $tests;
 # to help ActiveState's build process along by behaving (somewhat) if a dsn is not provided
 BEGIN {
-   $tests = 10;
+   $tests = 11;
    if (!defined $ENV{DBI_DSN}) {
       plan skip_all => "DBI_DSN is undefined";
    } else {
@@ -87,14 +87,14 @@ $handler_return = 0;
 $evalret = eval {
     # this sql is supposed to be invalid
     my $sth = $dbh->prepare('select * from');
-    $sth->execute;
+    $sth->execute if $sth;
     return 99;
 };
 $eval = $@;
 ok(!$eval, 'Handler filtered all messages');
-    
+is($evalret, 99, 'eval complete');
 $dbh->disconnect;
-      
+
 
 exit 0;
 # get rid of use once warnings
