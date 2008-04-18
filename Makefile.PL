@@ -23,6 +23,7 @@ my %opts =
 (
     NAME	=> 'DBD::ODBC',
     VERSION_FROM => 'ODBC.pm',
+    NO_META => 1,
     # See note below on CONFIGURE. This used to work when could rely on
     # CONFIGURE being after PREREQ_PM but that is not the case now so the
     # line below does nothing since 6.33 of MakeMaker.
