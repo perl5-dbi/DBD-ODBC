@@ -35,6 +35,9 @@ test to check multiple active statements and added a new test to check
 that when MARS_Connection is enabled multiple active statements are
 allowed.
 
+Changed the 09multi.t test to use ; as a SQL statement seperator
+instead of a newline.
+
 =head2 Changes in DBD::ODBC 1.16_1 March 14, 2008
 
 Moved the FAQ entries from ODBC.pm to new FAQ document. You can view
