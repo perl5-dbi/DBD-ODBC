@@ -25,6 +25,15 @@ unless($dbh) {
    exit 0;
 }
 
+# Output DBMS which is useful when debugging cpan-testers output
+{
+    diag("\n");
+    diag("Using DBMS_NAME " . DBI::neat($dbh->get_info(17)) . "\n");
+    diag("Using DBMS_VER " . DBI::neat($dbh->get_info(18)) . "\n");
+    diag("Using DRIVER_NAME " . DBI::neat($dbh->get_info(6)) . "\n");
+    diag("Using DRIVER_VER " . DBI::neat($dbh->get_info(7)) . "\n");
+}
+
 #
 # test private_attribute_info.
 # connection handles and statement handles should return a hash ref of
@@ -150,7 +159,7 @@ if ($sth) {
    is($is_ok, $colcount, "Col count matches correct col count");
    # print "not " unless $is_ok == $colcount;
    # print "ok 9\n";
-	
+
    $sth->finish;
 } else {
    fail("select didn't work, so column count won't work");
@@ -162,7 +171,7 @@ $dbh->{PrintError} = 0;
 is($dbh->{PrintError}, '', "Set PrintError 0");
 #
 # some ODBC drivers will prepare this OK, but not execute.
-# 
+#
 $sth = $dbh->prepare("SELECT XXNOTCOLUMN FROM $ODBCTEST::table_name");
 $sth->execute() if $sth;
 cmp_ok(length($DBI::errstr), '>', 0, "Error reported on bad query");
@@ -238,7 +247,7 @@ SKIP: {
    my $dbh3 = DBI->connect($ENV{DBI_DSN} . "x", $ENV{DBI_USER}, $ENV{DBI_PASS}, {RaiseError=>0, PrintError=>0});
    ok(defined($DBI::errstr), "INVALID DSN Test: " . $DBI::errstr . "\n");
    $dbh3->disconnect if (defined($dbh3));
-   
+
    $dbh3 = DBI->connect($connstr, $ENV{DBI_USER}, $ENV{DBI_PASS}, {RaiseError=>0, PrintError=>0});
    ok(defined($dbh3), "Connection with DSN=$connstr");
    $dbh3->disconnect if (defined($dbh3));
@@ -249,7 +258,7 @@ SKIP: {
       "Connection with DSN=$connstr and UID and PWD are set") or diag($cs);
    $dbh3->disconnect if (defined($dbh3));
 };
-	    
+
 # Test(1);
 # clean up
 $sth->finish;
@@ -284,7 +293,7 @@ sub tab_select
        }
     }
     $sth->finish();
-    
+
     $sth = $dbh->prepare("SELECT COL_A,COL_C FROM $ODBCTEST::table_name WHERE COL_A>=4")
 	   or return undef;
     $sth->execute();
@@ -300,7 +309,7 @@ sub tab_select
 	    if ($row[1] eq $ODBCTEST::longstr2) {
 	       # print "retrieved ", length($ODBCTEST::longstr2), " byte string OK\n";
 	    } else {
-	       diag(print "Basic retrieval of row longer than 255 chars not working!" . 
+	       diag(print "Basic retrieval of row longer than 255 chars not working!" .
 						"\nRetrieved ", length($row[1]), " bytes instead of " .
 						length($ODBCTEST::longstr2) . "\nRetrieved value = $row[1]\n");
 		return 0;
@@ -342,7 +351,7 @@ sub select_long
     }
     if ($rc != $expect) {
         diag("Row " . (map {(defined($_) ? $_ : 'undef') . ','} @row) . "\n");
-        diag("expect=$expect, Longest: $longest\n");
+        diag("expect=$expect, Longest: " . DBI::neat($longest) . "\n");
     }
     $$max_col = $longest;
     $rc;

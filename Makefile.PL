@@ -39,8 +39,8 @@ my %opts =
     DEFINE => ''
  );
 my $eumm = $ExtUtils::MakeMaker::VERSION;
-$eumm =~ tr/_//;
-if ($ExtUtils::MakeMaker::VERSION >= 5.43) {
+$eumm =~ tr/_//d;
+if ($eumm >= 5.43) {
     $opts{AUTHOR} = 'Tim Bunce, Jeff Urlwin, Martin J. Evans mailto:dbi-users@perl.org';
     $opts{ABSTRACT} = 'ODBC driver for the DBI module.';
     $opts{CAPI} = 'TRUE' if $Config{archname} =~ /-object\b/i;
@@ -179,20 +179,35 @@ else {
             $odbchome = $tmp_odbchome if (-e "$tmp_odbchome/odbc.ini")
         } elsif (-f '/opt/sapdb/interfaces/odbc/lib/libsqlod.a') {
             $odbchome = '/opt/sapdb/interfaces/odbc/';
-        }
-        # unixODBC - would have liked to use odbc_config but it did not
-        # exist until 2.2.11 and it was broken wrt --cflags in 2.2.11/2.2.12
-        # i.e. --cflags did not include -I/xxx/yyy
-        elsif (-f '/usr/include/sql.h' &&
-                 -f '/usr/include/sqlext.h' &&
-                 -f '/usr/include/sqltypes.h') {
-            $odbchome = '/usr';
-        } elsif (-f '/usr/local/include/sql.h' &&
-                 -f '/usr/local/include/sqlext.h' &&
-                 -f '/usr/local/include/sqltypes.h') {
-            $odbchome = '/usr/local';
-        } elsif (-d '/usr/local/easysoft/unixODBC') {
-            $odbchome = '/usr/local/easysoft/unixODBC';
+        } elsif ($^O !~ /MSWin/) {
+            # unixODBC - would have liked to use odbc_config but it did not
+            # exist until 2.2.11 and it was broken wrt --cflags in 2.2.11/2.2.12
+            # i.e. --cflags did not include -I/xxx/yyy
+            if (`odbc_config --version 2>&1` =~ /^(\d\.)+/) {
+                $odbchome = `odbc_config --prefix 2>&1`;
+                chomp $odbchome;
+                if ((-e $odbchome) && (-e "$odbchome/include") &&
+                        (-f "$odbchome/include/sql.h") &&
+                            (-f "$odbchome/include/sqlext.h") &&
+                                (-f "$odbchome/include/sqltypes.h")) {
+                    print "Set ODBC HOME to $odbchome from odbc_config\n";
+                } else {
+                    $odbchome = '';
+                }
+            }
+            if (!$odbchome) {
+                if (-f '/usr/include/sql.h' &&
+                        -f '/usr/include/sqlext.h' &&
+                            -f '/usr/include/sqltypes.h') {
+                    $odbchome = '/usr';
+                } elsif (-f '/usr/local/include/sql.h' &&
+                             -f '/usr/local/include/sqlext.h' &&
+                                 -f '/usr/local/include/sqltypes.h') {
+                    $odbchome = '/usr/local';
+                } elsif (-d '/usr/local/easysoft/unixODBC') {
+                    $odbchome = '/usr/local/easysoft/unixODBC';
+                }
+            }
         }
         print "Found what looks like a driver manager in $odbchome\n"
             if $odbchome;
@@ -236,7 +251,8 @@ EOT
     $opts{LIBS} = " -L$lib_d1 -R$lib_d1 -L$lib_d2 -R$lib_d2 -l$libs";
 
 
-    my $myodbc ='';	# edit and hack to suit!
+    my $myodbc ='';
+    my $myodbc_version = -1;
     $myodbc = 'Microsoft ODBC'
                  if (    -e "$odbchome/system/odbc32.dll" or
 			 -e "$odbchome/system32/odbc32.dll" or
@@ -248,15 +264,11 @@ EOT
     # fix to avoid foo..ext on many systems.
     $arext =~ s/^\.//;
 
-    # per patches from Nick Gorham
     $myodbc = 'unixodbc'
 		if !$myodbc && <$odbchome/lib/libodbc.*>;
 
     $myodbc = 'iodbc'
 		if !$myodbc && (<$odbchome/*iodbc*> || <$odbchome/lib/*iodbc*>);
-
-    $myodbc = 'esodbc'
-		if !$myodbc && <$odbchome/*esoobclient*>;
 
     $myodbc = 'empress'
 		if !$myodbc && <$odbchome/lib/libempodbc.*>;
@@ -273,9 +285,6 @@ EOT
     $myodbc = 'udbc'
 		if !$myodbc && -f "$odbchome/lib/libudbc.$arext";
 
-    $myodbc = 'easysoft'
-		if !$myodbc && -f "$odbchome/lib/libesoobclient.$dlext";
-
     $myodbc = 'solid'
 		if !$myodbc && -f "$odbchome/lib/libsolcli.$dlext";
 
@@ -291,13 +300,13 @@ EOT
 	my($list) = "@known_drivers";
 	$list =~ s%^(.{30,70})\s%$1\n\t%gmo;
 	die qq%
-Hmm...I cannot find an ODBC driver manager that I recognize.
+I cannot find an ODBC driver manager that I recognize.
 ...And I know about these drivers:
 	$list
 %;
     }
 
-    warn "\nUmm, this looks like a $myodbc type of driver manager.\n";
+    warn "\nThis looks like a $myodbc type of driver manager.\n";
 
     if ($myodbc eq 'Microsoft ODBC') {
 	print "\nBuilding for Microsoft under Cygwin\n";
@@ -346,12 +355,44 @@ Hmm...I cannot find an ODBC driver manager that I recognize.
 	#print SQLH qq{#include "fixup_t.h"\n};
     }
     elsif ($myodbc eq 'unixodbc') {
+        # if we find odbcinst, output useful info about this version of unixODBC
+        # and store unixODBC version
+        if (-x "$odbchome/bin/odbcinst") {
+            my $j = `$odbchome/bin/odbcinst -j 2>&1`;
+            print "odbcinst -j reports:\n\n$j\n" if $j;
+            if ($j =~ /^unixODBC ([\d\.]+).*/ ) {
+                $myodbc_version = $1;
+            }
+        }
+        # if we find odbc_config add --cflags output to CC line
+        if (-x "$odbchome/bin/odbc_config") {
+            my @args = qw(--prefix --include-prefix --lib-prefix --version --odbcversion);
+            for my $oca (@args) {
+                my $c = `$odbchome/bin/odbc_config $oca 2>&1`;
+                chomp $c;
+                if ($c) {
+                    print "odbc_config $oca = $c\n";
+                }
+            }
+            print "\n";
+            my $cf = `$odbchome/bin/odbc_config --cflags 2>&1`;
+            if ($cf =~ /\-D/) {
+                chomp $cf;
+                $cf =~ s/\n//g;
+                print qq/Adding odbc_config --cflags "$cf" to CC line\n/;
+                $opts{DEFINE} .= "$cf";
+            }
+        }
 	my @ilibs = <$odbchome/lib/libodbc.*>;
 	@ilibs = grep { /\.($Config{so}|$Config{dlext}|a)$/ } @ilibs;
 	die "That's odd, I can't see any unixodbc libs in $odbchome" unless @ilibs;
-	print "We expect to find the sql.h, sqlext.h and (which were\n";
-	print "supplied with unixODBC) in \$ODBCHOME/include directory alongside\n";
-	print "the @ilibs library in \$ODBCHOME/lib\n\n";
+	print << "EOT";
+
+We expect to find the sql.h, sqlext.h, sqltypes.h and sqlucode.h (which were
+supplied with unixODBC) in \$ODBCHOME/include directory alongside the
+@ilibs library in \$ODBCHOME/lib
+
+EOT
 	my $ilibpath = $ilibs[0]; # XXX if both .so and .a, pick based on LINKTYPE?
 	my $ilibname = basename($ilibpath);
 	$opts{DEFINE} .= " -I$odbchome/include";

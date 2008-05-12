@@ -1045,6 +1045,19 @@ Example (using MSSQL Server):
 These are in need of sorting and annotating. Some are relevant only
 to ODBC developers.
 
+You can find DBD::ODBC on ohloh now at:
+
+L<http://www.ohloh.net/projects/perl_dbd_odbc>
+
+There is a good search engine for the various Perl DBI lists at the
+following URLS:
+
+L<http://perl.markmail.org/search/list:org.perl.dbi-users>
+
+L<http://perl.markmail.org/search/list:org.perl.dbi-dev>
+
+L<http://perl.markmail.org/search/list:org.perl.dbi-announce>
+
 L<http://www.syware.com>
 
 L<http://www.microsoft.com/odbc>

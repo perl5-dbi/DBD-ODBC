@@ -27,8 +27,8 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
 =head2 Changes in DBD::ODBC 1.16_2 April 17, 2008
 
 Small change to the last test in 10handler.t to cope with the prepare
-failing instead of the execute failing - spotted by Andrei Kovalevski with
-the ODBCng Postgres driver.
+failing instead of the execute failing - spotted by Andrei Kovalevski
+with the ODBCng Postgres driver.
 
 Changed the 20SqlServer.t test to specifically disable MARS for the
 test to check multiple active statements and added a new test to check
@@ -37,6 +37,20 @@ allowed.
 
 Changed the 09multi.t test to use ; as a SQL statement seperator
 instead of a newline.
+
+Added references ot DBD::ODBC ohloh listing and markmail archives.
+
+More tracing in dbdimp.c for named parameters.
+
+In 02simple.t Output DBMS_NAME/VER, DRIVER_NAME/VER as useful
+debugging aid when cpan testers report a fail.
+
+A few minor "use of unitialised" fixes in tests when a test fails.
+
+Changes to Makefile.PL to fix a newly introduced bug with 'tr', remove
+easysoft OOB detection and to try and use odbc_config and odbcinst if
+we find them to aid automatic configuration. This latter change also
+adds "odbc_config --cflags" to the CC line when building DBD::ODBC.
 
 =head2 Changes in DBD::ODBC 1.16_1 March 14, 2008
 

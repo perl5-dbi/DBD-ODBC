@@ -32,13 +32,10 @@ $dbh->{RaiseError} = 1;
 #
 my ($errmsg, $errstate, $errnative, $handler_called);
 my $handler_return = 1;
+$handler_called = 0;
 sub err_handler {
     ($errstate, $errmsg, $errnative) = @_;
-    if (!defined($handler_called)) {
-        $handler_called = 1;
-    } else {
-        $handler_called++;
-    }
+    $handler_called++;
     #diag "===> state: $errstate\n";
     #diag "===> msg: $errmsg\n";
     #diag "===> nativeerr: $errnative\n";
@@ -65,7 +62,7 @@ ok($eval, 'Error handler called - error propagated');
 # check we can reset the error handler (bug in 1.14 prevented this)
 #
 ($errmsg, $errstate, $errnative, $handler_called) =
-    (undef, undef, undef, undef);
+    (undef, undef, undef, 0);
 $dbh->{odbc_err_handler} = undef;
 $evalret = eval {
     # this sql is supposed to be invalid
@@ -73,14 +70,14 @@ $evalret = eval {
     $sth->execute;
     return 99;
 };
-ok(!defined($handler_called), 'Handler cancelled');
+is($handler_called, 0, 'Handler cancelled');
 
 #
 # check we can filter error messages in the handler by returning 0 from
 # the handler
 #
 ($errmsg, $errstate, $errnative, $handler_called) =
-    (undef, undef, undef, undef);
+    (undef, undef, undef, 0);
 $dbh->{odbc_err_handler} = \&err_handler;
 $handler_return = 0;
 

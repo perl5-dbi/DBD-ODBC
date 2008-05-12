@@ -1250,6 +1250,10 @@ char *statement;
 	    *p++ = *src++;
 	 *p = 0;
 	 style = 1;
+	 if (ODBC_TRACE_LEVEL(imp_sth) >= 5)
+	    PerlIO_printf(
+                DBIc_LOGPIO(imp_sth),
+                "    found numbered parameter = %s\n", name);
       }
       else if (!imp_sth->odbc_ignore_named_placeholders && isALNUM(*src)) {
 	 /* ':foo' is valid, only if we are ignoring named
@@ -1282,6 +1286,10 @@ char *statement;
 
       svpp = hv_fetch(imp_sth->all_params_hv, name, (I32)namelen, 0);
       if (svpp == NULL) {
+	 if (ODBC_TRACE_LEVEL(imp_sth) >= 5)
+	    PerlIO_printf(
+                DBIc_LOGPIO(imp_sth),
+                "    creating new parameter key %s\n", name);
 	 /* create SV holding the placeholder */
 	 phs_sv = newSVpv((char*)&phs_tpl, sizeof(phs_tpl)+namelen+1);
 	 phs = (phs_t*)SvPVX(phs_sv);
@@ -1290,6 +1298,11 @@ char *statement;
 
 	 /* store placeholder to all_params_hv */
 	 svpp = hv_store(imp_sth->all_params_hv, name, (I32)namelen, phs_sv, 0);
+      } else {
+	 if (ODBC_TRACE_LEVEL(imp_sth) >= 5)
+	    PerlIO_printf(
+                DBIc_LOGPIO(imp_sth),
+                "    parameter key %s already exists\n", name);
       }
    }
    *dest = '\0';
@@ -1460,7 +1473,7 @@ int quick;
 
    odbc_unique = (unique ? SQL_INDEX_UNIQUE : SQL_INDEX_ALL);
    odbc_quick = (quick ? SQL_QUICK : SQL_ENSURE);
-   
+
    /* just for sanity, later.  Any internals that may rely on this (including */
    /* debugging) will have valid data */
    imp_sth->statement = (char *)safemalloc(strlen(cSqlStatistics)+
