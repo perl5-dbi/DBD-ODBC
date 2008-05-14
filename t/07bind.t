@@ -15,7 +15,7 @@ BEGIN {
    if (!defined $ENV{DBI_DSN}) {
       plan skip_all => "DBI_DSN is undefined";
    } else {
-      plan tests => 11;
+      plan tests => 15;
    }
 }
 
@@ -24,9 +24,9 @@ unless($dbh) {
    BAILOUT("Unable to connect to the database $DBI::errstr\nTests skipped.\n");
    exit 0;
 }
-   
 
-$rc = 
+
+$rc =
 ok(ODBCTEST::tab_create($dbh), "Create tables");
 
 my @data = (
@@ -95,9 +95,37 @@ my $key;
 is($ref->{1}, 1, "ParamValues test integer");
 is($ref->{2}, "test", "Paramvalues test string");
 
+# test numbered parameters
+eval {
+    $dbh->do("delete from $ODBCTEST::table_name");
+    $sth = $dbh->prepare(
+        "insert into $ODBCTEST::table_name(COL_A, COL_C) values (:1, :2)");
+    $sth->bind_param("1", 1);
+    $sth->bind_param("2", 2);
+    $sth->execute;
+};
+my $ev = $@;
+diag($ev) if $ev;
+ok(!$ev, 'insert with numbered placeholders');
+is($sth->rows, 1, '...inserted one row');
+
+# test named parameters
+eval {
+    $dbh->do("delete from $ODBCTEST::table_name");
+    $sth = $dbh->prepare(
+        "insert into $ODBCTEST::table_name(COL_A, COL_C) values (:three, :four)");
+    $sth->bind_param("three", 3);
+    $sth->bind_param("four", 4);
+    $sth->execute;
+};
+$ev = $@;
+diag($ev) if $ev;
+ok(!$ev, 'insert with named placeholders');
+is($sth->rows, 1, '...inserted one row');
+
 # how to test "sticky" bind_param?
 # how about setting ODBC default bind_param to some number
-# then 
+# then
 # clean up!
 $rc = ODBCTEST::tab_delete($dbh);
 
@@ -141,7 +169,7 @@ sub tab_select {
 	}
     }
     return 1;
-}	
+}
 
 sub tab_update_long {
     my $dbh = shift;
