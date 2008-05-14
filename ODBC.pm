@@ -9,7 +9,7 @@
 
 require 5.006;
 
-$DBD::ODBC::VERSION = '1.16_2';
+$DBD::ODBC::VERSION = '1.16';
 
 {
     package DBD::ODBC;
@@ -30,6 +30,17 @@ $DBD::ODBC::VERSION = '1.16_2';
     $errstr = "";	# holds error string for DBI::errstr
     $sqlstate = "00000";
     $drh = undef;	# holds driver handle once initialised
+
+    sub parse_trace_flag {
+        my ($class, $name) = @_;
+        return 0x01000000 if $name eq 'odbcdev';
+        return DBI::parse_trace_flag($class, $name);
+    }
+
+    sub parse_trace_flags {
+        my ($class, $flags) = @_;
+        return DBI::parse_trace_flags($class, $flags);
+    }
 
     sub driver{
 	return $drh if $drh;
@@ -85,6 +96,11 @@ $DBD::ODBC::VERSION = '1.16_2';
 
 {   package DBD::ODBC::db; # ====== DATABASE ======
     use strict;
+
+    sub parse_trace_flag {
+        my ($h, $name) = @_;
+        return DBD::ODBC->parse_trace_flag($name);
+    }
 
     sub private_attribute_info {
         return {
@@ -420,6 +436,8 @@ $DBD::ODBC::VERSION = '1.16_2';
 
 {   package DBD::ODBC::st; # ====== STATEMENT ======
     use strict;
+
+    *parse_trace_flag = \&DBD::ODBC::db::parse_trace_flag;
 
     sub private_attribute_info {
         return {
@@ -939,6 +957,82 @@ You call SQLDescribeCol like this:
 
 The returned array contains the column attributes in the order described
 in the ODBC specification for SQLDescribeCol.
+
+=head2 Tracing
+
+DBD::ODBC now supports the parse_trace_flag and parse_trace_flags
+methods introduced in DBI 1.42 (see DBI for a full description).  As
+of DBI 1.604, the only trace flag defined which is relevant to
+DBD::ODBC is 'SQL' which DBD::ODBC supports by outputting the SQL
+strings (after modification) passed to the prepare and do methods.
+
+Currently DBD::ODBC only supports one private trace flag.  The
+'odbcdev' trace flag is used to output development tracing so it
+should not be relevant in normal use.
+
+To enable tracing of particular flags you use:
+
+  $h->trace($h->parse_trace_flags('SQL|odbcdev'));
+  $h->trace($h->parse_trace_flags('1|odbcdev'));
+
+In the first case 'SQL' and 'odbcdev' tracing is enabled on $h. In the
+second case trace level 1 is set and 'odbcdev' tracing is enabled.
+
+If you want to enable a DBD::ODBC private trace flag before connecting
+you need to do something like:
+
+  use DBD::ODBC;
+  DBI->trace(DBD::ODBC->parse_trace_flag('odbcdev');
+
+DBD::ODBC outputs tracing at levels 3 and above (as levels 1 and 2 are
+reserved for DBI).
+
+=head2 Deviations from the DBI specification
+
+=head3 Mixed placeholder types
+
+There are 3 conventions for place holders in DBI. These are '?', ':N'
+and ':name' (where 'N' is a number and 'name' is an alpha numeric
+string not beginning with a number). DBD::ODBC supports all these methods
+for naming placeholders but you must only use one method throughout
+a particular SQL string. If you mix placeholder methods you will get
+an error like:
+
+  Can't mix placeholder styles (1/2)
+
+=head3 Using the same placeholder more than once
+
+DBD::ODBC does not support (currently) the use of one placeholder
+more than once in the a single SQL string. i.e.,
+
+  insert into foo values (:bar, :p1, :p2, :bar);
+
+is not supported because 'bar' is used more than once but:
+
+  insert into foo values(:bar, :p1, :p2)
+
+is ok. If you do the former you will get an error like:
+
+  DBD::ODBC does not yet support binding a named parameter more than once
+
+=head3 Binding named placeholders
+
+Although the DBI documentation (as of 1.604) does not say how named
+parameters are bound Tim Bunce has said that in Oracle they are bound
+with the leading ':' as part of the name and that has always been the
+case. i.e.,
+
+  prepare("insert into mytable values (:fred)");
+  bind_param(":foo", 1);
+
+DBD::ODBC does not support binding named parameters with the ':' introducer.
+In the above example you must use:
+
+  bind_param("foo", 1);
+
+In discussion on the dbi-dev list is was suggested that the ':' could
+be made optional and there were no basic objections but it has not
+made it's way into the pod yet.
 
 =head2 Others/todo?
 
