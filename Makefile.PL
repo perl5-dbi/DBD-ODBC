@@ -380,7 +380,7 @@ I cannot find an ODBC driver manager that I recognize.
                 chomp $cf;
                 $cf =~ s/\n//g;
                 print qq/Adding odbc_config --cflags "$cf" to CC line\n/;
-                $opts{DEFINE} .= "$cf";
+                $opts{DEFINE} .= " $cf";
             }
         }
 	my @ilibs = <$odbchome/lib/libodbc.*>;
@@ -605,7 +605,7 @@ changes_pm = ' . File::Spec->catfile($self->{INST_LIB}, 'DBD/ODBC', 'Changes.pm'
 inst_libdbdodbc = ' . File::Spec->catdir($self->{INST_LIB}, 'DBD/ODBC') . '
 faq_pm = ' . File::Spec->catfile($self->{INST_LIB}, 'DBD/ODBC', 'FAQ.pm') . '
 
-config :: $(changes_pm) ${faq_pm}
+config :: $(changes_pm) $(faq_pm)
 	@$(NOOP)
 
 $(changes_pm): Changes
