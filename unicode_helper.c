@@ -63,7 +63,7 @@ static SV * _dosvwv(SV * sv, UTF16 * wp, STRLEN len, new_cat_set_t mode)
       ret = ConvertUTF16toUTF8((const UTF16 **)&source_start, source_end,
 			       NULL, NULL, strictConversion, &bytes);
       /*fprintf(stderr, "Bytes = %d\n", bytes);*/
-      
+
       if (ret != conversionOK) {
 	if (ret == sourceExhausted) {
 	  croak("_dosvwc: Partial character in input");
@@ -85,7 +85,7 @@ static SV * _dosvwv(SV * sv, UTF16 * wp, STRLEN len, new_cat_set_t mode)
 			       &target_start, target_end,
 			       strictConversion, &bytes);
       /*fprintf(stderr, "%s\n", p);*/
-      
+
       if (ret != conversionOK) {
 	croak("_dosvwc: second call to ConvertUTF16toUTF8 failed (%d)", ret);
       }
@@ -94,7 +94,7 @@ static SV * _dosvwv(SV * sv, UTF16 * wp, STRLEN len, new_cat_set_t mode)
         svlen = 0;
     }
 #endif
-    
+
     switch (mode) {
       case do_new:
         sv=newSVpvn(p,svlen);
@@ -163,7 +163,7 @@ UTF16 * WValloc(char * s)
 
         slen = strlen(s);
         /*fprintf(stderr, "utf8 string \\%s\\ is %ld bytes long\n", s, strlen(s));*/
-        
+
         source_start = s;
         source_end = s + slen + 1;              /* include NUL terminator */
 
@@ -182,10 +182,10 @@ UTF16 * WValloc(char * s)
             }
         }
         /*fprintf(stderr,"utf8 -> utf16 requires %d bytes\n", bytes);*/
-        
+
         widechrs = bytes / sizeof(UTF16);
         /*fprintf(stderr, "Allocating %d wide chrs\n", widechrs);*/
-        
+
         Newz(0,buf,widechrs+1,UTF16);
         if (widechrs != 0) {
             source_start = s;
@@ -193,7 +193,7 @@ UTF16 * WValloc(char * s)
             target_start = buf;
             target_end = buf + widechrs + 1;
             /*fprintf(stderr, "%p %p %p %p\n", source_start, source_end, target_start, target_end);*/
-            
+
             ret = ConvertUTF8toUTF16(
                 (const UTF8 **)&source_start, source_end,
                 &target_start, target_end, strictConversion, &bytes);
@@ -201,7 +201,7 @@ UTF16 * WValloc(char * s)
                 croak("WValloc: second call to ConvertUTF8toUTF16 failed (%d)", ret);
             }
             /*fprintf(stderr, "Second returned %d bytes\n", bytes);*/
-            
+
         }
 #endif
     }
@@ -234,10 +234,25 @@ char * PVallocW(UTF16 * wp)
     if (wp!=NULL) {
 
 #ifdef WIN32
-        int bytes=WideCharToMultiByte(CP_UTF8,0,wp,-1,NULL,0,NULL,NULL);
+        int bytes=WideCharToMultiByte(
+            CP_UTF8,                            /* convert to UTF8 */
+            0,                                  /* no flags */
+            wp,                             /* wide chrs to convert */
+            -1,                            /* wp is null terminated */
+            NULL,                           /* no conversion output */
+            0,                     /* return how many bytes we need */
+            NULL,           /* default chr - must be NULL for UTF-8 */
+            NULL); /* was default chr used - must be NULL for UTF-8 */
+        if (bytes == 0) {
+        		DWORD err;
+        		err = GetLastError();
+        		croak("WideCharToMultiByte() failed with %ld", err);
+        }
         Newz(0,p,bytes,char);
         if (!WideCharToMultiByte(CP_UTF8,0,wp,-1,p,bytes,NULL,NULL)) {
-            croak("WideCharToMultiByte() failed");
+        	  DWORD err;
+        	  err = GetLastError();
+            croak("WideCharToMultiByte() failed with %ld, bytes=%d, chrs=%d", err, bytes, wcslen(wp));
         }
 #else
         ConversionResult ret;
@@ -247,7 +262,7 @@ char * PVallocW(UTF16 * wp)
         UTF8 *target_start;
         UTF8 *target_end;
         unsigned int len;
-        
+
         if (wp != NULL) {
             len = utf16_len(wp);
         }
@@ -325,7 +340,7 @@ static unsigned short utf16_len(UTF16 *wp)
     unsigned short len = 0;
 
     if (!wp) return 0;
-    
+
     while (*wp != 0) {
         wp++;
         len++;
