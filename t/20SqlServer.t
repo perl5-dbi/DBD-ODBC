@@ -22,8 +22,8 @@ BEGIN {
    }
 }
 
-sub Multiple_concurrent_stmts($) {
-   my $dbh = shift;
+sub Multiple_concurrent_stmts {
+   my ($dbh, $expect) = @_;
    my $sth = $dbh->prepare("select * from PERL_DBD_TABLE1");
    $dbh->{RaiseError} = 1;
    $sth->execute;
@@ -39,8 +39,11 @@ sub Multiple_concurrent_stmts($) {
    };
 
    if ($@) {
-      return 0;
+       diag($@) if (defined($expect) && ($expect == 1));
+       return 0;
    }
+   diag("Expected fail of MARS and it worked!")
+       if (defined($expect) && ($expect == 0));
    return 1;
 }
 
@@ -489,19 +492,27 @@ AS
    my $base_dsn = $dsn;
    $dsn .= ";MARS_Connection=no;";
    $dbh = DBI->connect($dsn, $ENV{DBI_USER}, $ENV{DBI_PASS}, {PrintError => 0});
-   ok(!&Multiple_concurrent_stmts($dbh), "Multiple concurrent statements should fail");
+   ok(!&Multiple_concurrent_stmts($dbh, 0), "Multiple concurrent statements should fail");
    $dbh->disconnect;
 
    $dbh = DBI->connect($dsn, $ENV{DBI_USER}, $ENV{DBI_PASS}, { odbc_cursortype => 2, PrintError => 0 });
    # $dbh->{odbc_err_handler} = \&err_handler;
-   ok(&Multiple_concurrent_stmts($dbh), "Multiple concurrent statements succeed (odbc_cursortype set)");
+   ok(&Multiple_concurrent_stmts($dbh, 1), "Multiple concurrent statements succeed (odbc_cursortype set)");
 
  SKIP: {
        skip "MS SQL Server version < 9", 1 if ($m_dbversion < 9);
-       $dbh->disconnect;
-       $dsn .= ";MARS_Connection=yes;";
+       $dbh->disconnect; # throw away non-mars connection
+       $dsn = "$base_dsn;MARS_Connection=yes;";
        $dbh = DBI->connect($dsn, $ENV{DBI_USER}, $ENV{DBI_PASS}, {PrintError => 0});
-       ok(&Multiple_concurrent_stmts($dbh), "Multiple concurrent statements succeed with MARS");
+       my $tst = "Multiple concurrent statements succeed with MARS";
+       if (&Multiple_concurrent_stmts($dbh,1)) {
+           pass($tst);
+       } else {
+           diag("DSN=$dsn\n");
+           fail($tst);
+       }
+       $dbh->disconnect; # throw away mars connection
+       $dbh = DBI->connect;
    }
 
    # clean up test table and procedure
