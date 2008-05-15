@@ -24,6 +24,12 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
 
 =head1 CHANGES
 
+=head2 Changes in DBD::ODBC 1.16_1 May NN, 2008
+
+Fixed bug in odbc_cancel which was checking the ACTIVE flag was on
+before calling SQLCancel. Non-select statements can also be cancelled
+so this was wrong. Thanks to Dean Arnold for spotting.
+
 =head2 Changes in DBD::ODBC 1.16 May 13, 2008
 
 =head3 Test Changes

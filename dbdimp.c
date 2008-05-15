@@ -4270,11 +4270,6 @@ SV *
    D_imp_sth(sth);
    RETCODE rc;
 
-   if ( !DBIc_ACTIVE(imp_sth) ) {
-      dbd_error(sth, SQL_ERROR, "no statement executing");
-      return Nullsv;
-   }
-
    rc = SQLCancel(imp_sth->hstmt);
    if (!SQL_ok(rc)) {
       dbd_error(sth, rc, "odbc_cancel/SQLCancel");
