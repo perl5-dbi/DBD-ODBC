@@ -46,5 +46,20 @@ from Control Panel, Administrative Tools, Data Sources is the 64bit
 one and data sources created here will not be visible or useable from
 32bit applications. The ODBC administrator you need to use for 32bit
 applications can be found at X:\windows\syswow64\odbcad32.exe.
- 
 
+Strawberry Perl
+===============
+
+If you attempt to install DBD::ODBC with:
+
+cpan -i DBD::ODBC
+
+cpan in strawberry perl adds INC to the command line and that
+overrides what MakeMaker attempts to add to INC. As a result, the
+build will probably be missing the include path for the DBIXS.h
+module.
+
+I know of no way to fix this over than to download DBD::ODBC and build
+it yourself without using cpan.
+
+See http://rt.cpan.org/Public/Bug/Display.html?id=32811.
