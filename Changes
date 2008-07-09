@@ -8,6 +8,7 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
 
 =head1 Todo
 
+ META.yml no longer seems to parse on pause
  Add array parameter binding (per new DBI Spec)
  Add row caching/multiple row fetches to speed selects
  Better/more tests on multiple statement handles which ensure the correct number of rows
@@ -29,6 +30,9 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
 Fixed bug in odbc_cancel which was checking the ACTIVE flag was on
 before calling SQLCancel. Non-select statements can also be cancelled
 so this was wrong. Thanks to Dean Arnold for spotting.
+
+Minor changes to test 01base to attempt to catch install_driver
+failing, report it as a fail and skip other tests.
 
 =head2 Changes in DBD::ODBC 1.16 May 13, 2008
 

@@ -1,7 +1,7 @@
 #!perl -w
 # $Id$
 
-use Test::More tests => 5;
+use Test::More tests => 6;
 
 require DBI;
 require_ok('DBI');
@@ -12,9 +12,18 @@ pass("import DBI");
 $switch = DBI->internal;
 is(ref $switch, 'DBI::dr', "DBI->internal is DBI::dr");
 
-$drh = DBI->install_driver('ODBC');
-is(ref $drh, 'DBI::dr', "Install ODBC driver OK");
+eval {
+    $drh = DBI->install_driver('ODBC');
+};
+my $ev = $@;
+diag($ev) if ($ev);
+ok(!$ev, 'install ODBC');
 
-ok($drh->{Version}, "Version is not empty");
+SKIP: {
+    skip "driver could not be loaded", 2 if $ev;
 
+    is(ref $drh, 'DBI::dr', "Install ODBC driver OK");
+
+    ok($drh->{Version}, "Version is not empty");
+}
 exit 0;
