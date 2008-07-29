@@ -43,28 +43,28 @@ BUILDING:
   make test           (or nmake, if VC++ on Win32)
 
 TESTING
-  
+
   make test
   make test TEST_VERBOSE=1   (if any of the t/* tests fail)
   make install               (if the tests look okay)
 
   Note that the tests currently all pass when using the Microsoft SQL
-  server driver up to SQL Server 2005 any many other ODBC drivers on
+  server driver up to SQL Server 2008 any many other ODBC drivers on
   Windows and UNIX (too numerous to mention here).
 
   If the tests from t/09bind.t fail, that is an indication of lack of
   ODBC Level 2 functionality.  This does not (necessarily) mean that
   your installation is broken.  It does indicate that your ODBC driver
   does not support certain level 2 calls (see below).  All other tests
-  should pass, however, since I've tested with a limited number of ODBC
-  drivers, I could have something wrong in the test.  Please notify me
-  if you have an incompatibility in the other tests.  (For example,
-  some Paradox ODBC drivers *could* fail, if they don't support long
-  file names, since in Paradox file names are tableName.db.).  Please
-  let me know about any incompatibilities you encounter (I'm sure you
-  will).  I will say, though, that I may not be able to reproduce or
-  fix problems without some help, since I can't possibly install all
-  the known ODBC drivers.  Please try to "solve" the problem, in
+  should pass, however, since I've tested with a limited number of
+  ODBC drivers, I could have something wrong in the test.  Please
+  notify me if you have an incompatibility in the other tests.  (For
+  example, some Paradox ODBC drivers *could* fail, if they don't
+  support long file names, since in Paradox file names are
+  tableName.db.).  Please let me know about any incompatibilities you
+  encounter. I will say, though, that I may not be able to reproduce
+  or fix problems without some help, since I can't possibly install
+  all the known ODBC drivers.  Please try to "solve" the problem, in
   addition to discovering it.
 
   If any of the tests fail and you are using SQL Server and Windows drivers,
@@ -90,9 +90,10 @@ You should not need to make any changes. If you do *please* let me
 know so that I can try to make it automatic in a later release.
 
 This software is supported via the dbi-users mailing list.  For more
-information and to keep informed about progress you can join the a
-mailing list via http://dbi.perl.org (if you are unable to use the
-web you can subscribe by sending a message to dbi-users-subscribe@perl.org.
+information and to keep informed about progress you can join the
+mailing list via http://dbi.perl.org (if you are unable to use the web
+you can subscribe by sending a message to
+dbi-users-subscribe@perl.org.
 
 Please post details of any problems (or changes you needed to make) to
 dbi-users@perl.org. But note...

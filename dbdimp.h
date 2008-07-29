@@ -1,5 +1,6 @@
 /*
  * $Id$
+ * portions Copyright (c) 2007-2008 Martin J. Evans
  * Copyright (c) 1997-2001 Jeff Urlwin
  * portions Copyright (c) 1997  Thomas K. Wenrich
  * portions Copyright (c) 1994,1995,1996  Tim Bunce
@@ -41,7 +42,8 @@ struct imp_dbh_st {
   int  odbc_force_rebind; /* force rebinding the output columns after each execute to */
   /* resolve some issues where certain stored procs can return */
        /* multiple result sets */
-    SQLINTEGER  odbc_query_timeout;
+    SQLINTEGER odbc_query_timeout;
+    IV odbc_putdata_start;
     int  odbc_has_unicode;
     int  odbc_async_exec; /* flag to set asynchronous execution */
     int  odbc_exec_direct;		/* flag for executing SQLExecDirect instead of SQLPrepare and SQLExecute.  Magic happens at SQLExecute() */
@@ -92,6 +94,7 @@ struct imp_sth_st {
 			       /* resolve some issues where certain stored procs can return */
        /* multiple result sets */
     SQLINTEGER odbc_query_timeout;
+    IV odbc_putdata_start;
 };
 #define IMP_STH_EXECUTING	0x0001
 
@@ -127,24 +130,19 @@ typedef struct phs_st phs_t;    /* scalar placeholder   */
 struct phs_st {  	/* scalar placeholder EXPERIMENTAL	*/
     SQLUSMALLINT idx;		/* index number of this param 1, 2, ...	*/
 
-    SV  *sv;            /* the scalar holding the value         */
-    int sv_type;        /* original sv type at time of bind     */
-    int biggestparam;    /* if sv_type is VARCHAR, size of biggest so far */
-    int scale;                                  /* MJE NEVER USED */
+    SV *sv;                 /* the scalar holding the value */
+    int sv_type;            /* original sv type at time of bind */
+    int biggestparam;       /* if sv_type is VARCHAR, size of biggest so far */
     bool is_inout;
-    IV  maxlen;         /* max possible len (=allocated buffer) */
-    char *sv_buf;	/* pointer to sv's data buffer		*/
-    int alen_incnull;                           /* MJE NEVER USED */
-
-    SWORD ftype;			/* external field type	       */
-    SWORD sql_type;			/* the sql type the placeholder should have in SQL	*/
-    SWORD tgt_sql_type;			/* the PH SQL type the stmt expects     */
-    SDWORD tgt_len;			/* size or precision the stmt expects */
-    SQLLEN cbValue;			/* length of returned value OR SQL_NULL_DATA */
-    SDWORD *indics;			/* ptr to indicator array for param arrays */
-    int is_array;			/* TRUE => parameter array */
-
-    char name[1];			/* struct is malloc'd bigger as needed	*/
+    IV  maxlen;             /* max possible len (=allocated buffer) */
+    char *sv_buf;	    /* pointer to sv's data buffer */
+    SWORD ftype;            /* external field type */
+    SWORD sql_type;         /* the sql type of the placeholder */
+    SWORD tgt_sql_type;     /* the PH SQL type the stmt expects */
+    SDWORD tgt_len;         /* size or precision the stmt expects */
+    SQLLEN cbValue;         /* length of returned value OR SQL_NULL_DATA */
+    SDWORD *indics;         /* ptr to indicator array for param arrays */
+    char name[1];           /* struct is malloc'd bigger as needed */
 };
 
 

@@ -115,7 +115,8 @@ $DBD::ODBC::VERSION = '1.16_1';
                 odbc_query_timeout => undef, # sth and dbh
                 odbc_has_unicode => undef,
                 odbc_version => undef,
-                odbc_err_handler => undef
+                odbc_err_handler => undef,
+                odbc_putdata_start => undef # sth and dbh
                };
     }
 
@@ -445,7 +446,8 @@ $DBD::ODBC::VERSION = '1.16_1';
                 odbc_default_bind_type => undef, # sth and dbh
                 odbc_force_rebind => undef, # sth & dbh
                 odbc_async_exec => undef, # sth and dbh
-                odbc_query_timeout => undef # sth and dbh
+                odbc_query_timeout => undef, # sth and dbh
+                odbc_putdata_start => undef # sth and dbh
                };
     }
 
@@ -607,6 +609,18 @@ currently no way to retrieve the capped value back from the driver.
 Note that some drivers may not support this attribute.
 
 See t/20SqlServer.t for an example.
+
+=head3 odbc_putdata_start
+
+odbc_putdata_start defines the size at which DBD::ODBC uses SQLPutData
+and SQLParamData to send larger objects to the database instead of
+simply binding them as normal with SQLBindParameter. It is mostly a
+placeholder for future changes allowing chunks of data to be sent to
+the database and there is little reason for anyone to change it
+currently.
+
+The default for odbc_putdata_start is 32768 because this value was
+hard-coded in DBD::ODBC until 1.17.
 
 =head2 Private connection attributes
 

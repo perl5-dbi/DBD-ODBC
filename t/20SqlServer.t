@@ -446,7 +446,7 @@ AS
       # normally something like [SQL Server Native Client 10.0][SQL Server]
       $msg =~ s/^(\[[\w\s:\.]*\])+//;
       $lastmsg = $msg;
-      print "===> state: $state msg: $msg nativeerr: $nativeerr\n";
+      diag "===> state: $state msg: $msg nativeerr: $nativeerr\n";
       $testpass++;
       return 0;
    }
@@ -545,7 +545,7 @@ AS
 
 };
 
-   $dbh->disconnect;
+$dbh->disconnect;
 
 
 exit 0;

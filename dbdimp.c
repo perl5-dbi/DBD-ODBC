@@ -3,6 +3,7 @@
  * portions Copyright (c) 1994,1995,1996,1997  Tim Bunce
  * portions Copyright (c) 1997 Thomas K. Wenrich
  * portions Copyright (c) 1997-2001 Jeff Urlwin
+ * portions Copyright (c) 2007-2008 Martin J. Evans
  *
  * You may distribute under the terms of either the GNU General Public
  * License or the Artistic License, as specified in the Perl README file.
@@ -71,6 +72,7 @@ int dbd_st_finish(SV *sth, imp_sth_t *imp_sth);
 #define ODBC_CURSORTYPE                0x833B
 #define ODBC_QUERY_TIMEOUT             0x833C
 #define ODBC_HAS_UNICODE               0x833D
+#define ODBC_PUTDATA_START             0x833E
 
 /* ODBC_DEFAULT_BIND_TYPE_VALUE is now set to 0, which means that
  * DBD::ODBC will call SQLDescribeParam to find out what type of
@@ -532,12 +534,6 @@ SV   *attr;
 #else
    SQLSMALLINT cbConnStrOut;
 #endif
-   SV **odbc_version_sv;
-   UV   odbc_version = 0;
-   SV **odbc_cursortype_sv;
-   UV   odbc_cursortype = 0;
-   SV **odbc_timeout_sv;
-   UV   odbc_timeout = 0;
 
    if (!imp_drh->connects) {
        if (DBIc_TRACE(imp_dbh, 0x01000000, 0, 0))
@@ -548,32 +544,33 @@ SV   *attr;
       if (!SQL_ok(rc))
 	 return 0;
 
-      DBD_ATTRIB_GET_IV(attr, "odbc_version",12, odbc_version_sv, odbc_version);
-      if (odbc_version) {
-	 rc = SQLSetEnvAttr(imp_drh->henv, SQL_ATTR_ODBC_VERSION,
-                            (SQLPOINTER)odbc_version, SQL_IS_INTEGER);
-	 if (!SQL_ok(rc)) {
-	    dbd_error2(dbh, rc, "db_login/SQLSetEnvAttr", imp_drh->henv, 0, 0);
-	    if (imp_drh->connects == 0) {
-	       SQLFreeEnv(imp_drh->henv);/* TBD: 3.0 update */
-	       imp_drh->henv = SQL_NULL_HENV;
-	    }
-	    return 0;
-	 }
-      } else {
-	 /* make sure we request a 3.0 version */
-	 rc = SQLSetEnvAttr(imp_drh->henv, SQL_ATTR_ODBC_VERSION,
-                            (SQLPOINTER)SQL_OV_ODBC3, SQL_IS_INTEGER);
-	 if (!SQL_ok(rc)) {
-	    dbd_error2(dbh, rc, "db_login/SQLSetEnvAttr", imp_drh->henv, 0, 0);
-	    if (imp_drh->connects == 0) {
-	       SQLFreeEnv(imp_drh->henv);/* TBD: 3.0 update */
-	       imp_drh->henv = SQL_NULL_HENV;
-	    }
-	    return 0;
-	 }
+      /* odbc_version */
+      {
+          SV **svp;
+          UV odbc_version = 0;
+
+          DBD_ATTRIB_GET_IV(
+              attr, "odbc_version",12, svp, odbc_version);
+          if (svp && odbc_version) {
+              rc = SQLSetEnvAttr(imp_drh->henv, SQL_ATTR_ODBC_VERSION,
+                                 (SQLPOINTER)odbc_version, SQL_IS_INTEGER);
+          } else {
+              /* make sure we request a 3.0 version */
+              rc = SQLSetEnvAttr(imp_drh->henv, SQL_ATTR_ODBC_VERSION,
+                                 (SQLPOINTER)SQL_OV_ODBC3, SQL_IS_INTEGER);
+          }
+          if (!SQL_ok(rc)) {
+              dbd_error2(
+                  dbh, rc, "db_login/SQLSetEnvAttr", imp_drh->henv, 0, 0);
+              if (imp_drh->connects == 0) {
+                  SQLFreeEnv(imp_drh->henv);
+                  imp_drh->henv = SQL_NULL_HENV;
+              }
+              return 0;
+          }
       }
    }
+
    imp_dbh->henv = imp_drh->henv;	/* needed for dbd_error */
 
    rc = SQLAllocConnect(imp_drh->henv, &imp_dbh->hdbc); /* TBD: 3.0 update */
@@ -754,6 +751,7 @@ SV   *attr;
    /* default value for query timeout is -1 which means do not set the
       query timeout at all. */
    imp_dbh->odbc_query_timeout = -1;
+   imp_dbh->odbc_putdata_start = 32768;
    imp_dbh->odbc_exec_direct = 0; /* default to not having SQLExecDirect used */
    imp_dbh->RowCacheSize = 1;	/* default value for now */
 
@@ -822,28 +820,86 @@ SV   *attr;
 
    DBIc_set(imp_dbh,DBIcf_AutoCommit, 1);
 
-   DBD_ATTRIB_GET_IV(attr, "odbc_cursortype", 15,
-                     odbc_cursortype_sv, odbc_cursortype);
-   if (odbc_cursortype) {
-       if (DBIc_TRACE(imp_dbh, 0, 0, 3)) {
-           TRACE1(imp_dbh, "    Set cursor type to: %d", odbc_cursortype);
-       }
-       rc = SQLSetConnectAttr(imp_dbh->hdbc,(SQLINTEGER)SQL_CURSOR_TYPE,
-                              (SQLPOINTER)odbc_cursortype,
-                              (SQLINTEGER)SQL_IS_INTEGER);
-       if (!SQL_ok(rc) && DBIc_TRACE(imp_dbh, 0, 0, 3)) {
-           TRACE1(imp_dbh, "    !!Failed to set SQL_CURSORTYPE to %d\n",
-                  (int)odbc_cursortype);
+   /* odbc_cursortype */
+   {
+       SV **svp;
+       UV odbc_cursortype = 0;
+
+       DBD_ATTRIB_GET_IV(attr, "odbc_cursortype", 15,
+                         svp, odbc_cursortype);
+       if (svp && odbc_cursortype) {
+           if (DBIc_TRACE(imp_dbh, 0, 0, 3)) {
+               TRACE1(imp_dbh, "    Set cursor type to: %d", odbc_cursortype);
+           }
+           /*
+            * prior to DBI subversion version 11605 (fixed post 1.607)
+            * DBD_ATTRIB_DELETE segfaulted so instead of calling:
+            * DBD_ATTRIB_DELETE(attr, "odbc_cursortype",
+            *                   strlen("odbc_cursortype"));
+            * we do the following:
+            */
+           hv_delete((HV*)SvRV(attr), "odbc_cursortype",
+                     strlen("odbc_cursortype"), G_DISCARD);
+           
+           rc = SQLSetConnectAttr(imp_dbh->hdbc,(SQLINTEGER)SQL_CURSOR_TYPE,
+                                  (SQLPOINTER)odbc_cursortype,
+                                  (SQLINTEGER)SQL_IS_INTEGER);
+           if (!SQL_ok(rc) && DBIc_TRACE(imp_dbh, 0, 0, 3)) {
+               TRACE1(imp_dbh, "    !!Failed to set SQL_CURSORTYPE to %d\n",
+                      (int)odbc_cursortype);
+           }
        }
    }
 
-   DBD_ATTRIB_GET_IV(attr, "odbc_query_timeout", strlen("odbc_query_timeout"),
-                     odbc_timeout_sv, odbc_timeout);
-   if (odbc_timeout) {
-      imp_dbh->odbc_query_timeout = odbc_timeout;
-      if (DBIc_TRACE(imp_dbh, 0, 0, 3))
-          TRACE1(imp_dbh, "    Setting DBH query timeout to %d\n",
-              (int)odbc_timeout);
+   /* odbc_query_timeout */
+   {
+       SV **svp;
+       UV   odbc_timeout = 0;
+
+       DBD_ATTRIB_GET_IV(
+           attr, "odbc_query_timeout", strlen("odbc_query_timeout"),
+           svp, odbc_timeout);
+       if (svp && odbc_timeout) {
+           imp_dbh->odbc_query_timeout = odbc_timeout;
+           if (DBIc_TRACE(imp_dbh, 0, 0, 3))
+               TRACE1(imp_dbh, "    Setting DBH query timeout to %d\n",
+                      (int)odbc_timeout);
+           /*
+            * prior to DBI subversion version 11605 (fixed post 1.607)
+            * DBD_ATTRIB_DELETE segfaulted so instead of calling:
+            * DBD_ATTRIB_DELETE(attr, "odbc_query_timeout",
+            *                   strlen("odbc_query_timeout"));
+            * we do the following:
+            */
+           hv_delete((HV*)SvRV(attr), "odbc_query_timeout",
+                     strlen("odbc_query_timeout"), G_DISCARD);
+       }
+   }
+
+   /* odbc_putdata_start */
+   {
+       SV **svp;
+       IV putdata_start_value;
+
+       DBD_ATTRIB_GET_IV(
+           attr, "odbc_putdata_start", strlen("odbc_putdata_start"),
+           svp, putdata_start_value);
+       if (svp) {
+           imp_dbh->odbc_putdata_start = putdata_start_value;
+           if (DBIc_TRACE(imp_dbh, 0, 0, 3))
+               TRACE1(imp_dbh, "    Setting DBH putdata_start to %d\n",
+                      (int)putdata_start_value);
+           /* avoid later STORE */
+           /*
+            * prior to DBI subversion version 11605 (fixed post 1.607)
+            * DBD_ATTRIB_DELETE segfaulted so instead of calling:
+            * DBD_ATTRIB_DELETE(attr, "odbc_putdata_start",
+            *                   strlen("odbc_putdata_start"));
+            * we do the following:
+            */
+           hv_delete((HV*)SvRV(attr), "odbc_putdata_start",
+                     strlen("odbc_putdata_start"), G_DISCARD);
+       }
    }
 
    imp_drh->connects++;
@@ -1529,6 +1585,7 @@ SV *attribs;
    imp_sth->odbc_default_bind_type = imp_dbh->odbc_default_bind_type;
    imp_sth->odbc_force_rebind = imp_dbh->odbc_force_rebind;
    imp_sth->odbc_query_timeout = imp_dbh->odbc_query_timeout;
+   imp_sth->odbc_putdata_start = imp_dbh->odbc_putdata_start;
 
    if (DBIc_TRACE(imp_dbh, 0, 0, 5))
        TRACE1(imp_dbh, "    initializing sth query timeout to %d\n",
@@ -1551,6 +1608,9 @@ SV *attribs;
       SV **odbc_exec_direct_sv;
       /* if the attribute is there, let it override what the default
        * value from the dbh is (set above).
+       * NOTE:
+       * There are unfortunately two possible attributes because of an early
+       * typo in DBD::ODBC which we keep for backwards compatibility.
        */
       if ((odbc_exec_direct_sv =
            DBD_ATTRIB_GET_SVP(attribs, "odbc_execdirect",
@@ -2017,11 +2077,21 @@ int more;
     return 1;
 }
 
+
 
-int
-   dbd_st_execute(sth, imp_sth)	/* <= -2:error, >=0:ok row count, (-1=unknown count) */
-   SV *sth;
-imp_sth_t *imp_sth;
+/*======================================================================*/
+/*                                                                      */
+/* dbd_st_execute                                                       */
+/* ==============                                                       */
+/*                                                                      */
+/* returns:                                                             */
+/*   -2 - error                                                         */
+/*   >=0 - ok, row count                                                */
+/*   -1 - unknown count                                                 */
+/*                                                                      */
+/*======================================================================*/
+int dbd_st_execute(
+    SV *sth, imp_sth_t *imp_sth)
 {
    dTHR;
    RETCODE rc;
@@ -2118,9 +2188,12 @@ imp_sth_t *imp_sth;
    while (rc == SQL_STILL_EXECUTING){
       dbd_error(sth, rc, "st_execute/SQLExecute");
 
-      /* Wait a second so we don't loop too fast and bring the machine
+      /*
+       * Wait a second so we don't loop too fast and bring the machine
        * to its knees
        */
+      if (DBIc_TRACE(imp_sth, 0, 0, 5))
+          TRACE1(imp_dbh, "    SQLExecute(%p) still executing", imp_sth->hstmt);
       sleep(1);
       rc = SQLExecute(imp_sth->hstmt);
    }
@@ -2133,8 +2206,19 @@ imp_sth_t *imp_sth;
       if (DBIc_TRACE(imp_sth, 0, 0, 5))
           TRACE1(imp_dbh, "    dbd_st_execute (NEED DATA)...\n",
                  imp_sth->hstmt);
-      if ((rc = SQLParamData(imp_sth->hstmt, (PTR*) &phs))
-	  !=  SQL_NEED_DATA) {
+
+      while ((rc = SQLParamData(imp_sth->hstmt, (PTR*) &phs)) ==
+              SQL_STILL_EXECUTING) {
+          if (DBIc_TRACE(imp_sth, 0, 0, 5))
+              TRACE1(imp_dbh, "    SQLParamData(%p) still executing",
+                     imp_sth->hstmt);
+          /*
+           * wait a while to avoid looping too fast waiting for SQLParamData
+           * to complete.
+           */
+          sleep(1);
+      }
+      if (rc !=  SQL_NEED_DATA) {
 	 break;
       }
 
@@ -2698,40 +2782,48 @@ static void
 #endif /* WITH_UNICODE */
 }
 
-/* ====================================================================	*/
+
 
-
-static int
-   _dbd_rebind_ph(SV *sth, imp_sth_t *imp_sth, phs_t *phs)
+/*======================================================================*/
+/*                                                                      */
+/* _dbd_rebind_ph                                                       */
+/* ==============                                                       */
+/*                                                                      */
+/*======================================================================*/
+static int _dbd_rebind_ph(
+    SV *sth,
+    imp_sth_t *imp_sth,
+    phs_t *phs)
 {
    dTHR;
    D_imp_dbh_from_sth;
-   RETCODE rc;
+   SQLRETURN rc;
    /* args of SQLBindParameter() call */
-   SQLSMALLINT fParamType;
-   SQLSMALLINT fCType;
-   UCHAR *rgbValue;
-   SQLULEN cbColDef;
-   SQLSMALLINT ibScale;
-   SQLLEN cbValueMax;
+   SQLSMALLINT param_type;
+   SQLSMALLINT value_type;
+   UCHAR *value_ptr;
+   SQLULEN column_size;
+   SQLSMALLINT d_digits;
+   SQLLEN buffer_length;
 
    STRLEN value_len = 0;
 
    if (DBIc_TRACE(imp_sth, 0, 0, 4)) {
       char *text = neatsvpv(phs->sv,value_len);
-      PerlIO_printf(DBIc_LOGPIO(imp_dbh),
-		    "    bind %s <== %s (size %d/%d/%ld, ptype %ld, "
-                    "otype %d, sqltype %d)\n",
-		    phs->name, text, SvOK(phs->sv) ? SvCUR(phs->sv) : -1,
-                    SvOK(phs->sv) ? SvLEN(phs->sv) : -1 ,phs->maxlen,
-		    SvTYPE(phs->sv), phs->ftype, phs->sql_type);
+      PerlIO_printf(
+          DBIc_LOGPIO(imp_dbh),
+          "    bind %s <== %s (size cur=%d/len=%d/max=%ld, svtype %ld, "
+          "otype %d, sqltype %d)\n",
+          phs->name, text, SvOK(phs->sv) ? SvCUR(phs->sv) : -1,
+          SvOK(phs->sv) ? SvLEN(phs->sv) : -1 ,phs->maxlen,
+          SvTYPE(phs->sv), phs->ftype, phs->sql_type);
    }
 
    /* At the moment we always do sv_setsv() and rebind.        */
    /* Later we may optimise this so that more often we can     */
    /* just copy the value & length over and not rebind.        */
 
-   if (phs->is_inout) {        /* XXX */
+   if (phs->is_inout) {
       if (SvREADONLY(phs->sv))
 	 croak(no_modify);
       /* phs->sv _is_ the real live variable, it may 'mutate' later   */
@@ -2750,67 +2842,66 @@ static int
       (void)SvUPGRADE(phs->sv, SVt_PV);
    }
 
-   /* At this point phs->sv must be at least a PV with a valid buffer, */
-   /* even if it's undef (null)                                        */
-   /* Here we set phs->sv_buf, and value_len.                */
+   /*
+    * At this point phs->sv must be at least a PV with a valid buffer,
+    * even if it's undef (null)
+    * Here we set phs->sv_buf, and value_len.
+    */
    if (SvOK(phs->sv)) {
       phs->sv_buf = SvPV(phs->sv, value_len);
-   }
-   else {
+   } else {
       /* it's undef but if it was inout param it would point to a
        * valid buffer, at least  */
       phs->sv_buf = SvPVX(phs->sv);
       value_len   = 0;
    }
-   /* ----------------------------------------------------------------	*/
 
-   /* XXX
-   This will fail (IM001) on drivers which don't support it.
-   We need to check for this and bind the param as varchars.
-   This will work on many drivers and databases.
-   If the database won't convert a varchar to an int (for example)
-   the user will get an error at execute time
-   but can add an explicit conversion to the SQL:
-   "... where num_field > int(?) ..."
-*/
+   /* TO_DO
+    * This will fail (IM001) on drivers which don't support it.
+    * We need to check for this and bind the param as varchars.
+    * This will work on many drivers and databases.
+    * If the database won't convert a varchar to an int (for example)
+    * the user will get an error at execute time
+    * but can add an explicit conversion to the SQL:
+    * "... where num_field > int(?) ..."
+    */
 
    _dbd_get_param_type(sth, imp_sth, phs);
 
 #if defined(WITH_UNICODE)
    if (phs->ftype==SQL_C_WCHAR) {
        if (DBIc_TRACE(imp_sth, 0, 0, 8)) {
-           TRACE0(imp_dbh, "    Need to modify phs->sv in place\n");
-     }
-       if (DBIc_TRACE(imp_sth, 0, 0, 8)) {
            TRACE1(imp_dbh,
                   "    Need to modify phs->sv in place: old length = %i\n",
                   value_len);
-     }
-     SV_toWCHAR(phs->sv);          /* may modify SvPV(phs->sv), ... */
-     /* ... so phs->sv_buf must be updated */
-     phs->sv_buf=SvPV(phs->sv,value_len);
-     if (DBIc_TRACE(imp_sth, 0, 0, 8)) {
-         TRACE1(imp_dbh,
-                "    Need to modify phs->sv in place: new length = %i\n",
-                value_len);
-     }
+       }
+       SV_toWCHAR(phs->sv);        /* may modify SvPV(phs->sv), ... */
+       /* ... so phs->sv_buf must be updated */
+       phs->sv_buf=SvPV(phs->sv,value_len);
+       if (DBIc_TRACE(imp_sth, 0, 0, 8)) {
+           TRACE1(imp_dbh,
+                  "    Need to modify phs->sv in place: new length = %i\n",
+                  value_len);
+       }
    }
-   /* value_len has current value length now */
-   phs->sv_type = SvTYPE(phs->sv);     /* part of mutation check       */
-   phs->maxlen  = SvLEN(phs->sv)-sizeof(WCHAR);    /* avail buffer space */
 
-#else
    /* value_len has current value length now */
-   phs->sv_type = SvTYPE(phs->sv);     /* part of mutation check       */
-   phs->maxlen  = SvLEN(phs->sv)-1;    /* avail buffer space  		*/
+   phs->sv_type = SvTYPE(phs->sv);        /* part of mutation check */
+   phs->maxlen  = SvLEN(phs->sv)-sizeof(WCHAR); /* avail buffer space */
+
+#else  /* !WITH_UNICODE */
+   /* value_len has current value length now */
+   phs->sv_type = SvTYPE(phs->sv);        /* part of mutation check */
+   phs->maxlen  = SvLEN(phs->sv)-1;           /* avail buffer space */
 
 #endif /* WITH_UNICODE */
 
-   if (DBIc_TRACE(imp_sth, 0, 0, 4))
-      PerlIO_printf(DBIc_LOGPIO(imp_dbh),
-                    "    bind %s <== '%.100s' (len %d/%ld, null %d)\n",
-		    phs->name, SvOK(phs->sv) ? phs->sv_buf : "(null)",
-		    value_len,(long)phs->maxlen, SvOK(phs->sv)?0:1);
+   if (DBIc_TRACE(imp_sth, 0, 0, 4)) {
+       PerlIO_printf(DBIc_LOGPIO(imp_dbh),
+                     "    bind %s <== '%.100s' (len %d/%ld, null %d)\n",
+                     phs->name, SvOK(phs->sv) ? phs->sv_buf : "(null)",
+                     value_len,(long)phs->maxlen, SvOK(phs->sv) ? 0 : 1);
+   }
 
    /*
     * JLU: was SQL_PARAM_OUTPUT only, but that caused a problem with
@@ -2818,25 +2909,23 @@ static int
     * with Oracle.  Need to test on other platforms to ensure this
     * does not cause a problem.
     */
-   fParamType = phs->is_inout ? SQL_PARAM_INPUT_OUTPUT : SQL_PARAM_INPUT;
-   fCType = phs->ftype;
-   ibScale = value_len;
-   cbColDef = phs->is_inout ? phs->maxlen : value_len;
+   param_type = phs->is_inout ? SQL_PARAM_INPUT_OUTPUT : SQL_PARAM_INPUT;
+   value_type = phs->ftype;
+   d_digits = value_len;
+   column_size = phs->is_inout ? phs->maxlen : value_len;
    /* JLU
     * need to look at this.
-    * was cbValueMax = value_len for some binding purposes
+    * was buffer_length = value_len for some binding purposes
     */
-   cbValueMax = phs->is_inout ? phs->maxlen : value_len;
+   buffer_length = phs->is_inout ? phs->maxlen : value_len;
 
-   /* When we fill a LONGVARBINARY, the CTYPE must be set
-    * to SQL_C_BINARY.
-    */
-   if (fCType == SQL_C_CHAR) {	/* could be changed by bind_plh */
+   /* When we fill a LONGVARBINARY, the CTYPE must be set to SQL_C_BINARY */
+   if (value_type == SQL_C_CHAR) {	/* could be changed by bind_plh */
       switch(phs->sql_type) {
 	 case SQL_LONGVARBINARY:
 	 case SQL_BINARY:
 	 case SQL_VARBINARY:
-	    fCType = SQL_C_BINARY;
+	    value_type = SQL_C_BINARY;
 	    break;
 #ifdef SQL_WLONGVARCHAR
 	 case SQL_WLONGVARCHAR:	/* added for SQLServer 7 ntext type */
@@ -2853,8 +2942,8 @@ static int
 	 case SQL_TIMESTAMP:
 	 case SQL_TYPE_TIMESTAMP:
 	    /* fSqlType = SQL_VARCHAR; */
-	    /* cbColDef = 23; */
-	    ibScale = 0;		/* tbd: millisecondS?) */
+	    /* column_size = 23; */
+	    d_digits = 0;		/* tbd: millisecondS?) */
 	    /* bug fix! if phs->sv is not OK, then there's a chance
 	     * we go through garbage data to determine the length */
 	    if (SvOK(phs->sv)) {
@@ -2865,23 +2954,22 @@ static int
 		     ++cp;
 		     while (*cp != '\0' && isdigit(*cp)) {
 			cp++;
-			ibScale++;
+			d_digits++;
 		     }
 		  }
 	       } else {
                    /* hard code for SQL Server when passing Undef to
                       bound parameters */
-		  cbColDef = 23;
+		  column_size = 23;
 	       }
 	    }
-
 	    break;
 
 #if 0
 	 case SQL_INTEGER:
 	 case SQL_SMALLINT:
 	    if (phs->is_inout) {
-	       fCType = SQL_C_LONG;
+	       value_type = SQL_C_LONG;
 	    }
 	    break;
 #endif
@@ -2900,7 +2988,7 @@ static int
     * or attribute.
     */
    if (phs->sql_type == SQL_VARCHAR && !phs->is_inout) {
-      ibScale = 0;
+      d_digits = 0;
       /* default to at least 80 if this is the first time through */
       if (phs->biggestparam == 0) {
 	 phs->biggestparam = (value_len > 80) ? value_len : 80;
@@ -2910,14 +2998,14 @@ static int
 	    phs->biggestparam = value_len;
 	 }
       }
-      cbColDef = phs->biggestparam;
+      column_size = phs->biggestparam;
    }
 
    if (!SvOK(phs->sv)) {
       /* if is_inout, shouldn't we null terminate the buffer and send
        * it, instead?? */
       if (!phs->is_inout) {
-	 cbColDef = 1;
+	 column_size = 1;
       }
       if (phs->is_inout) {
 	 if (!phs->sv_buf) {
@@ -2925,68 +3013,63 @@ static int
 	 }
          /* just in case, we *know* we called SvGROW above */
 	 phs->sv_buf[0] = '\0';
-	 rgbValue = phs->sv_buf;
 	 /* patch for binding undef inout params on sql server */
-	 ibScale = 1;
-         rgbValue = phs->sv_buf;
+	 d_digits = 1;
+         value_ptr = phs->sv_buf;
          phs->cbValue = SQL_NULL_DATA;
       } else {
-	 rgbValue = NULL;
+	 value_ptr = NULL;
 	 phs->cbValue = SQL_NULL_DATA;
       }
    }
    else {
-      rgbValue = phs->sv_buf;
+      value_ptr = phs->sv_buf;
       phs->cbValue = value_len;
       /* not undef, may be a blank string or something */
       if (!phs->is_inout && phs->cbValue == 0) {
-	 cbColDef = 1;
+	 column_size = 1;
       }
    }
-   if (DBIc_TRACE(imp_sth, 0, 0, 4))
+   if (DBIc_TRACE(imp_sth, 0, 0, 4)) {
       PerlIO_printf(DBIc_LOGPIO(imp_dbh),
-		    "    bind %s: CTy=%d, STy=%s, CD=%d, Sc=%d, VM=%d.\n",
-		    phs->name, fCType, S_SqlTypeToString(phs->sql_type),
-		    cbColDef, ibScale, cbValueMax);
-
-   if (value_len < 32768) {
+		    "    bind %s: type=%d, %s, cs=%d, dd=%d, bl=%d.\n",
+		    phs->name, value_type, S_SqlTypeToString(phs->sql_type),
+		    column_size, d_digits, buffer_length);
+   }
+   
+   if (value_len < imp_sth->odbc_putdata_start) {
       /* already set and should be left alone JLU */
-      /* ibScale = value_len; */
+      /* d_digits = value_len; */
    } else {
        /* This exceeds the positive size of an SWORD, so we have to use
         * SQLPutData.
         */
       SQLLEN vl = value_len;
-      ibScale = 32767;
+      d_digits = 0; /* not relevant to lobs */
       phs->cbValue = SQL_LEN_DATA_AT_EXEC(vl);
-      /* This is lazyness!
-       *
-       * The ODBC docs declare rgbValue as a 32 bit value. May be this
-       * breaks on 64 bit machines?
-       */
-      rgbValue = (UCHAR*) phs;
+      value_ptr = (UCHAR*) phs;
    }
 
    if (DBIc_TRACE(imp_sth, 0, 0, 5)) {
       PerlIO_printf(
           DBIc_LOGPIO(imp_dbh),
-          "    SQLBindParameter: idx = %d: fParamType=%d, name=%s, fCtype=%d, "
-          "SQL_Type = %d, cbColDef=%d, scale=%d, rgbValue = %p, "
-          "cbValueMax=%d, cbValue = %d\n",
-          phs->idx, fParamType, phs->name, fCType, phs->sql_type,
-          cbColDef, ibScale, rgbValue, cbValueMax, phs->cbValue);
-      if (fCType == SQL_C_CHAR) {
-          TRACE1(imp_sth, "    Param value = %s\n", rgbValue);
+          "    SQLBindParameter: idx = %d: param_type=%d, name=%s, "
+          "value_type=%d, SQL_Type = %d, column_size=%d, d_digits=%d, "
+          "value_ptr=%p, buffer_length=%d, cbValue = %d\n",
+          phs->idx, param_type, phs->name, value_type, phs->sql_type,
+          column_size, d_digits, value_ptr, buffer_length, phs->cbValue);
+      if (value_type == SQL_C_CHAR) {
+          TRACE1(imp_sth, "    Param value = %s\n", value_ptr);
       }
 #if THE_FOLLOWING_CODE_IS_FLAWED_AND_BROKEN
       /*
-       * rgbValue is not null terminated - it is a byte array so PVallocW
+       * value_ptr is not null terminated - it is a byte array so PVallocW
        * won't work as it works on null terminated strings
        */
 #if defined(WITH_UNICODE)
-      if (fCType==SQL_C_WCHAR) {
+      if (value_type==SQL_C_WCHAR) {
           char * c1;
-          c1 = PVallocW((WCHAR *)rgbValue);
+          c1 = PVallocW((WCHAR *)value_ptr);
           TRACE1(imp_dbh, " Param value = L'%s'\n", c1);
           PVfreeW(c1);
       }
@@ -2995,9 +3078,9 @@ static int
    }
 
    rc = SQLBindParameter(imp_sth->hstmt,
-			 phs->idx, fParamType, fCType, phs->sql_type,
-			 cbColDef, ibScale,
-			 rgbValue, cbValueMax, &phs->cbValue);
+			 phs->idx, param_type, value_type, phs->sql_type,
+			 column_size, d_digits,
+			 value_ptr, buffer_length, &phs->cbValue);
 
    if (!SQL_ok(rc)) {
       dbd_error(sth, rc, "_rebind_ph/SQLBindParameter");
@@ -3094,10 +3177,6 @@ IV maxlen;			/* ??? */
 	    imp_sth->out_params_av = newAV();
 	 av_push(imp_sth->out_params_av, SvREFCNT_inc(*phs_svp));
       }
-
-      /* some types require the trailing null included in the length. */
-      phs->alen_incnull = 0; /*Oracle:(phs->ftype==SQLT_STR || phs->ftype==SQLT_AVC);*/
-
    }
    /* check later rebinds for any changes */
    /*
@@ -3201,12 +3280,18 @@ long destoffset;
 }
 
 
-/*----------------------------------------
- * db level interface
- * set connection attributes.
- *----------------------------------------
- */
-
+
+/*======================================================================*/
+/*                                                                      */
+/* S_db_storeOptions                                                    */
+/* =================                                                    */
+/* S_db_fetchOptions                                                    */
+/* =================                                                    */
+/*                                                                      */
+/* An array of options/attributes we support on database handles for    */
+/* storing and fetching.                                                */
+/*                                                                      */
+/*======================================================================*/
 typedef struct {
    const char *str;
    UWORD fOption;
@@ -3234,9 +3319,38 @@ static db_params S_db_storeOptions[] =  {
    { "odbc_version", ODBC_VERSION },
    { "odbc_cursortype", ODBC_CURSORTYPE },
    { "odbc_query_timeout", ODBC_QUERY_TIMEOUT },
+   { "odbc_putdata_start", ODBC_PUTDATA_START },
    { NULL },
 };
 
+static db_params S_db_fetchOptions[] =  {
+   { "AutoCommit", SQL_AUTOCOMMIT, SQL_AUTOCOMMIT_ON, SQL_AUTOCOMMIT_OFF },
+   { "RowCacheSize", ODBC_ROWCACHESIZE },
+   { "odbc_SQL_ROWSET_SIZE", SQL_ROWSET_SIZE },
+   { "odbc_SQL_DRIVER_ODBC_VER", SQL_DRIVER_ODBC_VER },
+   { "odbc_ignore_named_placeholders", ODBC_IGNORE_NAMED_PLACEHOLDERS },
+   { "odbc_default_bind_type", ODBC_DEFAULT_BIND_TYPE },
+   { "odbc_force_rebind", ODBC_FORCE_REBIND },
+   { "odbc_async_exec", ODBC_ASYNC_EXEC },
+   { "odbc_err_handler", ODBC_ERR_HANDLER },
+   { "odbc_SQL_DBMS_NAME", SQL_DBMS_NAME },
+   { "odbc_exec_direct", ODBC_EXEC_DIRECT },
+   { "odbc_query_timeout", ODBC_QUERY_TIMEOUT},
+   { "odbc_putdata_start", ODBC_PUTDATA_START},
+   { "odbc_has_unicode", ODBC_HAS_UNICODE},
+   { NULL }
+};
+
+/*======================================================================*/
+/*                                                                      */
+/*  S_dbOption                                                          */
+/*  ==========                                                          */
+/*                                                                      */
+/*  Given a string and a length, locate this option in the specified    */
+/*  array of valid options. Typically used by STORE and FETCH methods   */
+/*  to decide if this option/attribute is supported by us.              */
+/*                                                                      */
+/*======================================================================*/
 static const db_params *
    S_dbOption(const db_params *pars, char *key, STRLEN len)
 {
@@ -3253,12 +3367,24 @@ static const db_params *
    return pars;
 }
 
-int
-   dbd_db_STORE_attrib(dbh, imp_dbh, keysv, valuesv)
-   SV *dbh;
-imp_dbh_t *imp_dbh;
-SV *keysv;
-SV *valuesv;
+
+
+/*======================================================================*/
+/*                                                                      */
+/* dbd_db_STORE_attrib                                                  */
+/* ===================                                                  */
+/*                                                                      */
+/* This function handles:                                               */
+/*                                                                      */
+/*   $dbh->{$key} = $value                                              */
+/*                                                                      */
+/* Method to handle the setting of driver specific attributes and DBI   */
+/* attributes CutoCommit and ChopBlanks (no other DBI attributes).      */
+/*                                                                      */
+/* Return TRUE if the attribute was handled, else FALSE.                */
+/*                                                                      */
+/*======================================================================*/
+int dbd_db_STORE_attrib(SV *dbh, imp_dbh_t *imp_dbh, SV *keysv, SV *valuesv)
 {
    dTHR;
    D_imp_drh_from_dbh;
@@ -3293,7 +3419,6 @@ SV *valuesv;
 	 vParam = (UDWORD) SvPV(valuesv, plen);
 	 break;
 
-
       case ODBC_IGNORE_NAMED_PLACEHOLDERS:
 	 bSetSQLConnectionOption = FALSE;
 	 /*
@@ -3318,13 +3443,17 @@ SV *valuesv;
 	 /*
 	  * set value to force rebind
 	  */
-	 imp_dbh->odbc_force_rebind = (int)SvIV(valuesv);
-
+	 imp_dbh->odbc_force_rebind = SvTRUE(valuesv);
 	 break;
 
       case ODBC_QUERY_TIMEOUT:
 	 bSetSQLConnectionOption = FALSE;
 	 imp_dbh->odbc_query_timeout = (SQLINTEGER)SvIV(valuesv);
+	 break;
+
+      case ODBC_PUTDATA_START:
+	 bSetSQLConnectionOption = FALSE;
+	 imp_dbh->odbc_putdata_start = SvIV(valuesv);
 	 break;
 
       case ODBC_EXEC_DIRECT:
@@ -3335,8 +3464,7 @@ SV *valuesv;
 	  * use SQLExecDirect.  This is to support drivers that
 	  * _only_ support SQLExecDirect.
 	  */
-	 imp_dbh->odbc_exec_direct = (int)SvIV(valuesv);
-
+	 imp_dbh->odbc_exec_direct = SvTRUE(valuesv);
 	 break;
 
       case ODBC_ASYNC_EXEC:
@@ -3345,10 +3473,9 @@ SV *valuesv;
 	  * set asynchronous execution.  It can only be turned on if
 	  * the driver supports it, but will fail silently.
 	  */
-	 on = SvTRUE(valuesv);
-	 if(on) {
+	 if (SvTRUE(valuesv)) {
 	    /* Only bother setting the attribute if it's not already set! */
-	    if (imp_dbh->odbc_async_exec == 1)
+	    if (imp_dbh->odbc_async_exec)
 	       break;
 
 	    /*
@@ -3480,37 +3607,21 @@ SV *valuesv;
    return TRUE;
 }
 
+
 
-static db_params S_db_fetchOptions[] =  {
-   { "AutoCommit", SQL_AUTOCOMMIT, SQL_AUTOCOMMIT_ON, SQL_AUTOCOMMIT_OFF },
-   { "RowCacheSize", ODBC_ROWCACHESIZE },
-#if 0 /* seems not supported by SOLID */
-   { "sol_readonly",
-   SQL_ACCESS_MODE, SQL_MODE_READ_ONLY, SQL_MODE_READ_WRITE },
-   { "sol_trace", SQL_OPT_TRACE, SQL_OPT_TRACE_ON, SQL_OPT_TRACE_OFF },
-   { "sol_timeout", SQL_LOGIN_TIMEOUT },
-   { "sol_isolation", SQL_TXN_ISOLATION },
-   { "sol_tracefile", SQL_OPT_TRACEFILE },
-#endif
-   { "odbc_SQL_ROWSET_SIZE", SQL_ROWSET_SIZE },
-   { "odbc_SQL_DRIVER_ODBC_VER", SQL_DRIVER_ODBC_VER },
-   { "odbc_ignore_named_placeholders", ODBC_IGNORE_NAMED_PLACEHOLDERS },
-   { "odbc_default_bind_type", ODBC_DEFAULT_BIND_TYPE },
-   { "odbc_force_rebind", ODBC_FORCE_REBIND },
-   { "odbc_async_exec", ODBC_ASYNC_EXEC },
-   { "odbc_err_handler", ODBC_ERR_HANDLER },
-   { "odbc_SQL_DBMS_NAME", SQL_DBMS_NAME },
-   { "odbc_exec_direct", ODBC_EXEC_DIRECT },
-   { "odbc_query_timeout", ODBC_QUERY_TIMEOUT},
-   { "odbc_has_unicode", ODBC_HAS_UNICODE},
-   { NULL }
-};
-
-SV *
-   dbd_db_FETCH_attrib(dbh, imp_dbh, keysv)
-   SV *dbh;
-imp_dbh_t *imp_dbh;
-SV *keysv;
+/*======================================================================*/
+/*                                                                      */
+/* dbd_db_FETCH_attrib                                                  */
+/* ===================                                                  */
+/*                                                                      */
+/* Counterpart of dbd_db_STORE_attrib handing:                          */
+/*                                                                      */
+/*   $value = $dbh->{$key};                                             */
+/*                                                                      */
+/* returns an "SV" with the value                                       */
+/*                                                                      */
+/*======================================================================*/
+SV *dbd_db_FETCH_attrib(SV *dbh, imp_dbh_t *imp_dbh, SV *keysv)
 {
    dTHR;
    D_imp_drh_from_dbh;
@@ -3519,7 +3630,7 @@ SV *keysv;
    char *key = SvPV(keysv,kl);
    UDWORD vParam = 0;
    const db_params *pars;
-   SV *retsv = NULL;
+   SV *retsv = Nullsv;
 
    /* checking pars we need FAST */
 
@@ -3532,8 +3643,8 @@ SV *keysv;
 
    switch (pars->fOption) {
       case SQL_DRIVER_ODBC_VER:
-      retsv = newSVpv(imp_dbh->odbc_ver, 0);
-      break;
+        retsv = newSVpv(imp_dbh->odbc_ver, 0);
+        break;
 
       case SQL_DBMS_NAME:
 	 retsv = newSVpv(imp_dbh->odbc_dbname, 0);
@@ -3558,6 +3669,11 @@ SV *keysv;
         } else {
             retsv = newSViv(imp_dbh->odbc_query_timeout);
         }
+        break;
+
+      case ODBC_PUTDATA_START:
+        /* fetch current value of putdata start */
+        retsv = newSViv(imp_dbh->odbc_putdata_start);
         break;
 
       case ODBC_HAS_UNICODE:
@@ -3612,8 +3728,12 @@ SV *keysv;
 	 break;
       default:
 	 /*
-	  * readonly, tracefile etc. isn't working yet.
-          * only AutoCommit supported.
+	  * The remainders we support are ODBC attributes like
+          * AutoCommit (SQL_AUTOCOMMIT)
+          * odbc_SQL_ROWSET_SIZE (SQL_ROWSET_SIZE)
+          *
+          * Nothing else should get here for now unless any item is added
+          * to S_db_fetchOptions.
 	  */
 
 	 rc = SQLGetConnectOption(imp_dbh->hdbc, pars->fOption, &vParam);/* TBD: 3.0 update */
@@ -3625,15 +3745,8 @@ SV *keysv;
 	    return Nullsv;
 	 }
 	 switch(pars->fOption) {
-	    case SQL_LOGIN_TIMEOUT:
-	    case SQL_TXN_ISOLATION:
-	       retsv = newSViv(vParam);
-	       break;
 	    case SQL_ROWSET_SIZE:
 	       retsv = newSViv(vParam);
-	       break;
-	    case SQL_OPT_TRACEFILE:
-	       retsv = newSVpv((char *)vParam, 0);
 	       break;
 	    default:
 	       if (vParam == pars->atrue)
@@ -3646,6 +3759,18 @@ SV *keysv;
 
    return sv_2mortal(retsv);
 }
+
+/*======================================================================*/
+/*                                                                      */
+/* S_st_fetch_params                                                    */
+/* =================                                                    */
+/* S_st_store_params                                                    */
+/* =================                                                    */
+/*                                                                      */
+/* An array of options/attributes we support on statement handles for   */
+/* storing and fetching.                                                */
+/*                                                                      */
+/*======================================================================*/
 
 /*
  * added "need_describe" flag to handle the situation where you don't
@@ -3673,16 +3798,17 @@ static T_st_params S_st_fetch_params[] =
    s_A("PRECISION",1),		/* 5 */
    s_A("SCALE",1),		/* 6 */
    s_A("sol_type",1),		/* 7 */
-   s_A("sol_length",1),	/* 8 */
+   s_A("sol_length",1),         /* 8 */
    s_A("CursorName",1),		/* 9 */
    s_A("odbc_more_results",1),	/* 10 */
-   s_A("ParamValues",1),		/* 11 */
+   s_A("ParamValues",1),        /* 11 */
 
-   s_A("LongReadLen",0),		/* 12 */
+   s_A("LongReadLen",0),        /* 12 */
    s_A("odbc_ignore_named_placeholders",0),	/* 13 */
-   s_A("odbc_default_bind_type",0),	/* 14 */
+   s_A("odbc_default_bind_type",0),             /* 14 */
    s_A("odbc_force_rebind",0),	/* 15 */
    s_A("odbc_query_timeout",0),	/* 16 */
+   s_A("odbc_putdata_start",0),	/* 17 */
    s_A("",0),			/* END */
 };
 
@@ -3692,19 +3818,20 @@ static T_st_params S_st_store_params[] =
    s_A("odbc_default_bind_type",0),	/* 1 */
    s_A("odbc_force_rebind",0),	/* 2 */
    s_A("odbc_query_timeout",0),	/* 3 */
+   s_A("odbc_putdata_start",0),	/* 4 */
    s_A("",0),			/* END */
 };
 #undef s_A
 
-/*----------------------------------------
- * dummy routines st_XXXX
- *----------------------------------------
- */
-SV *
-   dbd_st_FETCH_attrib(sth, imp_sth, keysv)
-   SV *sth;
-imp_sth_t *imp_sth;
-SV *keysv;
+
+
+/*======================================================================*/
+/*                                                                      */
+/*  dbd_st_FETCH_attrib                                                 */
+/*  ===================                                                 */
+/*                                                                      */
+/*======================================================================*/
+SV *dbd_st_FETCH_attrib(SV *sth, imp_sth_t *imp_sth, SV *keysv)
 {
    dTHR;
    STRLEN kl;
@@ -3881,20 +4008,22 @@ SV *keysv;
             retsv = newSViv(imp_sth->odbc_query_timeout);
         }
         break;
+      case 17: /* odbc_putdata_start */
+        retsv = newSViv(imp_sth->odbc_putdata_start);
+        break;
       default:
 	 return Nullsv;
    }
-
    return sv_2mortal(retsv);
 }
 
-
-int
-   dbd_st_STORE_attrib(sth, imp_sth, keysv, valuesv)
-   SV *sth;
-imp_sth_t *imp_sth;
-SV *keysv;
-SV *valuesv;
+/*======================================================================*/
+/*                                                                      */
+/*  dbd_st_STORE_attrib                                                 */
+/*  ===================                                                 */
+/*                                                                      */
+/*======================================================================*/
+int dbd_st_STORE_attrib(SV *sth, imp_sth_t *imp_sth, SV *keysv, SV *valuesv)
 {
    dTHR;
    D_imp_dbh_from_sth;
@@ -3922,15 +4051,20 @@ SV *valuesv;
 	 return TRUE;
 	 break;
 
-      case 2:/*  */
+      case 2:
 	 imp_sth->odbc_force_rebind = (int)SvIV(valuesv);
 	 return TRUE;
 	 break;
 
-      case 3:/*  */
+      case 3:
 	 imp_sth->odbc_query_timeout = SvIV(valuesv);
 	 return TRUE;
 	 break;
+
+      case 4:
+         imp_sth->odbc_putdata_start = SvIV(valuesv);
+         return TRUE;
+         break;
    }
    return FALSE;
 }

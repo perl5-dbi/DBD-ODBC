@@ -11,8 +11,10 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
  META.yml no longer seems to parse on pause
  Add array parameter binding (per new DBI Spec)
  Add row caching/multiple row fetches to speed selects
- Better/more tests on multiple statement handles which ensure the correct number of rows
- Better/more tests on all queries which ensure the correct number of rows and data
+ Better/more tests on multiple statement handles which ensure the
+   correct number of rows
+ Better/more tests on all queries which ensure the correct number of
+   rows and data
  Better tests on SQLExecDirect/do
  Keep checking Oracle's ODBC drivers for Windows to fix the Date binding problem
  Change SQLColAttributes calls (now deprecated) to SQLColAttribute
@@ -20,12 +22,15 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
  Use odbcinst (if it exists to point people at the ini files they need to use)
  Use odbc_config (if it exists to find out about unixODBC).
  There is a Columns private ODBC method which is not documented.
-
+ Add support for sending lobs in chunks instead of all in one go. Although
+   DBD::ODBC uses SQLParamData and SQLPutData internally they are not exposed
+   so anyone binding a lob has to have all of it available before it can
+   be bound.
  Try to produce a Module::Install build.
 
 =head1 CHANGES
 
-=head2 Changes in DBD::ODBC 1.16_1 May NN, 2008
+=head2 Changes in DBD::ODBC 1.16_1 July 29, 2008
 
 Fixed bug in odbc_cancel which was checking the ACTIVE flag was on
 before calling SQLCancel. Non-select statements can also be cancelled
@@ -33,6 +38,25 @@ so this was wrong. Thanks to Dean Arnold for spotting.
 
 Minor changes to test 01base to attempt to catch install_driver
 failing, report it as a fail and skip other tests.
+
+Fixed bug reported by James K. Lowden with asynchronous mode and
+SQLParamData where the code was not expecting SQL_STILL_EXECUTING and
+did not handle it
+
+Added odbc_putdata_start attribute to determine when to start using
+SQLPutData on lobs.
+
+Fixed bug in lob inserts where decimal_digits was being set to the
+size of the bound lob unnecessarily.
+
+Minor change to connect/login code to delete driver-specific attributes
+passed to connect so they do not have to be processed again when DBI
+calls STORE with them.
+
+New 12blob.t test.
+
+A lot of code tidy up but not expecting any real benefit or detriment
+when using DBD::ODBC.
 
 =head2 Changes in DBD::ODBC 1.16 May 13, 2008
 
