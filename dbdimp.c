@@ -3596,7 +3596,6 @@ int dbd_db_STORE_attrib(SV *dbh, imp_dbh_t *imp_dbh, SV *keysv, SV *valuesv)
        case SQL_ATTR_ACCESS_MODE:
          on = SvTRUE(valuesv);
 	 vParam = on ? pars->atrue : pars->afalse;
-         imp_dbh->read_only = vParam;
          break;
 
       default:
