@@ -2,22 +2,28 @@
 # $Id$
 
 use Test::More;
+eval "require Test::NoWarnings";
 
 $| = 1;
+my $has_test_nowarnings = 1;
+eval "require Test::NoWarnings";
+$has_test_nowarnings = undef if $@;
+my $tests = 7;
+$tests += 1 if $has_test_nowarnings;
+plan tests => $tests;
 
 use_ok('strict');
 use_ok('DBI');
 use_ok('ODBCTEST');
 
-my $tests;
-# to help ActiveState's build process along by behaving (somewhat) if a dsn is not provided
 BEGIN {
-   $tests = 7;
    if (!defined $ENV{DBI_DSN}) {
       plan skip_all => "DBI_DSN is undefined";
-   } else {
-      plan tests => $tests;
    }
+}
+END {
+    Test::NoWarnings::had_no_warnings()
+          if ($has_test_nowarnings);
 }
 
 # $ENV{'ODBCINI'}="/export/cmn/etc/odbc.ini" ;
@@ -25,7 +31,7 @@ BEGIN {
 
 my $dbh=DBI->connect();
 unless($dbh) {
-   BAILOUT("Unable to connect to the database $DBI::errstr\nTests skipped.\n");
+   BAIL_OUT("Unable to connect to the database $DBI::errstr\nTests skipped.\n");
    exit 0;
 }
 
@@ -34,7 +40,7 @@ $dbh->{PrintError} = 0;
 $dbh->{LongReadLen} = 10000;
 SKIP:
 {
-   skip "Multiple statements not supported using " . $dbh->get_info(17) . " (SQL_MULT_RESULT_SETS)", $tests-3 unless ($dbh->get_info(36) eq "Y");
+   skip "Multiple statements not supported using " . $dbh->get_info(17) . " (SQL_MULT_RESULT_SETS)", 4 unless ($dbh->get_info(36) eq "Y");
 
 
    my($sqlStr) ;
@@ -54,7 +60,7 @@ SKIP:
    };
    
    if ($@) {
-      skip("Multiple statements not supported using " . $dbh->get_info(17) . "\n", $tests-3);
+      skip("Multiple statements not supported using " . $dbh->get_info(17) . "\n", 4);
    }
 
 

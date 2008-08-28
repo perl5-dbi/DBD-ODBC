@@ -2,9 +2,16 @@
 # $Id$
 
 use Test::More;
+use strict;
 
 $| = 1;
 
+my $has_test_nowarnings = 1;
+eval "require Test::NoWarnings";
+$has_test_nowarnings = undef if $@;
+my $tests = 5;
+$tests += 1 if $has_test_nowarnings;
+plan tests => $tests;
 
 # use_ok('DBI', qw(:sql_types));
 # can't seem to get the imports right this way
@@ -12,26 +19,25 @@ use DBI qw(:sql_types);
 use_ok('ODBCTEST');
 use_ok('Data::Dumper');
 
-my $tests;
-# to help ActiveState's build process along by behaving (somewhat) if a dsn is not provided
 BEGIN {
-   $tests = 5;
    if (!defined $ENV{DBI_DSN}) {
       plan skip_all => "DBI_DSN is undefined";
-   } else {
-      plan tests => $tests;
    }
+}
+END {
+    Test::NoWarnings::had_no_warnings()
+          if ($has_test_nowarnings);
 }
 
 my $dbh = DBI->connect();
 unless($dbh) {
-   BAILOUT("Unable to connect to the database $DBI::errstr\nTests skipped.\n");
+   BAIL_OUT("Unable to connect to the database $DBI::errstr\nTests skipped.\n");
    exit 0;
 }
 
 SKIP:
 {
-   skip "SQLDescribeParam not supported using " . $dbh->get_info(17) . "\n", $tests -2, unless $dbh->func(58, GetFunctions);
+   skip "SQLDescribeParam not supported using " . $dbh->get_info(17) . "\n", $tests -2, unless $dbh->func(58, 'GetFunctions');
 
    $dbh->{RaiseError} = 0;
    $dbh->{PrintError} = 0;
@@ -66,7 +72,7 @@ SKIP:
 
    # turn off default binding of varchar to test this!
    $dbh->{odbc_default_bind_type} = 0;
-   $rc = ODBCTEST::tab_insert_bind($dbh, \@data_no_dates, 0);
+   my $rc = ODBCTEST::tab_insert_bind($dbh, \@data_no_dates, 0);
    unless ($rc) {
       diag("These are tests which rely upon the driver to tell what the parameter type is for the column.  This means you need to ensure you tell your driver the type of the column in bind_col().\n");
    }
@@ -91,4 +97,3 @@ SKIP:
 };
 
 exit(0);
-print $DBI::errstr;

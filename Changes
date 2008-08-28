@@ -17,6 +17,7 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
    rows and data
  Better tests on SQLExecDirect/do
  Keep checking Oracle's ODBC drivers for Windows to fix the Date binding problem
+ Change SQLSetConnectOption to SQLSetConnectAttr as we are ODBC 3 now
  Change SQLColAttributes calls (now deprecated) to SQLColAttribute
  Add support for $sth->more_results based on DBD::ODBC-specific attribute
  Use odbcinst (if it exists to point people at the ini files they need to use)
@@ -57,6 +58,30 @@ New 12blob.t test.
 
 A lot of code tidy up but not expecting any real benefit or detriment
 when using DBD::ODBC.
+
+Fixed retrieving [n]varchar(max) columns which were only returning 1
+byte - thanks to Fumiaki Yoshimatsu and perl monks for finding it.
+See http://markmail.org/message/fiym5r7q22oqlzsf#query:Fumiaki Yoshimatsu odbc+page:1+mid:fiym5r7q22oqlzsf+state:results
+
+Various minor changes to get the CPANTS kwalitee score up.
+  fixed pod issues in FAQ.pm
+  moved mytest dir to examples
+  added generated_by and requires perl version to META.yml
+  added pod and pod-coverage tests
+  removed executable flag from Makefile.PL
+  added use warnings to some modules and tests
+  fixed pod errors in ODBC.pm
+  added AUTHOR and LICENSE section to ODBC.pm
+  added Test::NoWarnings to tests
+
+Added support for setting the new(ish) DBI ReadOnly attribute on a
+connection. See notes in pod.
+
+Changes to test suite to work around problems in Oracle's instant
+client 11r1 ODBC driver for Linux (SQLColAttributes problems - see
+02simple.t).
+
+New tests in 30Oracle.t for oracle procedures.
 
 =head2 Changes in DBD::ODBC 1.16 May 13, 2008
 
@@ -115,6 +140,7 @@ Reformatted dbdimp.c to avoid going over 80 columns.
 
 Tracing changed. Levels reviewed and changed in many cases avoiding levels 1
 and 2 which are reserved for DBI. Now using DBIc_TRACE macro internally.
+Also tracing SQL when 'SQL' flag set.
 
 =head3 Build Changes
 

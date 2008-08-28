@@ -736,6 +736,7 @@ SV   *attr;
 
    /* default ignoring named parameters to false */
    imp_dbh->odbc_ignore_named_placeholders = 0;
+
 #ifdef WITH_UNICODE
    imp_dbh->odbc_has_unicode = 1;
 #else
@@ -840,7 +841,7 @@ SV   *attr;
             */
            hv_delete((HV*)SvRV(attr), "odbc_cursortype",
                      strlen("odbc_cursortype"), G_DISCARD);
-           
+
            rc = SQLSetConnectAttr(imp_dbh->hdbc,(SQLINTEGER)SQL_CURSOR_TYPE,
                                   (SQLPOINTER)odbc_cursortype,
                                   (SQLINTEGER)SQL_IS_INTEGER);
@@ -1960,6 +1961,9 @@ int more;
           case SQL_VARBINARY:
           case SQL_BINARY:
 	    fbh->ftype = SQL_C_BINARY;
+            if (fbh->ColDef == 0) {
+                fbh->ColDisplaySize = DBIc_LongReadLen(imp_sth);
+            }
 	    break;
 #if defined(WITH_UNICODE)
           case SQL_WCHAR:
@@ -1985,6 +1989,7 @@ int more;
 # endif	/* WITH_UNICODE */
 #endif
           case SQL_LONGVARCHAR:
+          case SQL_VARCHAR:
 	    fbh->ColDisplaySize = DBIc_LongReadLen(imp_sth)+1;
 	    break;
 #ifdef TIMESTAMP_STRUCT	/* XXX! */
@@ -2926,11 +2931,13 @@ static int _dbd_rebind_ph(
 	 case SQL_BINARY:
 	 case SQL_VARBINARY:
 	    value_type = SQL_C_BINARY;
+            d_digits = 0;
 	    break;
 #ifdef SQL_WLONGVARCHAR
 	 case SQL_WLONGVARCHAR:	/* added for SQLServer 7 ntext type */
 #endif
 	 case SQL_LONGVARCHAR:
+            d_digits = 0;
 	    break;
 	 case SQL_DATE:
 	 case SQL_TYPE_DATE:
@@ -3036,7 +3043,7 @@ static int _dbd_rebind_ph(
 		    phs->name, value_type, S_SqlTypeToString(phs->sql_type),
 		    column_size, d_digits, buffer_length);
    }
-   
+
    if (value_len < imp_sth->odbc_putdata_start) {
       /* already set and should be left alone JLU */
       /* d_digits = value_len; */
@@ -3301,6 +3308,7 @@ typedef struct {
 
 static db_params S_db_storeOptions[] =  {
    { "AutoCommit", SQL_AUTOCOMMIT, SQL_AUTOCOMMIT_ON, SQL_AUTOCOMMIT_OFF },
+   { "ReadOnly", SQL_ATTR_ACCESS_MODE, SQL_MODE_READ_ONLY, SQL_MODE_READ_WRITE},
 #if 0 /* not defined by DBI/DBD specification */
    { "TRANSACTION",
    SQL_ACCESS_MODE, SQL_MODE_READ_ONLY, SQL_MODE_READ_WRITE },
@@ -3325,7 +3333,7 @@ static db_params S_db_storeOptions[] =  {
 
 static db_params S_db_fetchOptions[] =  {
    { "AutoCommit", SQL_AUTOCOMMIT, SQL_AUTOCOMMIT_ON, SQL_AUTOCOMMIT_OFF },
-   { "RowCacheSize", ODBC_ROWCACHESIZE },
+   { "ReadOnly", SQL_ATTR_ACCESS_MODE, SQL_MODE_READ_ONLY, SQL_MODE_READ_WRITE},   { "RowCacheSize", ODBC_ROWCACHESIZE },
    { "odbc_SQL_ROWSET_SIZE", SQL_ROWSET_SIZE },
    { "odbc_SQL_DRIVER_ODBC_VER", SQL_DRIVER_ODBC_VER },
    { "odbc_ignore_named_placeholders", ODBC_IGNORE_NAMED_PLACEHOLDERS },
@@ -3379,7 +3387,7 @@ static const db_params *
 /*   $dbh->{$key} = $value                                              */
 /*                                                                      */
 /* Method to handle the setting of driver specific attributes and DBI   */
-/* attributes CutoCommit and ChopBlanks (no other DBI attributes).      */
+/* attributes AutoCommit and ChopBlanks (no other DBI attributes).      */
 /*                                                                      */
 /* Return TRUE if the attribute was handled, else FALSE.                */
 /*                                                                      */
@@ -3410,8 +3418,6 @@ int dbd_db_STORE_attrib(SV *dbh, imp_dbh_t *imp_dbh, SV *keysv, SV *valuesv)
    {
       case SQL_LOGIN_TIMEOUT:
       case SQL_TXN_ISOLATION:
-	 vParam = SvIV(valuesv);
-	 break;
       case SQL_ROWSET_SIZE:
 	 vParam = SvIV(valuesv);
 	 break;
@@ -3587,6 +3593,12 @@ int dbd_db_STORE_attrib(SV *dbh, imp_dbh_t *imp_dbh, SV *keysv, SV *valuesv)
 	 bSetSQLConnectionOption = FALSE;
 	 break;
 
+       case SQL_ATTR_ACCESS_MODE:
+         on = SvTRUE(valuesv);
+	 vParam = on ? pars->atrue : pars->afalse;
+         imp_dbh->read_only = vParam;
+         break;
+
       default:
 	 on = SvTRUE(valuesv);
 	 vParam = on ? pars->atrue : pars->afalse;
@@ -3595,7 +3607,9 @@ int dbd_db_STORE_attrib(SV *dbh, imp_dbh_t *imp_dbh, SV *keysv, SV *valuesv)
 
    if (bSetSQLConnectionOption) {
       /* TBD: 3.0 update */
+
       rc = SQLSetConnectOption(imp_dbh->hdbc, pars->fOption, vParam);
+
       if (!SQL_ok(rc)) {
 	 dbd_error(dbh, rc, "db_STORE/SQLSetConnectOption");
 	 return FALSE;
@@ -3744,6 +3758,7 @@ SV *dbd_db_FETCH_attrib(SV *dbh, imp_dbh_t *imp_dbh, SV *keysv)
                         "    !!SQLGetConnectOption=%d in dbd_db_FETCH\n", rc);
 	    return Nullsv;
 	 }
+
 	 switch(pars->fOption) {
 	    case SQL_ROWSET_SIZE:
 	       retsv = newSViv(vParam);

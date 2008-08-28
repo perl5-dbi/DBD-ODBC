@@ -7,13 +7,14 @@ use UChelp;
 
 use Test::More;
 use DBI qw(:sql_types);
+use Test::NoWarnings;
 
 $|=1;
 
 my $WAIT=0;
 my @data;
+
 my $tests;
-# to help ActiveState's build process along by behaving (somewhat) if a dsn is not provided
 BEGIN {
 	if ($] < 5.008001) {
 		plan skip_all => "Old Perl lacking unicode support";
@@ -32,11 +33,11 @@ BEGIN {
 	utf8::is_utf8($data[3]) or die "Perl did not set UTF8 flag on unicode string constant";
 	unshift @data,'';
 	push @data,42;
-	
+
 	my @plaindata=grep { !utf8::is_utf8($_) } @data;
 	@plaindata or die "OOPS";
-	
-	$tests=2+6*@data+6*@plaindata;
+
+	$tests=1+2+6*@data+6*@plaindata;
 
         plan tests => $tests;
 }
@@ -46,7 +47,7 @@ ok(defined($dbh),"DBI connect");
 
 SKIP: {
     if (!$dbh->{odbc_has_unicode}) {
-        skip "Unicode-specific tests disabled - not a unicode build", $tests-1;
+        skip "Unicode-specific tests disabled - not a unicode build", $tests-2;
     }
 
 my $dbname=$dbh->get_info(17); # DBI::SQL_DBMS_NAME
@@ -67,17 +68,17 @@ SKIP: {
 	$dbh->{RaiseError} = 1;
 	$dbh->{'LongTruncOk'}=1;
 	$dbh->{'LongReadLen'}=32000;
-	
+
 
 	foreach my $txt (@data) {
 		SKIP: {
 			if ($skipempty and ($txt eq '')) {
 				skip('Database is known to treat empty strings as NULL in this test',12);
-			}		
+			}
 			unless (utf8::is_utf8($txt)) {
 				my $sth=$dbh->prepare("SELECT ? as roundtrip, $len(?) as roundtriplen $fromdual");
 				ok(defined($sth),"prepare round-trip select statement plaintext");
-			
+
 				# diag(dumpstr($txt));
 				$sth->bind_param (1,$txt,SQL_VARCHAR);
 				$sth->bind_param (2,$txt,SQL_VARCHAR);
@@ -89,10 +90,10 @@ SKIP: {
 				cmp_ok($tlen,'==',length($txt),'length equal');
 				utf_eq_ok($t,$txt,'text equal');
 			}
-		
+
 			my $sth=$dbh->prepare("SELECT ? as roundtrip, $len(?) as roundtriplen $fromdual");
 			ok(defined($sth),"prepare round-trip select statement unicode");
-		
+
 			$sth->bind_param (1,$txt,SQL_WVARCHAR);
 			$sth->bind_param (2,$txt,SQL_WVARCHAR);
 			pass("bind WVARCHAR");
@@ -106,8 +107,8 @@ SKIP: {
 	}
 
 	$dbh->disconnect;
-	
+
 	pass("all done");
-}      
+}
 };
 exit 0;

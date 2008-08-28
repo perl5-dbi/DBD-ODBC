@@ -69,6 +69,7 @@ $DBD::ODBC::VERSION = '1.16_1';
 
 {   package DBD::ODBC::dr; # ====== DRIVER ======
     use strict;
+    use warnings;
 
     sub connect {
 	my $drh = shift;
@@ -96,6 +97,7 @@ $DBD::ODBC::VERSION = '1.16_1';
 
 {   package DBD::ODBC::db; # ====== DATABASE ======
     use strict;
+    use warnings;
 
     sub parse_trace_flag {
         my ($h, $name) = @_;
@@ -437,6 +439,7 @@ $DBD::ODBC::VERSION = '1.16_1';
 
 {   package DBD::ODBC::st; # ====== STATEMENT ======
     use strict;
+    use warnings;
 
     *parse_trace_flag = \&DBD::ODBC::db::parse_trace_flag;
 
@@ -537,6 +540,29 @@ Please, before submitting a patch:
 
 and send the resulting file to me and cc the dbi-users@perl.org
 mailing list (if you are not a member - why not!).
+
+=head2 DBI attribute handling
+
+If a DBI defined attribute is not mentioned here it behaves as per the
+DBI specification.
+
+=head3 ReadOnly (boolean)
+
+DBI documents the ReadOnly attribute as being settleable and
+retrievable on connection and statement handles. In ODBC setting
+ReadOnly to true causes the connection attribute SQL_ATTR_ACCESS_MODE
+to be set to SQL_MODE_READ_ONLY and setting it to false will set the
+access mode to SQL_MODE_READ_WRITE (which is the default in ODBC).
+
+B<Note:> There is no equivalent of setting ReadOnly on a statement
+handle in ODBC.
+
+B<Note:> See ODBC documentation on SQL_ATTR_ACCESS_MODE as setting it
+to SQL_MODE_READ_ONLY does B<not> prevent your script from running
+updates or deletes; it is simply a hint to the driver/database that
+you won't being doing updates.
+
+This attribute requires DBI version 1.55 or better.
 
 =head2 Private attributes common to connection and statement handles
 
@@ -952,12 +978,37 @@ Handled as of version 0.28
 head3 ColAttributes
 
 B<This private function is now superceded by DBI's statement attributes
-NAME, TYPE, PRECISION, SCLARE, NULLABLE etc).>
+NAME, TYPE, PRECISION, SCALE, NULLABLE etc).>
 
 See the ODBC specification for the SQLColAttributes API.
 You call SQLColAttributes like this:
 
   $dbh->func($column, $ftype, "ColAttributes");
+
+  SQL_COLUMN_COUNT = 0
+  SQL_COLUMN_NAME = 1
+  SQL_COLUMN_TYPE = 2
+  SQL_COLUMN_LENGTH = 3
+  SQL_COLUMN_PRECISION = 4
+  SQL_COLUMN_SCALE = 5
+  SQL_COLUMN_DISPLAY_SIZE = 6
+  SQL_COLUMN_NULLABLE = 7
+  SQL_COLUMN_UNSIGNED = 8
+  SQL_COLUMN_MONEY = 9
+  SQL_COLUMN_UPDATABLE = 10
+  SQL_COLUMN_AUTO_INCREMENT = 11
+  SQL_COLUMN_CASE_SENSITIVE = 12
+  SQL_COLUMN_SEARCHABLE = 13
+  SQL_COLUMN_TYPE_NAME = 14
+  SQL_COLUMN_TABLE_NAME = 15
+  SQL_COLUMN_OWNER_NAME = 16
+  SQL_COLUMN_QUALIFIER_NAME = 17
+  SQL_COLUMN_LABEL = 18
+
+B<Note:>Oracle's ODBC driver for linux in instant client 11r1 often
+returns strange values for column name e.g., '20291'. It is wiser to
+use DBI's NAME and NAME_xx attributes for portability.
+
 
 head3 DescribeCol
 
@@ -1127,6 +1178,8 @@ which are typically driver specific.  The important value to change for
 the Access driver, for example, is the DBQ value.  That's actually the
 file name of the Access database.
 
+=back
+
 =head2 Connect without DSN
 
 The ability to connect without a full DSN is introduced in version 0.21.
@@ -1145,8 +1198,6 @@ Example (using MSSQL Server):
       my $DSN = 'driver={SQL Server};Server=server_name;
       database=database_name;uid=user;pwd=password;';
       my $dbh  = DBI->connect("dbi:ODBC:$DSN") or die "$DBI::errstr\n";
-
-=back
 
 =head2 Random Links
 
@@ -1218,5 +1269,26 @@ L<http://www.easysoft.com/developer/languages/perl/tutorial_data_web.html>
 
 Frequently asked questions are now in DBD::ODBC::FAQ. Run
 C<perldoc DBD::ODBC::FAQ> to view them.
+
+=head1 AUTHOR
+
+Tim Bunce
+
+Jeff Urlwin
+
+Thomas K. Wenrich
+
+Martin J. Evans
+
+=head1 LICENSE
+
+This program is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself.
+
+See L<http://www.perl.com/perl/misc/Artistic.html>
+
+=head1 SEE ALSO
+
+L<DBI>
 
 =cut

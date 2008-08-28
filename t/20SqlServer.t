@@ -2,8 +2,14 @@
 # $Id$
 
 use Test::More;
-
 $| = 1;
+
+my $has_test_nowarnings = 1;
+eval "require Test::NoWarnings";
+$has_test_nowarnings = undef if $@;
+my $tests = 38;
+$tests += 1 if $has_test_nowarnings;
+plan tests => $tests;
 
 # use_ok('DBI', qw(:sql_types));
 # can't seem to get the imports right this way
@@ -11,15 +17,13 @@ use DBI qw(:sql_types);
 use_ok('ODBCTEST');
 use_ok('Data::Dumper');
 
-my $tests;
-# to help ActiveState's build process along by behaving (somewhat) if a dsn is not provided
 BEGIN {
-   $tests = 38;
-   if (!defined $ENV{DBI_DSN}) {
-      plan skip_all => "DBI_DSN is undefined";
-   } else {
-      plan tests => $tests;
-   }
+    plan skip_all => "DBI_DSN is undefined"
+        if (!defined $ENV{DBI_DSN});
+}
+END {
+    Test::NoWarnings::had_no_warnings()
+          if ($has_test_nowarnings);
 }
 
 sub Multiple_concurrent_stmts {
@@ -49,7 +53,7 @@ sub Multiple_concurrent_stmts {
 
 my $dbh = DBI->connect();
 unless($dbh) {
-   BAILOUT("Unable to connect to the database $DBI::errstr\nTests skipped.\n");
+   BAIL_OUT("Unable to connect to the database $DBI::errstr\nTests skipped.\n");
    exit 0;
 }
 
@@ -59,12 +63,11 @@ $m_dbversion =~ s/^(\d+).*/$1/;
 
 my $dbname = $dbh->get_info(17); # DBI::SQL_DBMS_NAME
 SKIP: {
-   skip "Microsoft SQL Server tests not supported using $dbname", $tests-2 unless ($dbname =~ /Microsoft SQL Server/i);
+   skip "Microsoft SQL Server tests not supported using $dbname", 36
+       unless ($dbname =~ /Microsoft SQL Server/i);
 
-
-   # the times chosen below are VERY specific to NOT cause rounding errors, but may cause different
-   # errors on different versions of SQL Server.
-   #
+   # the times chosen below are VERY specific to NOT cause rounding errors,
+   # but may cause different errors on different versions of SQL Server.
    my @data = (
 	       [undef, "z" x 13 ],
 	       ["2001-01-01 01:01:01.110", "a" x 12],   # "aaaaaaaaaaaa"
@@ -95,7 +98,7 @@ SKIP: {
        # warn "Unable to get type for type $type\n";
       }
    }
-   BAILOUT("Unable to find a suitable test type for date field\n")
+   BAIL_OUT("Unable to find a suitable test type for date field\n")
 	 unless @row;
 
    my $datetype = $row[0];

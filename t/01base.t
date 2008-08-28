@@ -1,7 +1,16 @@
 #!perl -w
 # $Id$
 
-use Test::More tests => 6;
+use Test::More;
+use strict;
+
+my $has_test_nowarnings = 1;
+eval "require Test::NoWarnings";
+$has_test_nowarnings = undef if $@;
+my $tests = 6;
+
+$tests += 1 if $has_test_nowarnings;
+plan tests => $tests;
 
 require DBI;
 require_ok('DBI');
@@ -9,9 +18,10 @@ require_ok('DBI');
 import DBI;
 pass("import DBI");
 
-$switch = DBI->internal;
+my $switch = DBI->internal;
 is(ref $switch, 'DBI::dr', "DBI->internal is DBI::dr");
 
+my $drh;
 eval {
     $drh = DBI->install_driver('ODBC');
 };
@@ -26,4 +36,10 @@ SKIP: {
 
     ok($drh->{Version}, "Version is not empty");
 }
+
+END {
+    Test::NoWarnings::had_no_warnings()
+          if ($has_test_nowarnings);
+}
+
 exit 0;

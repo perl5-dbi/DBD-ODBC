@@ -2,29 +2,38 @@
 # $Id$
 
 use Test::More;
+use strict;
+
 $| = 1;
+
+my $has_test_nowarnings = 1;
+eval "require Test::NoWarnings";
+$has_test_nowarnings = undef if $@;
+my $tests = 63;
+$tests += 1 if $has_test_nowarnings;
+plan tests => $tests;
 
 use_ok('DBI', qw(:sql_types));
 use_ok('ODBCTEST');
-use_ok('Data::Dumper');
+#use_ok('Data::Dumper');
 
-# to help ActiveState's build process along by behaving (somewhat) if a dsn is not provided
 BEGIN {
    if (!defined $ENV{DBI_DSN}) {
       plan skip_all => "DBI_DSN is undefined";
-   } else {
-      plan tests => 62;
    }
+}
+END {
+    Test::NoWarnings::had_no_warnings()
+          if ($has_test_nowarnings);
 }
 
 
 #DBI->trace(2);
 my $dbh = DBI->connect();
 unless($dbh) {
-   BAILOUT("Unable to connect to the database ($DBI::errstr)\nTests skipped.\n");
+   BAIL_OUT("Unable to connect to the database ($DBI::errstr)\nTests skipped.\n");
    exit 0;
 }
-
 # Output DBMS which is useful when debugging cpan-testers output
 {
     diag("\n");
@@ -33,6 +42,15 @@ unless($dbh) {
     diag("Using DRIVER_NAME " . DBI::neat($dbh->get_info(6)) . "\n");
     diag("Using DRIVER_VER " . DBI::neat($dbh->get_info(7)) . "\n");
 }
+
+# ReadOnly
+{
+    $dbh->{ReadOnly} = 1;
+    is($dbh->{ReadOnly}, 1, 'ReadOnly set');
+    $dbh->{ReadOnly} = 0;
+    is($dbh->{ReadOnly}, 0, 'ReadOnly cleared');
+}
+
 
 #
 # test private_attribute_info.
@@ -116,6 +134,7 @@ is($dbh->{PrintError}, '', "Set Print Error");
 #
 $dbh->{LongTruncOk} = 1;
 $dbh->{LongReadLen} = 50;
+my $max_col_len;
 ok(select_long($dbh, \$max_col_len, 1), "Select Long data, LongTruncOk");
 ok(!defined($dbh->err), 'err not set on LongTruncOk handle');
 # NOTE: there is an existing bug in DBD::ODBC that truncates to LongReadLen
@@ -136,24 +155,32 @@ my $sth = $dbh->prepare("SELECT * FROM $ODBCTEST::table_name ORDER BY COL_A");
 ok(defined($sth), "prepare select from table");
 if ($sth) {
    ok($sth->execute(), "Execute select");
-   my $colcount = $sth->func(1, 0, ColAttributes); # 1 for col (unused) 0 for SQL_COLUMN_COUNT
+   my $colcount = $sth->func(1, 0, 'ColAttributes'); # 1 for col (unused) 0 for SQL_COLUMN_COUNT
    #diag("Column count is: $colcount\n");
    is($sth->{NUM_OF_FIELDS}, $colcount,
       'NUM_OF_FIELDS = ColAttributes(SQL_COLUMN_COUNT)');
    my ($coltype, $colname, $i, @row);
    my $is_ok = 0;
    for ($i = 1; $i <= $colcount; $i++) {
-       # $i is colno (1 based) 2 is for SQL_COLUMN_TYPE, 1 is for SQL_COLUMN_NAME
-      $coltype = $sth->func($i, 2, ColAttributes);
+      # $i is colno (1 based) 2 is for SQL_COLUMN_TYPE, 1 is for SQL_COLUMN_NAME
+      $coltype = $sth->func($i, 2, 'ColAttributes');
       # NOTE: changed below to uc (uppercase) as keys in TestFieldInfo are
       # uppercase and databases are not guaranteed to return column names in
       # uppercase.
-      $colname = uc($sth->func($i, 1, ColAttributes));
+      if (DBI::neat($dbh->get_info(6)) =~ 'SQORA32') {
+          # NOTE: Oracle's instant client ODBC drivers often return '20291'
+          # for the column name via SQLColAttributes - I verified this
+          # with 11g r1. As a result I swapped to NAME_uc for drivers that
+          # look like oracle's official driver.
+          $colname = $sth->{NAME_uc}->[$i - 1];
+      } else {
+          $colname = uc($sth->func($i, 1, 'ColAttributes'));
+      }
       #diag("$i: $colname = $coltype ", $coltype+1-1);
       if (grep { $coltype == $_ } @{$ODBCTEST::TestFieldInfo{$colname}}) {
 	 $is_ok++;
       } else {
-	 diag("Coltype $coltype not found in list ", join(', ', @{$ODBCTEST::TestFieldInfo{$colname}}), "\n");
+	 diag("Coltype $coltype for column $colname not found in list ", join(', ', @{$ODBCTEST::TestFieldInfo{$colname}}), "\n");
       }
    }
    is($is_ok, $colcount, "Col count matches correct col count");

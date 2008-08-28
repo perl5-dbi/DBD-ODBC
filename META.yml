@@ -1,18 +1,17 @@
-# http://module-build.sourceforge.net/META-spec-v1.2.html
-name:         DBD-ODBC
-version:      1.16_1
+--- #YAML:1.0
+name: DBD-ODBC
+abstract: ODBC DBD for Perl DBI
+version: 1.16_1
 version_from: ODBC.pm
-abstract:
-  ODBC DBD for Per DBI
 author:
-  Tim Bunce
-  Jeff Urlwin
-  Martin J. Evans
+  - Tim Bunce
+  - Jeff Urlwin
+  - Martin J. Evans <mjevans@cpan.org>
 license: perl
-
-installdirs:  site
+distribution_type: module
 requires:
     DBI: 1.21
+    perl: 5.006
 #
 # Added build_requires/configure_requires DBI as DBD::ODBC needs DBI::DBD to
 # get postamble etc
@@ -22,14 +21,15 @@ build_requires:
 configure_requires:
   DBI: 1.21
 dynamic_config: 1
-keywords:
-  - ODBC
-  - DBD
 resources:
   license: http://dev.perl.org/licenses/
   bugtracker: http://rt.cpan.org/Public/Dist/Display.html?Name=DBD-ODBC
   MailingList: http://dbi.perl.org/
-distribution_type: module
+installdirs:  site
+keywords:
+  - ODBC
+  - DBD
 meta-spec:
-  version: 1.2
-  url: http://module-build.sourceforge.net/META-spec-v1.2.html
+  version: 1.4
+  url: http://module-build.sourceforge.net/META-spec-v1.4.html
+generated_by: Martin J. Evans

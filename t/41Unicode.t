@@ -6,6 +6,7 @@ use warnings;
 use UChelp;
 
 use Test::More;
+use Test::NoWarnings;
 use DBI qw(:sql_types);
 
 $|=1;
@@ -31,7 +32,7 @@ BEGIN {
 	utf8::is_utf8($data[2]) and die "Perl set UTF8 flag on non-unicode string constant";
 	utf8::is_utf8($data[3]) or die "Perl did not set UTF8 flag on unicode string constant";
 	
-	$tests=7+12*@data;
+	$tests=1+7+12*@data;
         plan tests => $tests,
 }
 
@@ -40,7 +41,7 @@ ok(defined($dbh),"DBI connect");
 
 SKIP: {
     if (!$dbh->{odbc_has_unicode}) {
-        skip "Unicode-specific tests disabled - not a unicode build",$tests-1;
+        skip "Unicode-specific tests disabled - not a unicode build",$tests-2;
     }
 
 

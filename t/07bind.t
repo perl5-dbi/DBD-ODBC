@@ -4,24 +4,32 @@
 use Test::More;
 
 $| = 1;
+my $has_test_nowarnings = 1;
+eval "require Test::NoWarnings";
+$has_test_nowarnings = undef if $@;
+my $tests = 15;
+$tests += 1 if $has_test_nowarnings;
+plan tests => $tests;
+
 
 # use_ok('DBI', qw(:sql_types));
 # can't seem to get the imports right this way
 use DBI qw(:sql_types);
 use_ok('ODBCTEST');
 
-# to help ActiveState's build process along by behaving (somewhat) if a dsn is not provided
 BEGIN {
    if (!defined $ENV{DBI_DSN}) {
       plan skip_all => "DBI_DSN is undefined";
-   } else {
-      plan tests => 15;
    }
+}
+END {
+    Test::NoWarnings::had_no_warnings()
+          if ($has_test_nowarnings);
 }
 
 my $dbh = DBI->connect();
 unless($dbh) {
-   BAILOUT("Unable to connect to the database $DBI::errstr\nTests skipped.\n");
+   BAIL_OUT("Unable to connect to the database $DBI::errstr\nTests skipped.\n");
    exit 0;
 }
 

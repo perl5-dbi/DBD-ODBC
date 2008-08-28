@@ -155,7 +155,6 @@ sub dotests
 # create table thrtest1 & thrtest2 and put some test data in
 #
 
-=pod
 my $dbh = DBI -> connect ($ENV{DBIDSN}, 'scott', 'tiger') or die "Cannot connect to $ENV{DBIDSN}" ;
 eval {
 $dbh -> do ('drop table thrtest1') ;
@@ -177,7 +176,6 @@ $dbh -> do ("insert into thrtest1 values ('xx', '', 'xx', 'XX', NULL, NULL)") ;
 $dbh -> do ("insert into thrtest2 values ('w32', 'Windows', 'mond:mond:ecos')") ;
 
 #$dbh -> disconnect ;
-=cut
 
 threads->create('dotests', 1, 20) ;
 threads->create('dotests', 1, 20) ;
