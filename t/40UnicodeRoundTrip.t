@@ -7,7 +7,8 @@ use UChelp;
 
 use Test::More;
 use DBI qw(:sql_types);
-use Test::NoWarnings;
+
+my $has_test_nowarnings;
 
 $|=1;
 
@@ -36,9 +37,19 @@ BEGIN {
 	my @plaindata=grep { !utf8::is_utf8($_) } @data;
 	@plaindata or die "OOPS";
 
-	$tests=1+2+6*@data+6*@plaindata;
+	$tests=2+6*@data+6*@plaindata;
 
+	eval "require Test::NoWarnings";
+	if (!$@) {
+	    $has_test_nowarnings = 1;
+	}
+	$tests += 1 if $has_test_nowarnings;
         plan tests => $tests;
+}
+
+END {
+    Test::NoWarnings::had_no_warnings()
+          if ($has_test_nowarnings);
 }
 
 my $dbh=DBI->connect();

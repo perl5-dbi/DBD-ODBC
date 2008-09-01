@@ -6,8 +6,9 @@ use warnings;
 use UChelp;
 
 use Test::More;
-use Test::NoWarnings;
 use DBI qw(:sql_types);
+
+my $has_test_nowarnings;
 
 $|=1;
 
@@ -32,8 +33,18 @@ BEGIN {
 	utf8::is_utf8($data[2]) and die "Perl set UTF8 flag on non-unicode string constant";
 	utf8::is_utf8($data[3]) or die "Perl did not set UTF8 flag on unicode string constant";
 	
-	$tests=1+7+12*@data;
+	$tests=7+12*@data;
+	eval "require Test::NoWarnings";
+	if (!$@) {
+	    $has_test_nowarnings = 1;
+	}
+	$tests += 1 if $has_test_nowarnings;
         plan tests => $tests,
+}
+
+END {
+    Test::NoWarnings::had_no_warnings()
+          if ($has_test_nowarnings);
 }
 
 my $dbh=DBI->connect();
