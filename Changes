@@ -93,6 +93,8 @@ cannot make it work.
 Changes internally to use sv_utf8_decode (where defined) instead of
 setting utf8 flag.
 
+Fix problems in the test when Test::NoWarnings is not installed.
+
 =head2 Changes in DBD::ODBC 1.16_1 August 28, 2008
 
 Fixed bug in odbc_cancel which was checking the ACTIVE flag was on
