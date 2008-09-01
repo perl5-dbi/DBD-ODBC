@@ -167,15 +167,7 @@ if ($sth) {
       # NOTE: changed below to uc (uppercase) as keys in TestFieldInfo are
       # uppercase and databases are not guaranteed to return column names in
       # uppercase.
-      if (DBI::neat($dbh->get_info(6)) =~ 'SQORA32') {
-          # NOTE: Oracle's instant client ODBC drivers often return '20291'
-          # for the column name via SQLColAttributes - I verified this
-          # with 11g r1. As a result I swapped to NAME_uc for drivers that
-          # look like oracle's official driver.
-          $colname = $sth->{NAME_uc}->[$i - 1];
-      } else {
-          $colname = uc($sth->func($i, 1, 'ColAttributes'));
-      }
+      $colname = uc($sth->func($i, 1, 'ColAttributes'));
       #diag("$i: $colname = $coltype ", $coltype+1-1);
       if (grep { $coltype == $_ } @{$ODBCTEST::TestFieldInfo{$colname}}) {
 	 $is_ok++;

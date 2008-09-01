@@ -9,7 +9,7 @@
 
 require 5.006;
 
-$DBD::ODBC::VERSION = '1.16_1';
+$DBD::ODBC::VERSION = '1.16_2';
 
 {
     package DBD::ODBC;
@@ -34,6 +34,7 @@ $DBD::ODBC::VERSION = '1.16_1';
     sub parse_trace_flag {
         my ($class, $name) = @_;
         return 0x01000000 if $name eq 'odbcdev';
+        return 0x02000000 if $name eq 'odbcunicode';
         return DBI::parse_trace_flag($class, $name);
     }
 
@@ -1031,9 +1032,10 @@ of DBI 1.604, the only trace flag defined which is relevant to
 DBD::ODBC is 'SQL' which DBD::ODBC supports by outputting the SQL
 strings (after modification) passed to the prepare and do methods.
 
-Currently DBD::ODBC only supports one private trace flag.  The
-'odbcdev' trace flag is used to output development tracing so it
-should not be relevant in normal use.
+Currently DBD::ODBC supports twoprivate trace flags.  The 'odbcdev'
+trace flag is used to output development tracing so it should not be
+relevant in normal use. The 'odbcunicode' flags traces some unicode
+operations.
 
 To enable tracing of particular flags you use:
 

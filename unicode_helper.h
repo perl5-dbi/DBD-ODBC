@@ -12,6 +12,7 @@ UTF16 * WValloc(char * s);
 void WVfree(UTF16 * wp);
 
 void sv_setwvn(SV * sv, UTF16 * wp, STRLEN len);
+SV *sv_newwvn(UTF16 * wp, STRLEN len);
 
 
 char * PVallocW(UTF16 * wp);

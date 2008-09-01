@@ -42,14 +42,20 @@ DBD::ODBC will bind columns declared as wide types by the ODBC Driver
 as SQL_Wxxx and convert any returned data from UTF16 to UTF8, then set
 the UTF8 flag on the data.
 
+Unicode SQL strings to the prepare and do methods are supported since
+1.16_2.
+
+The return of unicode column names in the statemet attribute NAME is
+supported since 1.16_2.
+
 What is not supported?
 ======================
 
-At this time Unicode SQL strings are not supported i.e. you cannot
-pass a UTF8 string to $dbh->prepare and expect it to work as it will
-end up being passed to the ODBC APIs SQLPrepare (or SQLExecDirect) as 8
-bit characters and the likelihood is that the ODBC Driver will not
-understand what you mean. Of course, patches are welcome.
+You cannot use unicode parameter names e.g.,
+
+  select * from table where column = :unicode_param_name
+
+You cannot currently use unicode connection strings.
 
 Caveats
 =======

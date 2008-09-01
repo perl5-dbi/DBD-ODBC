@@ -36,7 +36,7 @@ int  odbc_get_special_columns _((SV *dbh, SV *sth, int Identifier, char *Catalog
 int  odbc_get_foreign_keys _((SV *dbh, SV *sth, char *PK_CatalogName, char *PK_SchemaName, char *PK_TableName, char *FK_CatalogName, char *FK_SchemaName, char *FK_TableName));
 void dbd_error _((SV *h, RETCODE err_rc, char *what));
 void dbd_error2 _((SV *h, RETCODE err_rc, char *what, HENV henv, HDBC hdbc, HSTMT hstmt));
-int dbd_db_execdirect _(( SV *dbh, char *statement ));
+int dbd_db_execdirect _(( SV *dbh, SV *statement ));
 
 
 /* end of ODBC.h */

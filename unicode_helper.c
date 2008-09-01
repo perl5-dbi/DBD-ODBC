@@ -62,8 +62,7 @@ static SV * _dosvwv(SV * sv, UTF16 * wp, STRLEN len, new_cat_set_t mode)
       /* Test conversion and find size UTF* of buffer we need */
       ret = ConvertUTF16toUTF8((const UTF16 **)&source_start, source_end,
 			       NULL, NULL, strictConversion, &bytes);
-      /*fprintf(stderr, "Bytes = %d\n", bytes);*/
-
+      /*printf("Bytes Required = %d\n", bytes);*/
       if (ret != conversionOK) {
 	if (ret == sourceExhausted) {
 	  croak("_dosvwc: Partial character in input");
@@ -108,11 +107,21 @@ static SV * _dosvwv(SV * sv, UTF16 * wp, STRLEN len, new_cat_set_t mode)
       default:
         croak("_dosvwv called with bad mode value");
     }
+
+#ifdef sv_utf8_decode
+    if (!sv_utf8_decode(sv)) {
+        croak("Attempt to utf8 decode a non utf8 sequence");
+    }
+#else
     if (*p) {
         SvUTF8_on(sv);
+        /*printf("Switching UTF8 on\n");*/
+
     } else if (mode!=do_cat) {
         SvUTF8_off(sv); /* Don't switch off UTF8 just because we *APPENDED* an empty string! sv may still be UTF8. */
+        /*printf("Switching UTF8 off\n");*/
     }
+#endif
     Safefree(p);
     return sv;
 }
@@ -134,6 +143,23 @@ void sv_setwvn(SV * sv, UTF16 * wp, STRLEN len)
     } else {
         _dosvwv(sv,wp,len,do_set);
     }
+}
+
+SV *sv_newwvn(UTF16 * wp, STRLEN len)
+{
+    SV *sv;
+
+    /*printf("wp=%p, strlen=%d\n", wp, len);*/
+
+    if (wp==NULL) {
+        sv = &PL_sv_undef;
+    } else if (len==0) {
+        sv = newSVpvn("",0);
+    } else {
+        sv = _dosvwv(NULL,wp,len,do_new);
+    }
+    return sv;
+
 }
 
 /*
@@ -231,6 +257,7 @@ void WVfree(UTF16 * wp)
 char * PVallocW(UTF16 * wp)
 {
     char * p=NULL;
+
     if (wp!=NULL) {
 
 #ifdef WIN32
@@ -248,7 +275,7 @@ char * PVallocW(UTF16 * wp)
         		err = GetLastError();
         		croak("WideCharToMultiByte() failed with %ld", err);
         }
-        Newz(0,p,bytes,char);
+        Newz(0,p,bytes,char);                   /* allocate "bytes" chars */
         if (!WideCharToMultiByte(CP_UTF8,0,wp,-1,p,bytes,NULL,NULL)) {
         	  DWORD err;
         	  err = GetLastError();
@@ -326,7 +353,7 @@ void SV_toWCHAR(SV * sv)
     }
     p=SvPVutf8_force(sv,len);
     /* _force makes sure SV is only a string */
-    wp=WValloc(p);
+    wp=WValloc(p); /* allocate wp containing utf16 copy of utf8 p */
     len=utf16_len(wp);
     p=SvGROW(sv,sizeof(UTF16)*(1+len));
     utf16_copy((UTF16 *)p,wp);

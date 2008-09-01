@@ -19,6 +19,7 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
  Keep checking Oracle's ODBC drivers for Windows to fix the Date binding problem
  Change SQLSetConnectOption to SQLSetConnectAttr as we are ODBC 3 now
  Change SQLColAttributes calls (now deprecated) to SQLColAttribute
+ Change SQLTransact calls to SQLEndTran calls.
  Add support for $sth->more_results based on DBD::ODBC-specific attribute
  Use odbcinst (if it exists to point people at the ini files they need to use)
  Use odbc_config (if it exists to find out about unixODBC).
@@ -31,7 +32,68 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
 
 =head1 CHANGES
 
-=head2 Changes in DBD::ODBC 1.16_1 July 29, 2008
+=head2 Changes in DBD::ODBC 1.16_2 September 1, 2008
+
+Removed szDummyBuffer field from imp_fbh_st and code in dbd_describe
+which clears it. It was never used so this was a waste of time.
+
+Changed the remaining calls to SQLAllocEnv, SQLAllocConnect and
+SQLAllocStmt and their respective free calls to the ODBC 3.0
+SQLAllocHandle and SQLFreeHandle equivalents.
+
+Rewrote ColAttributes code to understand string and numeric attributes
+rather than trying to guess by what the driver returns. If you see any
+change in behaviour in ColAttributes calls you'll have to let me know
+as there were a number of undocumented workarounds for drivers.
+
+Unicode build of DBD::ODBC now supports:
+
+=over
+
+=item column names
+
+The retrieval of unicode column names
+
+=item SQL strings
+
+Unicode in prepare strings (but not unicode parameter names) e.g.,
+
+  select unicode_column from unicode_table
+
+is fine but
+
+  select * from table where column = :unicode_param_name
+
+is not so stick to ascii parameter names if you use named parameters.
+
+Unicode SQL strings passed to the do method are supported.
+
+SQL strings passed to DBD::ODBC when the odbc_exec_direct attribute
+is set will B<not> be passed as unicode strings - this is a limitation of
+the odbc_exec_direct attribute.
+
+=item connection strings
+
+Unicode connection strings are hopefully coming soon but they need a
+DBI change. B<note> that even though unicode connection strings are
+not supported currently DBD::ODBC has had to be changed to call
+SQLDriverConnectW/SQLConnectW to indicate to the driver manager it's
+intentions to use some of the ODBC wide APIs.
+
+=item odbcunicode trace flag
+
+There is a new odbcunicode trace flag to enable unicode-specific
+tracing.
+
+=back
+
+Skipped 40Unicode.t test if the ODBC driver is Oracle's ODBC as I
+cannot make it work.
+
+Changes internally to use sv_utf8_decode (where defined) instead of
+setting utf8 flag.
+
+=head2 Changes in DBD::ODBC 1.16_1 August 28, 2008
 
 Fixed bug in odbc_cancel which was checking the ACTIVE flag was on
 before calling SQLCancel. Non-select statements can also be cancelled

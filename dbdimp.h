@@ -100,7 +100,6 @@ struct imp_sth_st {
 
 
 struct imp_fbh_st { 	/* field buffer EXPERIMENTAL */
-   char szDummyBuffer[1024];
    imp_sth_t *imp_sth;	/* 'parent' statement */
     /* field description - SQLDescribeCol() */
     UCHAR *ColName;		/* zero-terminated column name */
@@ -162,6 +161,7 @@ struct phs_st {  	/* scalar placeholder EXPERIMENTAL	*/
 #define dbd_db_STORE_attrib	odbc_db_STORE_attrib
 #define dbd_db_FETCH_attrib	odbc_db_FETCH_attrib
 #define dbd_st_prepare		odbc_st_prepare
+#define dbd_st_prepare_sv       odbc_st_prepare_sv
 #define dbd_st_rows		odbc_st_rows
 #define dbd_st_execute		odbc_st_execute
 #define dbd_st_fetch		odbc_st_fetch
