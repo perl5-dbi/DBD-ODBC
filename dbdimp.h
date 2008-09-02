@@ -6,6 +6,7 @@
  * portions Copyright (c) 1994,1995,1996  Tim Bunce
  * portions Copyright (c) 1997-2001 Jeff Urlwin
  * portions Copyright (c) 2001 Dean Arnold
+ * portions Copyright (c) 2007-2008 Martin J. Evans
  *
  * You may distribute under the terms of either the GNU General Public
  * License or the Artistic License, as specified in the Perl README file.
@@ -39,7 +40,7 @@ struct imp_dbh_st {
     int  odbc_sqlmoreresults_supported; /* flag to see if SQLMoreResults is supported */
     int	 odbc_defer_binding; /* flag to work around SQLServer bug and defer binding until */
 			    /* last possible moment */
-  int  odbc_force_rebind; /* force rebinding the output columns after each execute to */
+    int  odbc_force_rebind; /* force rebinding the output columns after each execute to */
   /* resolve some issues where certain stored procs can return */
        /* multiple result sets */
     SQLINTEGER odbc_query_timeout;
@@ -50,6 +51,7 @@ struct imp_dbh_st {
     SQLUINTEGER odbc_async_type; /* flag to store the type of asynchronous
                                   * execution the driver supports */
     SV *odbc_err_handler; /* contains the error handler coderef */
+    SV *out_connect_string;
     int  RowCacheSize;			/* default row cache size in rows for statements */
 };
 
@@ -154,6 +156,7 @@ struct phs_st {  	/* scalar placeholder EXPERIMENTAL	*/
  * Not defined by DBI
  * #define dbd_db_do		odbc_db_do
  */
+#define dbd_db_login6_sv        odbc_db_login6_sv
 #define dbd_db_commit		odbc_db_commit
 #define dbd_db_rollback		odbc_db_rollback
 #define dbd_db_disconnect	odbc_db_disconnect

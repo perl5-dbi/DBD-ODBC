@@ -33,8 +33,9 @@ $DBD::ODBC::VERSION = '1.16_2';
 
     sub parse_trace_flag {
         my ($class, $name) = @_;
-        return 0x01000000 if $name eq 'odbcdev';
+        #return 0x02000000 if name eq 'this_is_spare_use_me';
         return 0x02000000 if $name eq 'odbcunicode';
+        return 0x04000000 if $name eq 'odbcconnection';
         return DBI::parse_trace_flag($class, $name);
     }
 
@@ -117,6 +118,7 @@ $DBD::ODBC::VERSION = '1.16_2';
                 odbc_cursortype => undef,
                 odbc_query_timeout => undef, # sth and dbh
                 odbc_has_unicode => undef,
+                odbc_out_connect_string => undef,
                 odbc_version => undef,
                 odbc_err_handler => undef,
                 odbc_putdata_start => undef # sth and dbh
@@ -571,7 +573,7 @@ This attribute requires DBI version 1.55 or better.
 
 Use this if you have special needs (such as Oracle triggers, etc)
 where :new or :name mean something special and are not just place
-holder names You I<must> then use ? for binding parameters.  Example:
+holder names. You I<must> then use ? for binding parameters.  Example:
 
  $dbh->{odbc_ignore_named_placeholders} = 1;
  $dbh->do("create trigger foo as if :new.x <> :old.x then ... etc");
@@ -647,12 +649,16 @@ the database and there is little reason for anyone to change it
 currently.
 
 The default for odbc_putdata_start is 32768 because this value was
-hard-coded in DBD::ODBC until 1.17.
+hard-coded in DBD::ODBC until 1.16_1.
 
 =head2 Private connection attributes
 
 =head3 odbc_err_handler
 
+B<NOTE:> There should be no reason to use this now as there is a DBI
+attribute of a similar name. In future versions this attribute will
+be deleted.
+ 
 Allow errors to be handled by the application.  A call-back function
 supplied by the application to handle or ignore messages.
 
@@ -685,27 +691,30 @@ since from other sources that this could/has caused SQL Server to
 "lock up".  Please use at your own risk!
 
 SQL_ROWSET_SIZE attribute patch from Andrew Brown
-> There are only 2 additional lines allowing for the setting of
-> SQL_ROWSET_SIZE as db handle option.
->
-> The purpose to my madness is simple. SqlServer (7 anyway) by default
-> supports only one select statement at once (using std ODBC cursors).
-> According to the SqlServer documentation you can alter the default setting
-> of
-> three values to force the use of server cursors - in which case multiple
-> selects are possible.
->
-> The code change allows for:
-> $dbh->{SQL_ROWSET_SIZE} = 2;    # Any value > 1
->
-> For this very purpose.
->
-> The setting of SQL_ROWSET_SIZE only affects the extended fetch command as
-> far as I can work out and thus setting this option shouldn't affect
-> DBD::ODBC operations directly in any way.
->
-> Andrew
->
+
+  > There are only 2 additional lines allowing for the setting of
+  > SQL_ROWSET_SIZE as db handle option.
+  >
+  > The purpose to my madness is simple. SqlServer (7 anyway) by default
+  > supports only one select statement at once (using std ODBC cursors).
+  > According to the SqlServer documentation you can alter the default
+  > setting of three values to force the use of server cursors - in
+  > which case multiple selects are possible.
+  >
+  > The code change allows for:
+  > $dbh->{SQL_ROWSET_SIZE} = 2;    # Any value > 1
+  >
+  > For this very purpose.
+  >
+  > The setting of SQL_ROWSET_SIZE only affects the extended fetch
+  > command as far as I can work out and thus setting this option
+  > shouldn't affect DBD::ODBC operations directly in any way.
+  >
+  > Andrew
+  >
+
+In versions of SQL Server 2008 and later see "Multiple Active
+Statements (MAS)" in the DBD::ODBC::FAQ instead of using this attribute.
 
 =head3 odbc_exec_direct
 
@@ -730,6 +739,11 @@ There are currently two ways to get this:
 and
 
     $dbh->{odbc_exec_direct} = 1;
+
+B<NOTE:> Even if you build DBD::ODBC with unicode support you can
+still not pass unicode strings to the prepare method if you also set
+odbc_exec_direct. This is a restriction in this attribute which is
+unavoidable.
 
 =head3 SQL_DRIVER_ODBC_VER
 
@@ -771,6 +785,11 @@ Building WITH_UNICODE affects columns and parameters which are
 SQL_C_WCHAR, SQL_WCHAR, SQL_WVARCHAR, and SQL_WLONGVARCHAR.
 
 When odbc_has_unicode is 1, DBD::ODBC will:
+
+=head3 odbc_out_connect_string
+
+After calling the connect method this will be the ODBC driver's
+out connection string - see documentation on SQLDriverConnect.
 
 =over
 
@@ -1032,24 +1051,29 @@ of DBI 1.604, the only trace flag defined which is relevant to
 DBD::ODBC is 'SQL' which DBD::ODBC supports by outputting the SQL
 strings (after modification) passed to the prepare and do methods.
 
-Currently DBD::ODBC supports twoprivate trace flags.  The 'odbcdev'
-trace flag is used to output development tracing so it should not be
-relevant in normal use. The 'odbcunicode' flags traces some unicode
-operations.
+Currently DBD::ODBC supports two private trace flags. The
+'odbcunicode' flag traces some unicode operations and the
+odbcconnection traces the connect process.
 
 To enable tracing of particular flags you use:
 
-  $h->trace($h->parse_trace_flags('SQL|odbcdev'));
-  $h->trace($h->parse_trace_flags('1|odbcdev'));
+  $h->trace($h->parse_trace_flags('SQL|odbcconnection'));
+  $h->trace($h->parse_trace_flags('1|odbcunicode'));
 
-In the first case 'SQL' and 'odbcdev' tracing is enabled on $h. In the
-second case trace level 1 is set and 'odbcdev' tracing is enabled.
+In the first case 'SQL' and 'odbcconnection' tracing is enabled on
+$h. In the second case trace level 1 is set and 'odbcunicode' tracing
+is enabled.
 
 If you want to enable a DBD::ODBC private trace flag before connecting
 you need to do something like:
 
   use DBD::ODBC;
-  DBI->trace(DBD::ODBC->parse_trace_flag('odbcdev');
+  DBI->trace(DBD::ODBC->parse_trace_flag('odbcconnection'));
+
+or
+
+  use DBD::ODBC;
+  DBI->trace(DBD::ODBC->parse_trace_flags('odbcconnection|odbcunicode'));
 
 DBD::ODBC outputs tracing at levels 3 and above (as levels 1 and 2 are
 reserved for DBI).

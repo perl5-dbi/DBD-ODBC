@@ -60,6 +60,9 @@ unless($dbh) {
 my $dbversion = $dbh->get_info(18); # SQL_DBMS_VER
 my $m_dbversion = $dbversion;
 $m_dbversion =~ s/^(\d+).*/$1/;
+#my $drvversion = $dbh->get_info(7); # SQL_DRIVER_VER
+#my $m_drvversion = $drvversion;
+#$m_drvversion =~ s/^(\d+).*/$1/;
 
 my $dbname = $dbh->get_info(17); # DBI::SQL_DBMS_NAME
 SKIP: {
@@ -449,7 +452,7 @@ AS
       # normally something like [SQL Server Native Client 10.0][SQL Server]
       $msg =~ s/^(\[[\w\s:\.]*\])+//;
       $lastmsg = $msg;
-      diag "===> state: $state msg: $msg nativeerr: $nativeerr\n";
+      #diag "===> state: $state msg: $msg nativeerr: $nativeerr\n";
       $testpass++;
       return 0;
    }
@@ -513,6 +516,7 @@ AS
        } else {
            diag("DSN=$dsn\n");
            fail($tst);
+           diag("\nNOTE: If you failed this test is may just be because your SQL Server driver\nis too old to handle the MARS_Connection attribute. This test cannot\neasily skip this test for old drivers as there is no definite SQL Server\ndriver version it can check.\n\n");
        }
        $dbh->disconnect; # throw away mars connection
        $dbh = DBI->connect;

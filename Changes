@@ -32,7 +32,7 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
 
 =head1 CHANGES
 
-=head2 Changes in DBD::ODBC 1.16_2 September 1, 2008
+=head2 Changes in DBD::ODBC 1.16_2 September 2, 2008
 
 Removed szDummyBuffer field from imp_fbh_st and code in dbd_describe
 which clears it. It was never used so this was a waste of time.
@@ -74,11 +74,14 @@ the odbc_exec_direct attribute.
 
 =item connection strings
 
-Unicode connection strings are hopefully coming soon but they need a
-DBI change. B<note> that even though unicode connection strings are
+True unicode connection string support will require a new version
+of DBI (post 1.607).
+
+B<note> that even though unicode connection strings are
 not supported currently DBD::ODBC has had to be changed to call
 SQLDriverConnectW/SQLConnectW to indicate to the driver manager it's
-intentions to use some of the ODBC wide APIs.
+intention to use some of the ODBC wide APIs. This only affects DBD::ODBC
+when built for unicode.
 
 =item odbcunicode trace flag
 
