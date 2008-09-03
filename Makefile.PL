@@ -237,6 +237,18 @@ EOT
     die "ODBCHOME environment variable ($odbchome) does not refer to a directory.\n"
 	unless -d $odbchome;
     warn "Using ODBC in $odbchome\n";
+
+    if (defined($opt_u) && $opt_u) {
+        if (-e "$odbchome/include/sql.h") {
+            open IN, "$odbchome/include/sql.h";
+            my @lines = <IN>;
+            my @found = grep(/iODBC driver manager/i, @lines);
+            if (scalar(@found)) {
+                die "\n\nDBD::ODBC does not support unicode on darwin with iODBC and this looks like iODBC. The iODBC driver manager expects wide characters to be 4 bytes long and DBD::ODBC wants wide characters to be UTF16.\nEither\no) Rerun without the -u switch\no) complain to the producer of your ODBC driver manager\no) get another ODBC driver manager (like unixODBC).\n\n";
+            }
+        }
+    }
+
     $opts{INC}  = "-I.";
 
     # cygwin patch
