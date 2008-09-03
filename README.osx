@@ -7,3 +7,5 @@ install_driver(ODBC) failed: Can't load '/Library/Perl/5.8.8/darwin-thread-multi
 
 A possible workaround for this is to add "-framework CoreFoundation"
 to the Makefile for the LDLOADLIBS and EXTRALIBS symbols.
+
+Since DBD::ODBC post 1.16, this has been automated.
