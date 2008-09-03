@@ -16,6 +16,7 @@ my $WAIT=0;
 my @data;
 
 my $tests;
+my $data_tests;
 BEGIN {
 	if ($] < 5.008001) {
 		plan skip_all => "Old Perl lacking unicode support";
@@ -37,7 +38,8 @@ BEGIN {
 	my @plaindata=grep { !utf8::is_utf8($_) } @data;
 	@plaindata or die "OOPS";
 
-	$tests=2+6*@data+6*@plaindata;
+	$data_tests = 6*@data+6*@plaindata;
+	$tests=2+$data_tests;
 
 	eval "require Test::NoWarnings";
 	if (!$@) {
@@ -56,12 +58,12 @@ my $dbh=DBI->connect();
 ok(defined($dbh),"DBI connect");
 
 SKIP: {
-    if (!$dbh->{odbc_has_unicode}) {
-        skip "Unicode-specific tests disabled - not a unicode build", $tests-2;
-    }
+    skip "Unicode-specific tests disabled - not a unicode build",
+        $data_tests + 1 if (!$dbh->{odbc_has_unicode});
 
     if (DBI::neat($dbh->get_info(6)) =~ 'SQORA32') {
-        skip "Oracle ODBC driver does not work with these tests", $tests-2;
+        skip "Oracle ODBC driver does not work with these tests",
+            $data_tests + 1;
     }
 
 my $dbname=$dbh->get_info(17); # DBI::SQL_DBMS_NAME

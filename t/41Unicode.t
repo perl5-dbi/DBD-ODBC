@@ -15,7 +15,8 @@ $|=1;
 my $WAIT=0;
 my @data;
 my $tests;
-# to help ActiveState's build process along by behaving (somewhat) if a dsn is not provided
+my $data_tests;
+my $other_tests;
 BEGIN {
 	if ($] < 5.008001) {
 		plan skip_all => "Old Perl lacking unicode support";
@@ -33,7 +34,9 @@ BEGIN {
 	utf8::is_utf8($data[2]) and die "Perl set UTF8 flag on non-unicode string constant";
 	utf8::is_utf8($data[3]) or die "Perl did not set UTF8 flag on unicode string constant";
 	
-	$tests=7+12*@data;
+	$data_tests=12*@data;
+        $other_tests = 7;
+        $tests = $other_tests + $data_tests;
 	eval "require Test::NoWarnings";
 	if (!$@) {
 	    $has_test_nowarnings = 1;
@@ -52,7 +55,8 @@ ok(defined($dbh),"DBI connect");
 
 SKIP: {
     if (!$dbh->{odbc_has_unicode}) {
-        skip "Unicode-specific tests disabled - not a unicode build",$tests-2;
+        skip "Unicode-specific tests disabled - not a unicode build",
+		$data_tests + $other_tests - 1;
     }
 
 
@@ -68,7 +72,8 @@ SKIP: {
 	} elsif ($dbname=~/ACCESS/i) {
 		($NVARCHAR)=('MEMO');
 	} else {
-		skip "Tests not supported using $dbname",$tests-1;
+		skip "Tests not supported using $dbname",
+			$data_tests + $other_tests - 1;
 	}
 
 	$dbh->{RaiseError} = 1;
