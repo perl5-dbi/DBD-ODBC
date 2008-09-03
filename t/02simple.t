@@ -57,16 +57,21 @@ unless($dbh) {
 # connection handles and statement handles should return a hash ref of
 # private attributes
 #
-{
+SKIP: {
+    skip "DBI too old for private_attribute_info", 3
+	if ($DBI::VERSION < 1.54);
     my $pai = $dbh->private_attribute_info();
     #diag Data::Dumper->Dump([$pai], [qw(dbc_private_attribute_info)]);
     ok(defined($pai), 'dbc private_attribute_info result');
     ok(ref($pai) eq 'HASH', 'dbc private_attribute_info is hashref');
     ok(scalar(keys %{$pai}) >= 1,
        'dbc private_attribute_info has some attributes');
-}
+};
 
-{
+SKIP: {
+    skip "DBI too old for private_attribute_info", 3
+	if ($DBI::VERSION < 1.54);
+	
     my $sql;
     my $drv = $dbh->get_info(17);
     if ($drv =~ /Oracle/i) {
@@ -81,7 +86,7 @@ unless($dbh) {
     ok(ref($pai) eq 'HASH', 'stmt private_attribute_info is hashref');
     ok(scalar(keys %{$pai}) >= 1, 'stmt private_attribute_info has some attributes');
     $sth->finish;
-}
+};
 
 #
 # Test changing of AutoCommit - start be setting away from the default
