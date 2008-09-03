@@ -188,7 +188,7 @@ UTF16 * WValloc(char * s)
         UTF16 *target_start, *target_end;
 
         slen = strlen(s);
-        /*fprintf(stderr, "utf8 string \\%s\\ is %ld bytes long\n", s, strlen(s));*/
+        /*printf("utf8 string \\%s\\ is %ld bytes long\n", s, strlen(s));*/
 
         source_start = s;
         source_end = s + slen + 1;              /* include NUL terminator */
