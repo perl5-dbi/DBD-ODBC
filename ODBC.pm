@@ -1234,6 +1234,8 @@ You can find DBD::ODBC on ohloh now at:
 
 L<http://www.ohloh.net/projects/perl_dbd_odbc>
 
+If you use ohloh and DBD::ODBC please say you use it and rate it.
+
 There is a good search engine for the various Perl DBI lists at the
 following URLS:
 
