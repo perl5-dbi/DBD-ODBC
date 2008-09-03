@@ -37,6 +37,18 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
 Changed Makefile.PL to add "-framework CoreFoundation" to linker line on
 OSX/darwin.
 
+Disallow building with iODBC if it is a unicode build.
+
+More tracing for odbcconnect flag
+
+Fix bug in out connection string handling that attempted to use an out
+connection string when SQLDriverConnect[W] fails.
+
+Fixed yet more test count problems due to Test::NoWarnings not being
+installed.
+
+Skip private_attribute_info tests if DBI < 1.54
+
 =head2 Changes in DBD::ODBC 1.16_2 September 2, 2008
 
 Removed szDummyBuffer field from imp_fbh_st and code in dbd_describe

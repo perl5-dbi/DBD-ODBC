@@ -30,11 +30,16 @@
 # include "unicode_helper.h"
 #endif
 
+#if defined(WITH_UNICODE) && (defined(_IODBCUNIX_H) || defined(_IODBCEXT_H))
+#error DBD::ODBC will not run properly with iODBC in unicode mode as iODBC defines wide characters as being 4 bytes in size
+#endif
+
 /* Can't find a constant in DBI for SQL tracing but it is 256 */
 #define SQL_TRACE_FLAG 0x100
 #define TRACE0(a,b) PerlIO_printf(DBIc_LOGPIO(a), (b))
 #define TRACE1(a,b,c) PerlIO_printf(DBIc_LOGPIO(a), (b), (c))
-#define TRACE2(a,b,c, d) PerlIO_printf(DBIc_LOGPIO(a), (b), (c), (d))
+#define TRACE2(a,b,c,d) PerlIO_printf(DBIc_LOGPIO(a), (b), (c), (d))
+#define TRACE3(a,b,c,d,e) PerlIO_printf(DBIc_LOGPIO(a), (b), (c), (d), (e))
 
 static int post_connect(SV *dbh, imp_dbh_t *imp_dbh, SV *attr);
 static int set_odbc_version(SV *dbh, imp_dbh_t *imp_dbh, SV* attr);
@@ -551,8 +556,11 @@ int dbd_db_login6_sv(
    WCHAR dc_constr[512];
    STRLEN dc_constr_len;
 
-   if (DBIc_TRACE(imp_dbh, 0x04000000, 0, 0))
-       TRACE0(imp_dbh, "Unicode login6\n");
+   if (DBIc_TRACE(imp_dbh, 0x04000000, 0, 0)) {
+       TRACE0(imp_dbh, "Unicode login6 \n");
+       TRACE3(imp_dbh, "dbname=%s, uid=%s, pwd=xxxxx\n",
+              SvPV_nolen(dbname), SvPV_nolen(uid));
+   }
 
    imp_dbh->out_connect_string = NULL;
 
@@ -587,6 +595,8 @@ int dbd_db_login6_sv(
        !dsnHasUIDorPWD(SvPV_nolen(dbname))) {
        sv_catpvf(dbname, ";UID=%s;PWD=%s;",
                  SvPV_nolen(uid), SvPV_nolen(pwd));
+       if (DBIc_TRACE(imp_dbh, 0x04000000, 0, 0))
+           TRACE1(imp_dbh, "Now using dbname = %s\n", SvPV_nolen(dbname));
    }
 
    if (DBIc_TRACE(imp_dbh, 0x04000000, 0, 0))
@@ -627,10 +637,12 @@ int dbd_db_login6_sv(
                               wout_str, sizeof(wout_str) / sizeof(wout_str[0]),
                               &wout_str_len,
                               SQL_DRIVER_NOPROMPT);
-       imp_dbh->out_connect_string = sv_newwvn(wout_str, wout_str_len);
-       if (DBIc_TRACE(imp_dbh, 0x04000000, 0, 0))
-           TRACE1(imp_dbh, "Out connection string: %s\n",
-                  SvPV_nolen(imp_dbh->out_connect_string));
+       if (SQL_SUCCEEDED(rc)) {
+           imp_dbh->out_connect_string = sv_newwvn(wout_str, wout_str_len);
+           if (DBIc_TRACE(imp_dbh, 0x04000000, 0, 0))
+               TRACE1(imp_dbh, "Out connection string: %s\n",
+                      SvPV_nolen(imp_dbh->out_connect_string));
+       }
    }
 
    if (!SQL_SUCCEEDED(rc)) {
@@ -829,10 +841,12 @@ int dbd_db_login6(
                               wout_str, sizeof(wout_str) / sizeof(wout_str[0]),
                               &wout_str_len,
                               SQL_DRIVER_NOPROMPT);
-       imp_dbh->out_connect_string = sv_newwvn(wout_str, wout_str_len);
-       if (DBIc_TRACE(imp_dbh, 0x04000000, 0, 0))
-           TRACE1(imp_dbh, "Out connection string: %s\n",
-                  SvPV_nolen(imp_dbh->out_connect_string));
+       if (SQL_SUCCEEDED(rc)) {
+           imp_dbh->out_connect_string = sv_newwvn(wout_str, wout_str_len);
+           if (DBIc_TRACE(imp_dbh, 0x04000000, 0, 0))
+               TRACE1(imp_dbh, "Out connection string: %s\n",
+                      SvPV_nolen(imp_dbh->out_connect_string));
+       }
    }
 
 # else  /* WITH_UNICODE */
