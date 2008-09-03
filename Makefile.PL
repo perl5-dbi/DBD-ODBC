@@ -250,7 +250,6 @@ EOT
     my $libs   = "odbc";
     $opts{LIBS} = " -L$lib_d1 -R$lib_d1 -L$lib_d2 -R$lib_d2 -l$libs";
 
-
     my $myodbc ='';
     my $myodbc_version = -1;
     $myodbc = 'Microsoft ODBC'
@@ -549,6 +548,11 @@ print SQLH qq{\n};
 close(SQLH);
 
 print "\n";
+
+if ($^O eq 'darwin') {
+    $opts{LD} = $Config{ld} . ' -framework CoreFoundation';
+}
+
 
 my $rv = WriteMakefile(%opts);
 

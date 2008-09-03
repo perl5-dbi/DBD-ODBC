@@ -32,6 +32,11 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
 
 =head1 CHANGES
 
+=head2 Changes in DBD::ODBC 1.16_3 September 3, 2008
+
+Changed Makefile.PL to add "-framework CoreFoundation" to linker line on
+OSX/darwin.
+
 =head2 Changes in DBD::ODBC 1.16_2 September 2, 2008
 
 Removed szDummyBuffer field from imp_fbh_st and code in dbd_describe
