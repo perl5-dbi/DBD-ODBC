@@ -98,6 +98,24 @@ setting utf8 flag.
 
 Fix problems in the test when Test::NoWarnings is not installed.
 
+Removed some unused variables that were leading to compiler warnings.
+
+Changed a lot of tracing to use new odbcconnection flag
+
+Changed to use dbd_db_login6_sv if DBI supports it.
+
+Commented out a diag in 20SqlServer.t that was leading to confusion.
+
+Added diag to 20SqlServer.t in mars test to explain why it may fail.
+
+Various pod changes for clarification and to note odbc_err_handler is
+deprecated.
+
+Removed odbcdev trace flag - it was not really used.
+
+New odbc_out_connect_string attribute for connections which returns
+the ODBC driver out connection string.
+
 =head2 Changes in DBD::ODBC 1.16_1 August 28, 2008
 
 Fixed bug in odbc_cancel which was checking the ACTIVE flag was on
