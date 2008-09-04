@@ -183,7 +183,8 @@ else {
             # unixODBC - would have liked to use odbc_config but it did not
             # exist until 2.2.11 and it was broken wrt --cflags in 2.2.11/2.2.12
             # i.e. --cflags did not include -I/xxx/yyy
-            if (`odbc_config --version 2>&1` =~ /^(\d\.)+/) {
+            my $odbc_config_v = `odbc_config --version 2>&1`;
+            if ($odbc_config_v && ($odbc_config_v =~ /^(\d\.)+/)) {
                 $odbchome = `odbc_config --prefix 2>&1`;
                 chomp $odbchome;
                 if ((-e $odbchome) && (-e "$odbchome/include") &&
