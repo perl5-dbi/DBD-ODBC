@@ -39,7 +39,6 @@
 #define TRACE0(a,b) PerlIO_printf(DBIc_LOGPIO(a), (b))
 #define TRACE1(a,b,c) PerlIO_printf(DBIc_LOGPIO(a), (b), (c))
 #define TRACE2(a,b,c,d) PerlIO_printf(DBIc_LOGPIO(a), (b), (c), (d))
-#define TRACE3(a,b,c,d,e) PerlIO_printf(DBIc_LOGPIO(a), (b), (c), (d), (e))
 
 static int post_connect(SV *dbh, imp_dbh_t *imp_dbh, SV *attr);
 static int set_odbc_version(SV *dbh, imp_dbh_t *imp_dbh, SV* attr);
@@ -404,7 +403,7 @@ int dbd_db_execdirect( SV *dbh,
 
 #ifdef WITH_UNICODE
    if (SvOK(statement) && DO_UTF8(statement)) {
-       WCHAR *wsql;
+       SQLWCHAR *wsql;
        STRLEN wsql_len;
        SV *sql_copy;
 
@@ -415,9 +414,9 @@ int dbd_db_execdirect( SV *dbh,
 
        SV_toWCHAR(sql_copy);
 
-       wsql = (WCHAR *)SvPV(sql_copy, wsql_len);
+       wsql = (SQLWCHAR *)SvPV(sql_copy, wsql_len);
 
-       ret = SQLExecDirectW(stmt, wsql, wsql_len / sizeof(WCHAR));
+       ret = SQLExecDirectW(stmt, wsql, wsql_len / sizeof(SQLWCHAR));
    } else {
        if (DBIc_TRACE(imp_dbh, 0x02000000, 0, 0))
            TRACE0(imp_dbh, "Processing utf8 sql in non-unicode mode\n");
@@ -553,12 +552,12 @@ int dbd_db_login6_sv(
    dTHR;
    RETCODE rc;
    SV *wconstr;
-   WCHAR dc_constr[512];
+   SQLWCHAR dc_constr[512];
    STRLEN dc_constr_len;
 
    if (DBIc_TRACE(imp_dbh, 0x04000000, 0, 0)) {
        TRACE0(imp_dbh, "Unicode login6 \n");
-       TRACE3(imp_dbh, "dbname=%s, uid=%s, pwd=xxxxx\n",
+       TRACE2(imp_dbh, "dbname=%s, uid=%s, pwd=xxxxx\n",
               SvPV_nolen(dbname), SvPV_nolen(uid));
    }
 
@@ -627,13 +626,13 @@ int dbd_db_login6_sv(
    }
 
    {
-       WCHAR wout_str[512];
+       SQLWCHAR wout_str[512];
        SQLSMALLINT wout_str_len;
 
        rc = SQLDriverConnectW(imp_dbh->hdbc,
                               0, /* no hwnd */
                               dc_constr,
-                              (SQLSMALLINT)(dc_constr_len / sizeof(WCHAR)),
+                              (SQLSMALLINT)(dc_constr_len / sizeof(SQLWCHAR)),
                               wout_str, sizeof(wout_str) / sizeof(wout_str[0]),
                               &wout_str_len,
                               SQL_DRIVER_NOPROMPT);
@@ -707,12 +706,12 @@ int dbd_db_login6_sv(
        SV_toWCHAR(wpwd);
 
        rc = SQLConnectW(imp_dbh->hdbc,
-                        (WCHAR *)SvPV_nolen(wconstr),
-                        (SQLSMALLINT)(SvCUR(wconstr) / sizeof(WCHAR)),
-                        (WCHAR *)SvPV_nolen(wuid),
-                        (SQLSMALLINT)(SvCUR(wuid) / sizeof(WCHAR)),
-                        (WCHAR *)SvPV_nolen(wpwd),
-                        (SQLSMALLINT)(SvCUR(wpwd) / sizeof(WCHAR)));
+                        (SQLWCHAR *)SvPV_nolen(wconstr),
+                        (SQLSMALLINT)(SvCUR(wconstr) / sizeof(SQLWCHAR)),
+                        (SQLWCHAR *)SvPV_nolen(wuid),
+                        (SQLSMALLINT)(SvCUR(wuid) / sizeof(SQLWCHAR)),
+                        (SQLWCHAR *)SvPV_nolen(wpwd),
+                        (SQLSMALLINT)(SvCUR(wpwd) / sizeof(SQLWCHAR)));
    }
    if (!SQL_SUCCEEDED(rc)) {
       dbd_error(dbh, rc, "db_login/SQLConnect");
@@ -773,7 +772,7 @@ int dbd_db_login6(
    RETCODE rc;
    char dbname_local[512];
 #ifdef WITH_UNICODE
-   WCHAR wconstr[512];
+   SQLWCHAR wconstr[512];
    STRLEN wconstr_len;
    unsigned int i;
 #endif
@@ -832,7 +831,7 @@ int dbd_db_login6(
    wconstr_len = i;
 
    {
-       WCHAR wout_str[512];
+       SQLWCHAR wout_str[512];
        SQLSMALLINT wout_str_len;
 
        rc = SQLDriverConnectW(imp_dbh->hdbc,
@@ -916,7 +915,7 @@ int dbd_db_login6(
           TRACE2(imp_dbh, "    SQLConnect '%s', '%s'\n", dbname, uid);
 #ifdef WITH_UNICODE
       {
-          WCHAR wuid[100], wpwd[100];
+          SQLWCHAR wuid[100], wpwd[100];
           for (i = 0; i < strlen(uid); i++) {
               wuid[i] = uid[i];
           }
@@ -1739,7 +1738,7 @@ int odbc_st_prepare_sv(
        }
 #ifdef WITH_UNICODE
        if (SvOK(statement) && DO_UTF8(statement)) {
-           WCHAR *wsql;
+           SQLWCHAR *wsql;
            STRLEN wsql_len;
            SV *sql_copy;
 
@@ -1755,10 +1754,10 @@ int odbc_st_prepare_sv(
 #endif
            SV_toWCHAR(sql_copy);
 
-           wsql = (WCHAR *)SvPV(sql_copy, wsql_len);
+           wsql = (SQLWCHAR *)SvPV(sql_copy, wsql_len);
 
            rc = SQLPrepareW(imp_sth->hstmt,
-                            wsql, wsql_len / sizeof(WCHAR));
+                            wsql, wsql_len / sizeof(SQLWCHAR));
        } else {
            if (DBIc_TRACE(imp_dbh, 0x02000000, 0, 0))
                TRACE0(imp_dbh, "Processing non-utf8 sql in unicode mode\n");
@@ -2018,7 +2017,7 @@ int more;
 #ifdef WITH_UNICODE
         rc = SQLDescribeColW(imp_sth->hstmt,
                             (SQLSMALLINT)(i+1),
-                             (WCHAR *) cur_col_name,
+                             (SQLWCHAR *) cur_col_name,
                             (SQLSMALLINT)imp_dbh->max_column_name_len,
                             &fbh->ColNameLen,
                             &fbh->ColSqlType,
@@ -2032,7 +2031,7 @@ int more;
 
             int i;
 
-            WCHAR *wp = (WCHAR *)cur_col_name;
+            SQLWCHAR *wp = (SQLWCHAR *)cur_col_name;
 
             printf("SQLDescribeCol = ");
 
@@ -2060,7 +2059,7 @@ int more;
         }
         fbh->ColName = cur_col_name;
 #ifdef WITH_UNICODE
-        cur_col_name += fbh->ColNameLen * sizeof(WCHAR);
+        cur_col_name += fbh->ColNameLen * sizeof(SQLWCHAR);
 #else
         cur_col_name += fbh->ColNameLen + 1;
         cur_col_name[fbh->ColNameLen] = '\0';
@@ -2140,8 +2139,8 @@ int more;
           case SQL_WVARCHAR:
             fbh->ftype = SQL_C_WCHAR;
             /* MS SQL returns bytes, Oracle returns characters ... */
-            fbh->ColDisplaySize*=sizeof(WCHAR);
-            fbh->ColLength*=sizeof(WCHAR);
+            fbh->ColDisplaySize*=sizeof(SQLWCHAR);
+            fbh->ColLength*=sizeof(SQLWCHAR);
             break;
 #endif /* WITH_UNICODE */
           case SQL_LONGVARBINARY:
@@ -2153,7 +2152,7 @@ int more;
 # if defined(WITH_UNICODE)
             fbh->ftype = SQL_C_WCHAR;
             /* MS SQL returns bytes, Oracle returns characters ... */
-            fbh->ColLength*=sizeof(WCHAR);
+            fbh->ColLength*=sizeof(SQLWCHAR);
             fbh->ColDisplaySize = DBIc_LongReadLen(imp_sth)+1;
             break;
 # endif	/* WITH_UNICODE */
@@ -2740,12 +2739,12 @@ imp_sth_t *imp_sth;
          case SQL_C_WCHAR:
 	   if (ChopBlanks && fbh->ColSqlType == SQL_WCHAR && fbh->datalen > 0)
 	   {
-	     WCHAR *p = (WCHAR*)fbh->data;
+	     SQLWCHAR *p = (SQLWCHAR*)fbh->data;
 	     while(fbh->datalen && p[fbh->datalen-1]==L' ') {
 	       --fbh->datalen;
 	     }
            }
-	   sv_setwvn(sv,(WCHAR*)fbh->data,fbh->datalen/sizeof(WCHAR));
+	   sv_setwvn(sv,(SQLWCHAR*)fbh->data,fbh->datalen/sizeof(SQLWCHAR));
 	   break;
 #endif /* WITH_UNICODE */
 	 default:
@@ -3008,7 +3007,7 @@ static int _dbd_rebind_ph(
       /* ensure room for result, 28 is magic number (see sv_2pv)      */
 #if defined(WITH_UNICODE)
       SvGROW(phs->sv,
-             (phs->maxlen+sizeof(WCHAR) < 28) ? 28 : phs->maxlen+sizeof(WCHAR));
+             (phs->maxlen+sizeof(SQLWCHAR) < 28) ? 28 : phs->maxlen+sizeof(SQLWCHAR));
 #else
       SvGROW(phs->sv, (phs->maxlen < 28) ? 28 : phs->maxlen+1);
 #endif /* WITH_UNICODE */
@@ -3063,7 +3062,7 @@ static int _dbd_rebind_ph(
 
    /* value_len has current value length now */
    phs->sv_type = SvTYPE(phs->sv);        /* part of mutation check */
-   phs->maxlen  = SvLEN(phs->sv)-sizeof(WCHAR); /* avail buffer space */
+   phs->maxlen  = SvLEN(phs->sv)-sizeof(SQLWCHAR); /* avail buffer space */
 
 #else  /* !WITH_UNICODE */
    /* value_len has current value length now */
@@ -3247,7 +3246,7 @@ static int _dbd_rebind_ph(
 #if defined(WITH_UNICODE)
       if (value_type==SQL_C_WCHAR) {
           char * c1;
-          c1 = PVallocW((WCHAR *)value_ptr);
+          c1 = PVallocW((SQLWCHAR *)value_ptr);
           TRACE1(imp_dbh, " Param value = L'%s'\n", c1);
           PVfreeW(c1);
       }
@@ -4096,7 +4095,7 @@ SV *dbd_st_FETCH_attrib(SV *sth, imp_sth_t *imp_sth, SV *keysv)
              }
 #ifdef WITH_UNICODE
              av_store(av, i,
-                      sv_newwvn((WCHAR *)imp_sth->fbh[i].ColName,
+                      sv_newwvn((SQLWCHAR *)imp_sth->fbh[i].ColName,
                                 imp_sth->fbh[i].ColNameLen));
 #else
              av_store(av, i, newSVpv(imp_sth->fbh[i].ColName, 0));
