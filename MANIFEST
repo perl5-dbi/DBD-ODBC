@@ -91,5 +91,6 @@ t/ODBCTEST.pm
 t/UChelp.pm
 t/pod.t
 t/pod-coverage.t
+t/rt_38977.t
 unicode_helper.c
 unicode_helper.h
