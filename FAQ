@@ -197,8 +197,7 @@ There are basically two choices:
 * using mdbtools although as of writing it has not been updated since
 June 2004, only provides read access and seems to be a little buggy.
 
-=head2 Almost all of my tests for DBD::ODBC fail. They complain about
-not being able to connect or the DSN is not found.
+=head2 Almost all of my tests for DBD::ODBC fail. They complain about not being able to connect or the DSN is not found.
 
 Please, please test your configuration of ODBC and driver before
 trying to test DBD::ODBC. Most of the time, this stems from the fact
@@ -339,6 +338,80 @@ from Control Panel, Administrative Tools, Data Sources is the 64bit
 one and data sources created here will not be visible or useable from
 32bit applications. The ODBC administrator you need to use for 32bit
 applications can be found at X:\windows\syswow64\odbcad32.exe.
+
+=head2 How do I use DBD::ODBC with web servers under Win32.
+
+=over 4
+
+=item General Commentary re web database access
+
+This should be a DBI faq, actually, but this has somewhat of an
+Win32/ODBC twist to it.
+
+Typically, the Web server is installed as an NT service or a Windows
+95/98 service.  This typically means that the web server itself does
+not have the same environment and permissions the web developer does.
+This situation, of course, can and does apply to Unix web servers.
+Under Win32, however, the problems are usually slightly different.
+
+=item Defining your DSN -- which type should I use?
+
+Under Win32 take care to define your DSN as a system DSN, not as a user
+DSN.  The system DSN is a "global" one, while the user is local to a
+user.  Typically, as stated above, the web server is "logged in" as a
+different user than the web developer.  This helps cause the situation
+where someone asks why a script succeeds from the command line, but
+fails when called from the web server.
+
+=item Defining your DSN -- careful selection of the file itself is important!
+
+For file based drivers, rather than client server drivers, the file
+path is VERY important.  There are a few things to keep in mind.  This
+applies to, for example, MS Access databases.
+
+1) If the file is on an NTFS partition, check to make sure that the Web
+B<service> user has permissions to access that file.
+
+2) If the file is on a remote computer, check to make sure the Web
+B<service> user has permissions to access the file.
+
+3) If the file is on a remote computer, try using a UNC path the file,
+rather than a X:\ notation.  This can be VERY important as services
+don't quite get the same access permissions to the mapped drive letters
+B<and>, more importantly, the drive letters themselves are GLOBAL to
+the machine.  That means that if the service tries to access Z:, the Z:
+it gets can depend upon the user who is logged into the machine at the
+time.  (I've tested this while I was developing a service -- it's ugly
+and worth avoiding at all costs).
+
+Unfortunately, the Access ODBC driver that I have does not allow one to
+specify the UNC path, only the X:\ notation.  There is at least one way
+around that.  The simplest is probably to use Regedit and go to
+(assuming it's a system DSN, of course)
+HKEY_LOCAL_USERS\SOFTWARE\ODBC\"YOUR DSN" You will see a few settings
+which are typically driver specific.  The important value to change for
+the Access driver, for example, is the DBQ value.  That's actually the
+file name of the Access database.
+
+=back
+
+=head2 How do I connect without DSN
+
+The ability to connect without a full DSN was introduced in version 0.21.
+
+Example (using MS Access):
+
+  my $DSN = 'driver=Microsoft Access Driver(*.mdb);dbq=\\\\cheese\\g$\\perltest.mdb';
+  my $dbh = DBI->connect("dbi:ODBC:$DSN", '','') or die "$DBI::errstr\n";
+
+The above sample uses Microsoft's UNC naming convention to point to
+the MSAccess file (\\cheese\g$\perltest.mdb).  The dbq parameter tells
+the access driver which file to use for the database.
+
+Example (using MSSQL Server):
+
+  my $DSN = 'driver={SQL Server};Server=server_name;database=database_name;uid=user;pwd=password;';
+  my $dbh = DBI->connect("dbi:ODBC:$DSN") or die "$DBI::errstr\n";
 
 =head1 AUTHOR
 
