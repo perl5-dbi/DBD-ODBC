@@ -3,6 +3,7 @@
 # Copyright (c) 1994,1995,1996,1998  Tim Bunce
 # portions Copyright (c) 1997-2004  Jeff Urlwin
 # portions Copyright (c) 1997  Thomas K. Wenrich
+# portions Copyright (c) 2007-2008 Martin J. Evans
 #
 # You may distribute under the terms of either the GNU General Public
 # License or the Artistic License, as specified in the Perl README file.
@@ -658,7 +659,7 @@ hard-coded in DBD::ODBC until 1.16_1.
 B<NOTE:> There should be no reason to use this now as there is a DBI
 attribute of a similar name. In future versions this attribute will
 be deleted.
- 
+
 Allow errors to be handled by the application.  A call-back function
 supplied by the application to handle or ignore messages.
 
@@ -1093,7 +1094,7 @@ an error like:
 
 =head3 Using the same placeholder more than once
 
-DBD::ODBC does not support (currently) the use of one placeholder
+DBD::ODBC does not support (currently) the use of one named placeholder
 more than once in the a single SQL string. i.e.,
 
   insert into foo values (:bar, :p1, :p2, :bar);
@@ -1125,6 +1126,234 @@ In discussion on the dbi-dev list is was suggested that the ':' could
 be made optional and there were no basic objections but it has not
 made it's way into the pod yet.
 
+=head2 Unicode
+
+The ODBC specification supports wide character versions (a postfix of
+'W') of some of the normal ODBC APIs e.g., SQLDriverConnectW is a wide
+character version of SQLDriverConnect.
+
+In ODBC on Windows the wide characters are defined as SQLWCHARs (2
+bytes) and are UCS-2. On non-Windows, the main driver managers I know
+of have implemented the wide character APIs differently:
+
+=over
+
+=item unixODBC
+
+unixODBC mimics the Windows ODBC API precisely meaning the wide
+character versions expect and return 2-byte characters in
+UCS-2.
+
+unixODBC will happily recognise ODBC drivers which only have the ANSI
+versions of the ODBC API and those that have the wide versions
+too.
+
+unixODBC will allow an ANSI application to work with a unicode
+ODBC driver and vice versa (although in the latter case you obviously
+cannot actually use unicode).
+
+unixODBC does not prevent you sending UTF-8 in the ANSI versions of
+the ODBC APIs but whether that is understood by your ODBC driver is
+another matter.
+
+unixODBC differs in only one way from the Microsoft ODBC driver in
+terms of unicode support in that it avoids unnecessary translations
+between single byte and double byte characters when an ANSI
+application is using a unicode-aware ODBC driver by requiring unicode
+applications to signal their intent by calling SQLDriverConnectW
+first. On Windows, the ODBC driver manager always uses the wide
+versions of the ODBC API in ODBC drivers which provide the wide
+versions regardless of what the application really needs and this
+results in a lot of unnecessary character translations when you have
+an ANSI application and a unicode ODBC driver.
+
+=item iODBC
+
+The wide character versions expect and return wchar_t types.
+
+=back
+
+DBD::ODBC has gone with unixODBC so you cannot use iODBC with a
+unicode build of DBD::ODBC. However, some ODBC drivers support UTF-8
+(although how they do this with SQLGetData reliably I don't know)
+and so you should be able to use those with DBD::ODBC not built for
+unicode.
+
+=head3 Enabling and Disabling Unicode support
+
+On Windows Unicode support as ss enabled by default and to disable it
+you will need to specify C<-nou> to F<Makefile.PL> to get back to the
+original behavior of DBD::ODBC before any Unicode support was added.
+
+e.g.,
+
+  perl Makfile.PL -nou
+
+On non-Windows platforms Unicode support is disabled by default. To
+enable it specify C<-u> to F<Makefile.PL> when you configure DBD::ODBC.
+
+e.g.,
+
+  perl Makefile.PL -u
+
+=head3 Unicode - What is supported?
+
+As of version 1.17 DBD::ODBC has the following unicode support:
+
+=over
+
+=item SQL (introduced in 1.16_2)
+
+Unicode strings in calls to the C<prepare> and C<do> methods are
+supported so long as the C<odbc_execdirect> attribute is not used.
+
+=item unicode connection strings (introduced in 1.16_2)
+
+Unicode connection strings are supported but you will need a DBI
+post 1.607 for that.
+
+=item column names
+
+Unicode column names are returned.
+
+=item bound columns (introduced in 1.15)
+
+If the DBMS reports the column as being a wide character (SQL_Wxxx) it
+will be bound as a wide character and any returned data will be
+converted from UTF16 to UTF8 and the UTF8 flag will then be set on the
+data.
+
+=item bound parameters
+
+If the perl scalars you bind to parameters are marked UTF8 and the
+DBMS reports the type as being a wide type or you bind the parameter
+as a wide type they will be converted to wide characters and bound as
+such.
+
+=back
+
+The above Unicode support has been tested with the SQL Server, Oracle
+9.2+ and Postgres drivers on Windows and various Easysoft ODBC drivers
+on UNIX.
+
+=head3 Unicode - What is not supported?
+
+You cannot use unicode parameter names e.g.,
+
+  select * from table where column = :unicode_param_name
+
+You cannot use unicode strings in calls to prepare if you set the
+odbc_execdirect attribute.
+
+You cannot use the iODBC driver manager with DBD::ODBC built for
+unicode.
+
+=head3 Unicode - Caveats
+
+For Unicode support on any platform in Perl you will need at least
+Perl 5.8.1 - sorry but this is the way it is with Perl.
+
+The Unicode support in DBD::ODBC expects a WCHAR to be 2 bytes (as it
+is on Windows and as the ODBC specification suggests it is). Until
+ODBC specifies any other Unicode support it is not envisioned this
+will change.  On UNIX there are a few different ODBC driver
+managers. I have only tested the unixODBC driver manager
+(http://www.unixodbc.org) with Unicode support and it was built with
+defaults which set WCHAR as 2 bytes.
+
+I believe that the iODBC driver manager expects wide characters to be
+wchar_t types (which are usually 4) and hence DBD::ODBC will not work
+iODBC when built for unicode.
+
+The ODBC Driver must expect Unicode data specified in SQLBindParameter
+and SQLBindCol to be UTF16 in local endianess. Similarly, in calls to
+SQLPrepareW, SQLDescribeColW and SQLDriverConnectW.
+
+You should be aware that once Unicode support is enabled it affects a
+number of DBI methods (some of which you might not expect). For
+instance, when listing tables, columns etc some drivers
+(e.g. Microsoft SQL Server) will report the column types as wide types
+even if the strings actually fit in 7-bit ASCII. As a result, there is
+an overhead for retrieving this column data as 2 bytes per character
+will be transmitted (compared with 1 when Unicode support is not
+enabled) and these strings will be converted into UTF8 but will end up
+fitting (in most cases) into 7bit ASCII so a lot of conversion work
+has been performed for nothing. If you don't have Unicode table and
+column names or Unicode column data in your tables you are best
+disabling Unicode support.
+
+I am at present unsure if ChopBlanks processing on Unicode strings is
+working correctly on UNIX. If nothing else the construct L' ' in
+dbdimp.c might not work with all UNIX compilers. Reports of issues and
+patches welcome.
+
+=head3 Unicode implementation in DBD::ODBC
+
+DBD::ODBC uses the wide character versions of the ODBC API and the
+SQL_WCHAR ODBC type to support unicode in Perl.
+
+Wide characters returned from the ODBC driver will be converted to
+UTF-8 and the perl scalars will have the utf8 flag set (by using
+sv_utf8_decode).
+
+perl scalars which are UTF-8 and are sent through the ODBC API will be
+converted to UTF-16 and passed to the ODBC wide APIs or signalled as
+SQL_WCHARs (e.g., in the case of bound columns).
+
+When built for unicode, DBD::ODBC will always call SQLDriverConnectW
+(and not SQLDriverConnect) even if a) your connection string is not
+unicode b) you have not got a DBI later than 1.607, because unixODBC
+requires SQLDriverConnectW to be called if you want to call other
+unicode ODBC APIs later. As a result, if you build for unicode and
+pass ASCII strings to the connect method they will be converted to
+UTF-16 and passed to SQLDriverConnectW. This should make no real
+difference to perl not using unicode connection strings.
+
+You will need a DBI later than 1.607 to support unicode connection
+strings because until post 1.607 there was no way for DBI to pass
+unicode strings to the DBD.
+
+=head3 Unicode and Oracle
+
+You have to set the environment variables C<NLS_NCHAR=AL32UTF8> and
+C<NLS_LANG=AMERICAN_AMERICA.AL32UTF8> (or any other language setting
+ending with C<.AL32UTF8>) before loading DBD::ODBC to make Oracle
+return Unicode data. (See also "Oracle and Unicode" in the POD of
+DBD::Oracle.)
+
+On Windows, using the Oracle ODBC Driver you have to enable the B<Force
+SQL_WCHAR support> Workaround in the data source configuration to make
+Oracle return Unicode to a non-Unicode application. Alternatively, you
+can include C<FWC=T> in your connect string.
+
+Unless you need to use ODBC, if you want Unicode support with Oracle
+you are better off using L<DBD::Oracle>.
+
+=head3 Unicode and PostgreSQL
+
+Some tests from the original DBD::ODBC 1.13 fail with PostgreSQL
+8.0.3, so you may not want to use DBD::ODBC to connect to PostgreSQL
+8.0.3.
+
+Unicode tests fail because PostgreSQL seems not to give any hints
+about Unicode, so all data is treated as non-Unicode.
+
+Unless you need to use ODBC, if you want Unicode support with Postgres
+you are better off with L<DBD::Pg> as it has a specific attribute named
+C<pg_enable_utf8> to enable Unicode support.
+
+=head3 Unicode and Easysoft ODBC Drivers
+
+We have tested the Easysoft SQL Server, Oracle and ODBC Bridge drivers
+with DBD::ODBC built for Unicode. All work as described without
+modification except for the Oracle driver you will need to set you
+NLS_LANG as mentioned above.
+
+=head3 Unicode and other ODBC drivers
+
+If you have a unicode-enabled ODBC driver and it works with DBD::ODBC
+let me know and I will include it here.
+
 =head2 Others/todo?
 
 Level 1
@@ -1139,91 +1368,6 @@ Level 2
     SQLTablePrivileges
     SQLDrivers
     SQLNativeSql
-
-=head2 Connect without DSN
-
-The ability to connect without a full DSN is introduced in version
-0.21.
-
-Example (using MS Access):
-	my $DSN = 'driver=Microsoft Access Driver (*.mdb);dbq=\\\\cheese\\g$\\perltest.mdb';
-	my $dbh = DBI->connect("dbi:ODBC:$DSN", '','')
-		or die "$DBI::errstr\n";
-
-=head2 Using DBD::ODBC with web servers under Win32.
-
-=over 4
-
-=item General Commentary re web database access
-
-This should be a DBI faq, actually, but this has somewhat of an
-Win32/ODBC twist to it.
-
-Typically, the Web server is installed as an NT service or a Windows
-95/98 service.  This typically means that the web server itself does
-not have the same environment and permissions the web developer does.
-This situation, of course, can and does apply to Unix web servers.
-Under Win32, however, the problems are usually slightly different.
-
-=item Defining your DSN -- which type should I use?
-
-Under Win32 take care to define your DSN as a system DSN, not as a user
-DSN.  The system DSN is a "global" one, while the user is local to a
-user.  Typically, as stated above, the web server is "logged in" as a
-different user than the web developer.  This helps cause the situation
-where someone asks why a script succeeds from the command line, but
-fails when called from the web server.
-
-=item Defining your DSN -- careful selection of the file itself is important!
-
-For file based drivers, rather than client server drivers, the file
-path is VERY important.  There are a few things to keep in mind.  This
-applies to, for example, MS Access databases.
-
-1) If the file is on an NTFS partition, check to make sure that the Web
-B<service> user has permissions to access that file.
-
-2) If the file is on a remote computer, check to make sure the Web
-B<service> user has permissions to access the file.
-
-3) If the file is on a remote computer, try using a UNC path the file,
-rather than a X:\ notation.  This can be VERY important as services
-don't quite get the same access permissions to the mapped drive letters
-B<and>, more importantly, the drive letters themselves are GLOBAL to
-the machine.  That means that if the service tries to access Z:, the Z:
-it gets can depend upon the user who is logged into the machine at the
-time.  (I've tested this while I was developing a service -- it's ugly
-and worth avoiding at all costs).
-
-Unfortunately, the Access ODBC driver that I have does not allow one to
-specify the UNC path, only the X:\ notation.  There is at least one way
-around that.  The simplest is probably to use Regedit and go to
-(assuming it's a system DSN, of course)
-HKEY_LOCAL_USERS\SOFTWARE\ODBC\"YOUR DSN" You will see a few settings
-which are typically driver specific.  The important value to change for
-the Access driver, for example, is the DBQ value.  That's actually the
-file name of the Access database.
-
-=back
-
-=head2 Connect without DSN
-
-The ability to connect without a full DSN is introduced in version 0.21.
-
-Example (using MS Access):
-	my $DSN = 'driver=Microsoft Access Driver
-(*.mdb);dbq=\\\\cheese\\g$\\perltest.mdb';
-	my $dbh = DBI->connect("dbi:ODBC:$DSN", '','')
-		or die "$DBI::errstr\n";
-
-The above sample uses Microsoft's UNC naming convention to point to the MSAccess
-file (\\\\cheese\\g$\\perltest.mdb).  The dbq parameter tells the access driver
-which file to use for the database.
-
-Example (using MSSQL Server):
-      my $DSN = 'driver={SQL Server};Server=server_name;
-      database=database_name;uid=user;pwd=password;';
-      my $dbh  = DBI->connect("dbi:ODBC:$DSN") or die "$DBI::errstr\n";
 
 =head2 Random Links
 
@@ -1283,7 +1427,7 @@ L<http://www.easysoft.com/developer/languages/perl/dbd_odbc_tutorial_part_1.html
 
 Perl DBI/DBD::ODBC Tutorial Part 2 - Introduction to retrieving data from your database:
 
-L<http://www.easysoft.com/developer/languages/perl/index.html>
+L<http://www.easysoft.com/developer/languages/perl/dbd_odbc_tutorial_part_2.html>
 
 Perl DBI/DBD::ODBC Tutorial Part 3 - Connecting Perl on UNIX or Linux to Microsoft SQL Server:
 
@@ -1295,7 +1439,7 @@ L<http://www.easysoft.com/developer/languages/perl/tutorial_data_web.html>
 
 =head2 Frequently Asked Questions
 
-Frequently asked questions are now in DBD::ODBC::FAQ. Run
+Frequently asked questions are now in L<DBD::ODBC::FAQ>. Run
 C<perldoc DBD::ODBC::FAQ> to view them.
 
 =head1 AUTHOR
