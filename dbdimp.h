@@ -34,25 +34,44 @@ struct imp_dbh_st {
     char odbc_ver[20];  /* ODBC compat. version for driver */
     SQLSMALLINT max_column_name_len;
     char odbc_dbname[64];
-    int  odbc_ignore_named_placeholders;	/* flag to ignore named parameters */
-    SQLSMALLINT  odbc_default_bind_type;	/* flag to set default binding type (experimental) */
-    int  odbc_sqldescribeparam_supported; /* flag to see if SQLDescribeParam is supported */
-    int  odbc_sqlmoreresults_supported; /* flag to see if SQLMoreResults is supported */
-    int	 odbc_defer_binding; /* flag to work around SQLServer bug and defer binding until */
-			    /* last possible moment */
-    int  odbc_force_rebind; /* force rebinding the output columns after each execute to */
-  /* resolve some issues where certain stored procs can return */
-       /* multiple result sets */
+    /* flag to ignore named parameters */
+    int  odbc_ignore_named_placeholders;
+    /* flag to set default binding type (experimental) */
+    SQLSMALLINT  odbc_default_bind_type;
+    /* flag to see if SQLDescribeParam is supported */
+    int  odbc_sqldescribeparam_supported;
+    /* flag to see if SQLMoreResults is supported */
+    int  odbc_sqlmoreresults_supported;
+    /* flag to work around SQLServer bug and defer binding until
+       last possible moment - execute instead of bind time. Should only
+       be set for SQL Server currently.
+       The problem was that SQL Server was not handling binding an undef
+       then binding the real value. This happened with older SQLServer
+       2000 drivers on varchars and is still happening with date */
+    int	 odbc_defer_binding;
+    /* force rebinding the output columns after each execute to
+       resolve some issues where certain stored procs can return
+       multiple result sets */
+    int  odbc_force_rebind;
     SQLINTEGER odbc_query_timeout;
+    /* point at which start using SQLPutData */
     IV odbc_putdata_start;
+    /* whether built WITH_UNICODE */
     int  odbc_has_unicode;
-    int  odbc_async_exec; /* flag to set asynchronous execution */
-    int  odbc_exec_direct;		/* flag for executing SQLExecDirect instead of SQLPrepare and SQLExecute.  Magic happens at SQLExecute() */
-    SQLUINTEGER odbc_async_type; /* flag to store the type of asynchronous
-                                  * execution the driver supports */
-    SV *odbc_err_handler; /* contains the error handler coderef */
+    /* flag to set asynchronous execution */
+    int  odbc_async_exec;
+    /* flag for executing SQLExecDirect instead of SQLPrepare and SQLExecute.
+       Magic happens at SQLExecute() */
+    int  odbc_exec_direct;
+    /* flag to store the type of asynchronous execution the driver supports */
+    SQLUINTEGER odbc_async_type;
+    SV *odbc_err_handler;     /* contains the error handler coderef */
+    /* The out connection string after calling SQLDriverConnect */
     SV *out_connect_string;
-    int  RowCacheSize;			/* default row cache size in rows for statements */
+    /* default row cache size in rows for statements */
+    int  RowCacheSize;
+    char odbc_driver_name[80];
+    char odbc_driver_version[20];
 };
 
 /* Define sth implementor data structure */
@@ -129,20 +148,26 @@ struct imp_fbh_st { 	/* field buffer EXPERIMENTAL */
 typedef struct phs_st phs_t;    /* scalar placeholder   */
 
 struct phs_st {  	/* scalar placeholder EXPERIMENTAL	*/
-    SQLUSMALLINT idx;		/* index number of this param 1, 2, ...	*/
-
+    SQLUSMALLINT idx;       /* index number of this param 1, 2, ...	*/
     SV *sv;                 /* the scalar holding the value */
     int sv_type;            /* original sv type at time of bind */
-    int biggestparam;       /* if sv_type is VARCHAR, size of biggest so far */
-    bool is_inout;
-    IV  maxlen;             /* max possible len (=allocated buffer) */
     char *sv_buf;	    /* pointer to sv's data buffer */
-    SWORD ftype;            /* external field type */
-    SWORD sql_type;         /* the sql type of the placeholder */
-    SWORD tgt_sql_type;     /* the PH SQL type the stmt expects */
-    SDWORD tgt_len;         /* size or precision the stmt expects */
-    SQLLEN cbValue;         /* length of returned value OR SQL_NULL_DATA */
-    SDWORD *indics;         /* ptr to indicator array for param arrays */
+    SQLULEN param_size;     /* value returned from SQLDescribeParam */
+    int describe_param_called; /* has SQLDescribeParam been called */
+    SQLRETURN describe_param_status;
+                            /* status return from last SQLDescribeParam */
+    int biggestparam;       /* if sv_type is VARCHAR, size of biggest so far */
+    bool is_inout;          /* is this an output parameter? */
+    IV  maxlen;             /* max possible len (=allocated buffer) for */
+                            /* out parameters */
+    SQLLEN strlen_or_ind;   /* SQLBindParameter StrLen_or_IndPtr argument */
+                            /* containg parameter length on input for input */
+                            /* and returned parameter size for output params */
+    SQLSMALLINT requested_type; /* type optionally passed in bind_param call */
+    SQLSMALLINT value_type; /* SQLBindParameter value_type - a SQL C type */
+    SQLSMALLINT described_sql_type;
+                            /* sql type as described by SQLDescribeParam */
+    SQLSMALLINT sql_type;   /* the sql type of the placeholder */
     char name[1];           /* struct is malloc'd bigger as needed */
 };
 

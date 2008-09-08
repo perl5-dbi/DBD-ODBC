@@ -39,7 +39,7 @@ OSX/darwin.
 
 Disallow building with iODBC if it is a unicode build.
 
-More tracing for odbcconnect flag
+More tracing for odbcconnect flag.
 
 Fix bug in out connection string handling that attempted to use an out
 connection string when SQLDriverConnect[W] fails.
@@ -48,6 +48,28 @@ Fixed yet more test count problems due to Test::NoWarnings not being
 installed.
 
 Skip private_attribute_info tests if DBI < 1.54
+
+About a 30% rewrite of bound parameter code which started with an
+attempt to support the new VARBINARY(MAX) and VARCHAR(MAX) columns in
+SQL Server when the parameter length is > 400K in size (see elsewhere
+in this Changelog). This is a seriously big change to DBD::ODBC to
+attempt to be a bit more clever in its handling of drivers which
+either do not support SQLDescribeParam or do support SQLDescribeParam
+but cannot describe all parameters e.g., MS SQL Server ODBC driver
+cannot describe "select ?, LEN(?)". If you specify the bound parameter
+type in your calls to bind_param and run them to an ODBC driver which
+supports SQLDescribeParam you may want to check carefully and probably
+remove the parameter type from the bind_param method call.
+
+Added rt_38977.t test to test suite to test varchar(max) and
+varbinary(max) columns in SQL Server.
+
+Moved most of README.unicode to ODBC.pm pod.
+
+Added workaround for problem with the Microsoft SQL Server driver when
+attempting to insert more than 400K into a varbinary(max) or
+varchar(max) column. Thanks to Julian Lishev for finding the problem
+and identifying 2 possible solutions.
 
 =head2 Changes in DBD::ODBC 1.16_2 September 2, 2008
 
