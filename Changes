@@ -32,6 +32,12 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
 
 =head1 CHANGES
 
+=head2 Changes in DBD::ODBC 1.16_4 September 8, 2008
+
+Small change to Makefile.PL to work around problem in darwin 8 with
+iODBC which leads to "Symbol not found: _SQLGetPrivateProfileString"
+errors.
+
 =head2 Changes in DBD::ODBC 1.16_3 September 3, 2008
 
 Changed Makefile.PL to add "-framework CoreFoundation" to linker line on

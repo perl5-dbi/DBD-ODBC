@@ -564,6 +564,13 @@ print "\n";
 
 if ($^O eq 'darwin') {
     $opts{LD} = $Config{ld} . ' -framework CoreFoundation';
+    # some older versions of darwin had a problem with iODBC which leads to
+    # Symbol not found: _SQLGetPrivateProfileString
+    # SQLGetPrivateProfileString is in libiodbcinst.a
+    my $osver = `uname -r`;
+    if ($osver && ($osver =~ /^8/)) {
+        $opts{LIBS} .= ' -L/usr/lib -liodbcinst';
+    }
 }
 
 
