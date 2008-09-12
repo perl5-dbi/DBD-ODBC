@@ -554,7 +554,7 @@ AS
 
    $dbh->disconnect;
    my $dsn = $ENV{DBI_DSN};
-   if ($dsn !~ /^DSN=/) {
+   if ($dsn !~ /^dbi:ODBC:DSN=/) {
        my @a = split(q/:/, $ENV{DBI_DSN});
        $dsn = join(q/:/, @a[0..($#a - 1)]) . ":DSN=" . $a[-1];
    }

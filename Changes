@@ -59,6 +59,8 @@ because SQLDescribeParam does not exist in MS Access so we fallback to
 either a default bind type (which was SQL_VARCHAR) or whatever was
 specified in the bind_param call.
 
+Fixed bug in 20SqlServer.t when DBI_DSN is defined including "DSN=".
+
 =head2 Changes in DBD::ODBC 1.16_3 September 3, 2008
 
 Changed Makefile.PL to add "-framework CoreFoundation" to linker line on
