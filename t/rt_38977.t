@@ -44,7 +44,6 @@ unless($dbh) {
    exit 0;
 }
 
-diag("\nNOTE this test will fail in DBD::ODBC before 1.17\n");
 my $dbms_name = $dbh->get_info(17);
 ok($dbms_name, "got DBMS name: $dbms_name");
 my $dbms_version = $dbh->get_info(18);
@@ -56,7 +55,7 @@ SKIP: {
     skip "not SQL Server", 6 if $dbms_name !~ /Microsoft SQL Server/;
     my $major_version = $dbms_version;
     $major_version =~ s/^(\d+)\..*$/$1/;
-    diag("Major Version: $major_version\n");
+    #diag("Major Version: $major_version\n");
     skip "SQL Server version too old", 6 if $major_version < 9;
 
     eval {

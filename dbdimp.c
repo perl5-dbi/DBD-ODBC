@@ -87,7 +87,11 @@ int dbd_st_finish(SV *sth, imp_sth_t *imp_sth);
 /* This is the bind type for parameters we fall back to if the bind_param
    method was not given a parameter type and SQLDescribeParam is not supported
    or failed */
-#define ODBC_BACKUP_BIND_TYPE_VALUE	SQL_VARCHAR
+#ifdef WITH_UNICODE
+# define ODBC_BACKUP_BIND_TYPE_VALUE	SQL_WVARCHAR
+#else
+# define ODBC_BACKUP_BIND_TYPE_VALUE	SQL_VARCHAR
+#endif
 
 SV *dbd_param_err(SQLHANDLE h, int recno);
 static int  rebind_param(SV *sth, imp_sth_t *imp_sth, phs_t *phs);
@@ -1009,7 +1013,7 @@ int dbd_db_disconnect(SV *dbh, imp_dbh_t *imp_dbh)
    }
    if (DBIc_TRACE(imp_dbh, 0x04000000, 0, 0))
        TRACE1(imp_dbh, "SQLDisconnect=%d\n", rc);
-       
+
    SQLFreeHandle(SQL_HANDLE_DBC, imp_dbh->hdbc);
    imp_dbh->hdbc = SQL_NULL_HDBC;
    imp_drh->connects--;
@@ -2103,18 +2107,19 @@ int dbd_describe(SV *h, imp_sth_t *imp_sth, int more)
             fbh->ColDisplaySize > fbh->ColLength ?
             fbh->ColDisplaySize : fbh->ColLength;
 
-        /* change fetched size for some types
+        /*
+         * change fetched size, decimal digits etc for some types,
+         * The tests for ColDef = 0 are for when the driver does not give
+         * us a length for the column e.g., "max" column types in SQL Server
+         * like varbinary(max).
          */
         fbh->ftype = SQL_C_CHAR;
         switch(fbh->ColSqlType)
         {
-            /* patch to allow binary types 3/24/99 courtesy of Jon
-             * Smirl
-             */
           case SQL_VARBINARY:
           case SQL_BINARY:
 	    fbh->ftype = SQL_C_BINARY;
-            if (fbh->ColDef == 0) {
+            if (fbh->ColDef == 0) {             /* cope with varbinary(max) */
                 fbh->ColDisplaySize = DBIc_LongReadLen(imp_sth);
             }
 	    break;
@@ -2123,9 +2128,30 @@ int dbd_describe(SV *h, imp_sth_t *imp_sth, int more)
           case SQL_WVARCHAR:
             fbh->ftype = SQL_C_WCHAR;
             /* MS SQL returns bytes, Oracle returns characters ... */
+
+            if (fbh->ColDef == 0) {             /* cope with nvarchar(max) */
+                fbh->ColDisplaySize = DBIc_LongReadLen(imp_sth);
+                fbh->ColLength = DBIc_LongReadLen(imp_sth);
+            }
+
             fbh->ColDisplaySize*=sizeof(SQLWCHAR);
             fbh->ColLength*=sizeof(SQLWCHAR);
             break;
+#else
+# if defined(SQL_WCHAR)
+          case SQL_WCHAR:
+            if (fbh->ColDef == 0) {
+                fbh->ColDisplaySize = DBIc_LongReadLen(imp_sth);
+            }
+            break;
+# endif
+# if defined(SQL_WVARCHAR)
+          case SQL_WVARCHAR:
+            if (fbh->ColDef == 0) {
+                fbh->ColDisplaySize = DBIc_LongReadLen(imp_sth);
+            }
+            break;
+# endif
 #endif /* WITH_UNICODE */
           case SQL_LONGVARBINARY:
 	    fbh->ftype = SQL_C_BINARY;

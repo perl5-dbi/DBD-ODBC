@@ -29,14 +29,35 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
    so anyone binding a lob has to have all of it available before it can
    be bound.
  Try to produce a Module::Install build.
+ There is a blob_read method in DBI (undocumented) that DBD:DB2 uses and
+   might be useful in DBD::ODBC.
 
 =head1 CHANGES
 
-=head2 Changes in DBD::ODBC 1.16_4 September 8, 2008
+=head2 Changes in DBD::ODBC 1.16_4 September 12, 2008
 
 Small change to Makefile.PL to work around problem in darwin 8 with
 iODBC which leads to "Symbol not found: _SQLGetPrivateProfileString"
 errors.
+
+Added new [n]varXXX(max) column type tests to 20SqlServer.t.
+
+Fixed support for SQL_WCHAR and SQL_WVARCHAR support in non-unicode
+build. These types had ended up only being included for unicode
+builds.
+
+More changes to ODBC pod to 1) encourage people to use CPAN::Reporter,
+2) rework contributing section, 3) mention DBIx::Log4perl 4) add a
+BUGS section 5) add a "ODBC Support in ODBC Drivers" section etc.
+
+Changed default fallback parameter bind type to SQL_WVARCHAR for
+unicode builds. This affects ODBC drivers which don't have
+SQLDescribeParam. Problem reported by Vasili Galka with MS Access when
+reading unicode data from one table and inserting it into another
+table.  The read data was unicode but it was inserted as SQL_CHARs
+because SQLDescribeParam does not exist in MS Access so we fallback to
+either a default bind type (which was SQL_VARCHAR) or whatever was
+specified in the bind_param call.
 
 =head2 Changes in DBD::ODBC 1.16_3 September 3, 2008
 

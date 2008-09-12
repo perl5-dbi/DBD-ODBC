@@ -2,12 +2,14 @@
 # $Id$
 
 use Test::More;
+use strict;
+
 $| = 1;
 
 my $has_test_nowarnings = 1;
 eval "require Test::NoWarnings";
 $has_test_nowarnings = undef if $@;
-my $tests = 38;
+my $tests = 53;
 $tests += 1 if $has_test_nowarnings;
 plan tests => $tests;
 
@@ -26,6 +28,67 @@ END {
           if ($has_test_nowarnings);
 }
 
+my $dbms_name;
+my $dbms_version;
+my $m_dbmsversion;
+
+sub getinfo
+{
+    my $dbh = shift;
+
+    my $dbms_name = $dbh->get_info(17);
+    ok($dbms_name, "got DBMS name: $dbms_name");
+    my $dbms_version = $dbh->get_info(18);
+    ok($dbms_version, "got DBMS version: $dbms_version");
+    $m_dbmsversion = $dbms_version;
+    $m_dbmsversion =~ s/^(\d+).*/$1/;
+    ok($m_dbmsversion, "got DBMS major version: $m_dbmsversion");
+}
+
+sub varmax_test
+{
+    my ($dbh, $coltype) = @_;
+
+  SKIP: {
+        skip "SQL Server major version $m_dbmsversion too old", 4
+            if $m_dbmsversion < 9;
+
+        my $data = 'x' x 1000;
+        my $datalen = length($data);
+        local $dbh->{PrintError} = 0;
+        local $dbh->{RaiseError} = 1;
+        local $dbh->{LongReadLen} = length($data) * 2;
+
+        eval {$dbh->do(q/drop table PERL_DBD_TABLE1/);};
+        eval {
+            $dbh->do(qq/create table PERL_DBD_TABLE1 (a int identity, b $coltype(MAX))/);
+            $dbh->do(q/insert into PERL_DBD_TABLE1 (b) values(?)/,
+                     undef, $data);
+        };
+        diag($@) if $@;
+        ok(!$@, "create PERL_DBD_TABLE1 and insert test data");
+      SKIP: {
+            skip "failed to create test table or insert data", 3 if $@;
+
+            my $sth = $dbh->prepare(q/select a,b from PERL_DBD_TABLE1/);
+            $sth->execute;
+            my ($a, $b);
+            eval {
+                ($a, $b) = $sth->fetchrow_array;
+            };
+            diag($@) if $@;
+            ok(!$@, "fetchrow for $coltype(max)");
+          SKIP: {
+                skip "fetchrow failed", 2 if $@;
+
+                ok($b, "data received from $coltype(max)");
+                is(length($b), $datalen,
+                   'all data (' . length($b) . ") received from $coltype(max)");
+            };
+        };
+    };
+    eval {$dbh->do(q/drop table PERL_DBD_TABLE1/);};
+}
 sub Multiple_concurrent_stmts {
    my ($dbh, $expect) = @_;
    my $sth = $dbh->prepare("select * from PERL_DBD_TABLE1");
@@ -56,18 +119,18 @@ unless($dbh) {
    BAIL_OUT("Unable to connect to the database $DBI::errstr\nTests skipped.\n");
    exit 0;
 }
-
-my $dbversion = $dbh->get_info(18); # SQL_DBMS_VER
-my $m_dbversion = $dbversion;
-$m_dbversion =~ s/^(\d+).*/$1/;
-#my $drvversion = $dbh->get_info(7); # SQL_DRIVER_VER
-#my $m_drvversion = $drvversion;
-#$m_drvversion =~ s/^(\d+).*/$1/;
+my $sth;
 
 my $dbname = $dbh->get_info(17); # DBI::SQL_DBMS_NAME
 SKIP: {
-   skip "Microsoft SQL Server tests not supported using $dbname", 36
+   skip "Microsoft SQL Server tests not supported using $dbname", 51
        unless ($dbname =~ /Microsoft SQL Server/i);
+
+   getinfo($dbh);
+
+   varmax_test($dbh, 'varchar');
+   varmax_test($dbh, 'varbinary');
+   varmax_test($dbh, 'nvarchar');
 
    # the times chosen below are VERY specific to NOT cause rounding errors,
    # but may cause different errors on different versions of SQL Server.
@@ -506,7 +569,7 @@ AS
    ok(&Multiple_concurrent_stmts($dbh, 1), "Multiple concurrent statements succeed (odbc_cursortype set)");
 
  SKIP: {
-       skip "MS SQL Server version < 9", 1 if ($m_dbversion < 9);
+       skip "MS SQL Server version < 9", 1 if ($m_dbmsversion < 9);
        $dbh->disconnect; # throw away non-mars connection
        $dsn = "$base_dsn;MARS_Connection=yes;";
        $dbh = DBI->connect($dsn, $ENV{DBI_USER}, $ENV{DBI_PASS}, {PrintError => 0});

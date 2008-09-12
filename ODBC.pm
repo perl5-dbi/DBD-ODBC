@@ -10,7 +10,7 @@
 
 require 5.006;
 
-$DBD::ODBC::VERSION = '1.16_3';
+$DBD::ODBC::VERSION = '1.16_4';
 
 {
     package DBD::ODBC;
@@ -532,6 +532,13 @@ get a list of checked in changes.
 
 =head2 Contributing
 
+There are six main ways you may help with the development and
+maintenance of this module:
+
+=over
+
+=item Submitting patches
+
 Please use Subversion (see above) to get the latest version of
 DBD::ODBC from the trunk and submit any patches against that.
 
@@ -544,6 +551,52 @@ Please, before submitting a patch:
 
 and send the resulting file to me and cc the dbi-users@perl.org
 mailing list (if you are not a member - why not!).
+
+=item Reporting installs
+
+Install CPAN::Reporter and report you installations. This is easy to
+do - see L</CPAN Testers Reporting>.
+
+=item Report bugs
+
+If you find what you believe is a bug then enter it into the
+L<http://rt.cpan.org> system. Where possible include code which reproduces the
+problem including any schema required and the versions of software you
+are using.
+
+If you are unsure whether you have found a bug report it anyway or
+post it to the dbi-users mailing list.
+
+=item pod comments and corrections
+
+If you find inaccuracies in the DBD::ODBC pod or have a comment which
+you think should be added then go to L<http://annocpan.org> and submit
+them there. I get an email for every comment added and will review
+each one and apply any changes to the documentation.
+
+=item Review DBD::ODBC
+
+Add your review of DBD::ODBC on L<http://cpanratings.perl.org>.
+
+If you are a member on ohloh then add your review or register your
+use of DBD::ODBC at L<http://www.ohloh.net/projects/perl_dbd_odbc>.
+
+=item submit test cases
+
+Most DBDs are built against a single client library for the database.
+
+Unlike other DBDs, DBD::ODBC works with many different ODBC drivers.
+Although they all should be written with regard to the ODBC
+specification drivers have bugs and in some places the specification is
+open to interpretation. As a result, when changes are applied to
+DBD::ODBC it is very easy to break something in one ODBC driver.
+
+What helps enormously to identify problems in the many combinations
+of DBD::ODBC and ODBC drivers is a large test suite. I would greatly
+appreciate any test cases and in particular any new test cases for
+databases other than MS SQL Server.
+
+=back
 
 =head2 DBI attribute handling
 
@@ -586,12 +639,17 @@ binding and get confused.
 
 This value defaults to 0.
 
-Older versions of DBD::ODBC assumed that the binding type was 12
-(SQL_VARCHAR).  Newer versions default to 0, which means that
-DBD::ODBC will attempt to query the driver via SQLDescribeParam to
-determine the correct type.  If the driver doesn't support
-SQLDescribeParam, then DBD::ODBC falls back to using SQL_VARCHAR as
-the default, unless overridden by bind_param().
+Older versions of DBD::ODBC assumed that the parameter binding type
+was 12 (C<SQL_VARCHAR>).  Newer versions always attempt to call
+C<SQLDescribeParam> to find the parameter types but if
+C<SQLDescribeParam> is unavailable DBD::ODBC falls back to a default
+bind type. The internal default bind type is C<SQL_VARCHAR> (for
+non-unicode build) and C<SQL_WVARCHAR> (for a unicode build). If you
+set C<odbc_default_bind_type> to a value other than 0 you override the
+internal default.
+
+B<N.B> If you call the C<bind_param> method with a SQL type this
+overrides everything else above.
 
 =head3 odbc_force_rebind
 
@@ -1079,6 +1137,9 @@ or
 DBD::ODBC outputs tracing at levels 3 and above (as levels 1 and 2 are
 reserved for DBI).
 
+For comprehensive tracing of DBI method calls without all the DBI
+internals see L<DBIx::Log4perl>.
+
 =head2 Deviations from the DBI specification
 
 =head3 Mixed placeholder types
@@ -1232,6 +1293,11 @@ such.
 
 =back
 
+Since version 1.16_4, the default parameter bind type is SQL_WVARCHAR
+for unicode builds of DBD::ODBC. This only affects ODBC drivers which
+do not support SQLDescribeParam and only then if you do not
+specifically set a sql type on the bind_param method call.
+
 The above Unicode support has been tested with the SQL Server, Oracle
 9.2+ and Postgres drivers on Windows and various Easysoft ODBC drivers
 on UNIX.
@@ -1354,11 +1420,60 @@ NLS_LANG as mentioned above.
 If you have a unicode-enabled ODBC driver and it works with DBD::ODBC
 let me know and I will include it here.
 
+=head2 ODBC Support in ODBC Drivers
+
+=head3 Drivers without SQLDescribeParam
+
+Some drivers do not support the C<SQLDescribeParam> ODBC API (e.g.,
+Microsoft Access).
+
+DBD::ODBC uses the C<SQLDescribeParam> API when parameters are bound
+to your SQL to find the types of the parameters. If the ODBC driver
+does not support C<SQLDescribeParam>, DBD::ODBC assumes the parameters
+are C<SQL_VARCHAR> or C<SQL_WVARCHAR> types (depending on whether
+DBD::ODBC is built for unicode or not). In any case, if you bind a
+parameter and specify a SQL type this overrides any type DBD::ODBC
+would choose.
+
+For ODBC drivers which do not support C<SQLDescribeParam> the default
+behavior in DBD::ODBC may not be what you want. To change the default
+parameter bind type set L</odbc_default_bind_type>. If, after that you
+have some SQL where you need to vary the parameter types used add the
+SQL type to the end of the C<bind_param> method.
+
+  use DBI qw(:sql_types);
+  $h = DBI->connect;
+  # set the default bound parameter type
+  $h->{odbc_default_bind_type} = SQL_VARCHAR;
+  # bind a parameter with a specific type
+  $s = $h->prepare(q/insert into mytable values(?)/);
+  $s->bind_param(1, "\x{263a}", SQL_WVARCHAR);
+
+=head2 CPAN Testers Reporting
+
+Please, please, please (is that enough), consider installing
+CPAN::Reporter so that when you install perl modules a report of the
+installation success or failure can be sent to cpan testers. In this
+way module authors 1) get feedback on the fact that a module is being
+installed 2) get to know if there are any installation problems. Also
+other people like you may look at the test reports to see how
+successful they are before choosing the version of a module to
+install.
+
+CPAN::Reporter is easy to install and configure like this:
+
+  perl -MCPAN -e shell
+  cpan> install CPAN::Reporter
+  cpan> reload cpan
+  cpan> o conf init test_report
+
+Simply answer the questions to configure CPAN::Reporter.
+
+You can find the CPAN testers wiki at L<http://wiki.cpantesters.org/>
+and the installation guide for CPAN::Reporter at
+L<http://wiki.cpantesters.org/wiki/CPANInstall>.
+
 =head2 Others/todo?
-
-Level 1
-
-    SQLTables (use tables()) call
 
 Level 2
 
@@ -1441,6 +1556,14 @@ L<http://www.easysoft.com/developer/languages/perl/tutorial_data_web.html>
 
 Frequently asked questions are now in L<DBD::ODBC::FAQ>. Run
 C<perldoc DBD::ODBC::FAQ> to view them.
+
+=head1 BUGS
+
+None known other than the deviations from the DBI specification mentioned
+above in L</Deviations from the DBI specification>.
+
+Please report any to me via the CPAN RT system. See
+L<http://rt.cpan.org/> for more details.
 
 =head1 AUTHOR
 
