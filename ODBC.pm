@@ -10,7 +10,7 @@
 
 require 5.006;
 
-$DBD::ODBC::VERSION = '1.16_4';
+$DBD::ODBC::VERSION = '1.17';
 
 {
     package DBD::ODBC;
@@ -605,17 +605,17 @@ DBI specification.
 
 =head3 ReadOnly (boolean)
 
-DBI documents the ReadOnly attribute as being settleable and
+DBI documents the C<ReadOnly> attribute as being settleable and
 retrievable on connection and statement handles. In ODBC setting
 ReadOnly to true causes the connection attribute SQL_ATTR_ACCESS_MODE
-to be set to SQL_MODE_READ_ONLY and setting it to false will set the
-access mode to SQL_MODE_READ_WRITE (which is the default in ODBC).
+to be set to C<SQL_MODE_READ_ONLY> and setting it to false will set the
+access mode to C<SQL_MODE_READ_WRITE> (which is the default in ODBC).
 
 B<Note:> There is no equivalent of setting ReadOnly on a statement
 handle in ODBC.
 
-B<Note:> See ODBC documentation on SQL_ATTR_ACCESS_MODE as setting it
-to SQL_MODE_READ_ONLY does B<not> prevent your script from running
+B<Note:> See ODBC documentation on C<SQL_ATTR_ACCESS_MODE> as setting it
+to C<SQL_MODE_READ_ONLY> does B<not> prevent your script from running
 updates or deletes; it is simply a hint to the driver/database that
 you won't being doing updates.
 
@@ -668,16 +668,16 @@ about this.
 Allow asynchronous execution of queries.  This causes a spin-loop
 (with a small "sleep") until the SQL is complete.  This is useful,
 however, if you want the error handling and asynchronous messages (see
-the L</odbc_err_handler> and t/20SQLServer.t for an example of this.
+the L</odbc_err_handler> and F<t/20SQLServer.t> for an example of this.
 
 =head3 odbc_query_timeout
 
 This allows you to change the ODBC query timeout (the ODBC statement
-attribute SQL_ATTR_QUERY_TIMEOUT). ODBC defines the query time out as
+attribute C<SQL_ATTR_QUERY_TIMEOUT>). ODBC defines the query time out as
 the number of seconds to wait for a SQL statement to execute before
 returning to the application. A value of 0 (the default) means there
-is no time out. B<Do not confuse this with the ODBC attributes
-SQL_ATTR_LOGIN_TIMEOUT and SQL_ATTR_CONNECTION_TIMEOUT>. Add
+is no time out. Do not confuse this with the ODBC attributes
+C<SQL_ATTR_LOGIN_TIMEOUT> and C<SQL_ATTR_CONNECTION_TIMEOUT>. Add
 
   { odbc_query_timeout => 30 }
 
@@ -696,13 +696,13 @@ currently no way to retrieve the capped value back from the driver.
 
 Note that some drivers may not support this attribute.
 
-See t/20SqlServer.t for an example.
+See F<t/20SqlServer.t> for an example.
 
 =head3 odbc_putdata_start
 
-odbc_putdata_start defines the size at which DBD::ODBC uses SQLPutData
-and SQLParamData to send larger objects to the database instead of
-simply binding them as normal with SQLBindParameter. It is mostly a
+odbc_putdata_start defines the size at which DBD::ODBC uses C<SQLPutData>
+and C<SQLParamData> to send larger objects to the database instead of
+simply binding them as normal with C<SQLBindParameter>. It is mostly a
 placeholder for future changes allowing chunks of data to be sent to
 the database and there is little reason for anyone to change it
 currently.
@@ -729,7 +729,7 @@ error is passed through the normal DBI error handling.
 
 This can also be used for procedures under MS SQL Server (Sybase too,
 probably) to obtain messages from system procedures such as DBCC.
-Check t/20SQLServer.t and t/10handler.t.
+Check F<t/20SQLServer.t> and F<t/10handler.t>.
 
   $dbh->{RaiseError} = 1;
   sub err_handler {
@@ -745,11 +745,11 @@ Check t/20SQLServer.t and t/10handler.t.
 
 =head3 odbc_SQL_ROWSET_SIZE
 
-Here is the information from the original patch, however, I've learned
-since from other sources that this could/has caused SQL Server to
-"lock up".  Please use at your own risk!
+Here is the information from the original patch, however, this
+could/has caused SQL Server to "lock up".  Please use at your own
+risk!
 
-SQL_ROWSET_SIZE attribute patch from Andrew Brown
+C<SQL_ROWSET_SIZE> attribute patch from Andrew Brown
 
   > There are only 2 additional lines allowing for the setting of
   > SQL_ROWSET_SIZE as db handle option.
@@ -777,9 +777,10 @@ Statements (MAS)" in the DBD::ODBC::FAQ instead of using this attribute.
 
 =head3 odbc_exec_direct
 
-Force DBD::ODBC to use SQLExecDirect instead of SQLPrepare/SQLExecute.
+Force DBD::ODBC to use C<SQLExecDirect> instead of
+C<SQLPrepare>/C<SQLExecute>.
 
-There are drivers that only support SQLExecDirect and the DBD::ODBC
+There are drivers that only support C<SQLExecDirect> and the DBD::ODBC
 do() override does not allow returning result sets.  Therefore, the
 way to do this now is to set the attribute odbc_exec_direct.
 
@@ -832,7 +833,7 @@ instead.  For example:
        $sth2->execute($row[0]);
     }
 
-See t/20SqlServer.t for an example.
+See F<t/20SqlServer.t> for an example.
 
 =head3 odbc_has_unicode
 
@@ -841,7 +842,8 @@ C macro WITH_UNICODE or not. A value of 1 indicates DBD::ODBC was built
 with WITH_UNICODE else the value returned is 0.
 
 Building WITH_UNICODE affects columns and parameters which are
-SQL_C_WCHAR, SQL_WCHAR, SQL_WVARCHAR, and SQL_WLONGVARCHAR.
+SQL_C_WCHAR, SQL_WCHAR, SQL_WVARCHAR, and SQL_WLONGVARCHAR, SQL,
+the connect method and a lot more. See L</Unicode>.
 
 When odbc_has_unicode is 1, DBD::ODBC will:
 
@@ -1523,7 +1525,7 @@ L<http://www.openlinksw.com>
 
 L<http://www.datadirect.com>
 
-L<http://www.atinet.com/support/openrda_samples.asp>
+L<http://www.atinet.com>
 
 Some useful tutorials:
 

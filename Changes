@@ -34,6 +34,13 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
 
 =head1 CHANGES
 
+=head2 Changes in DBD::ODBC 1.17 September 22, 2008
+
+In the absence of any bug reports since 1.16_4 this is the official
+1.17 release. See below for changes since 1.16.
+
+Minor pod changes.
+
 =head2 Changes in DBD::ODBC 1.16_4 September 12, 2008
 
 Small change to Makefile.PL to work around problem in darwin 8 with
