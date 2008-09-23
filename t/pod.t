@@ -1,4 +1,8 @@
+
+#!perl
 use Test::More;
+use strict;
+use warnings;
 
 my $has_test_nowarnings = 1;
 eval "require Test::NoWarnings";
@@ -9,15 +13,21 @@ END {
           if ($has_test_nowarnings);
 }
 
-# I need to include Test::NoWarnings to pass cpants but that adds a test
-# so that prevents you using all_pod_files_ok as that sets the Test::More plan.
-# 
-my $tests = 3;
+my $basic_tests = 3;
+my $tests = $basic_tests;
 $tests += 1 if $has_test_nowarnings;
-eval "use Test::Pod 1.00 tests => $tests";
-plan skip_all => "Test::Pod 1.00 required for testing POD" if $@;
-my @pods = all_pod_files();
-foreach my $pod (@pods) {
-    next if $pod !~ /(ODBC.pm)|(FAQ.pm)|(Changes.pm)/;
-    pod_file_ok($pod);
-}
+plan tests => $tests;
+eval {
+    require Test::Pod;
+    Test::Pod->import;
+};
+SKIP: {
+    if (($@) || ($Test::Pod::VERSION < '1.00')) {
+        skip "Test::Pod 1.00 required for testing POD", $basic_tests;
+    }
+    my @pods = all_pod_files();
+    foreach my $pod (@pods) {
+        next if $pod !~ /(ODBC.pm)|(FAQ.pm)|(Changes.pm)/;
+        pod_file_ok($pod);
+    }
+};

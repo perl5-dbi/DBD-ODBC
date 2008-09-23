@@ -40,6 +40,9 @@ my %opts =
  );
 my $eumm = $ExtUtils::MakeMaker::VERSION;
 $eumm =~ tr/_//d;
+
+$opts{LICENSE} = 'perl' if $eumm >= 6.3002;
+
 if ($eumm >= 5.43) {
     $opts{AUTHOR} = 'Tim Bunce, Jeff Urlwin, Martin J. Evans mailto:dbi-users@perl.org';
     $opts{ABSTRACT} = 'ODBC driver for the DBI module.';
