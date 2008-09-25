@@ -19,6 +19,42 @@ use strict;
 
 $| = 1;
 $^W = 1;
+
+# if INC is set on the command line ExtUtils::MakeMaker will not override it
+# or allow us to add to it so you can never find the DBI header files.
+# It is pointless to continue
+foreach (@ARGV) {
+    if ($_ =~ /^INC=/) {
+    print "\nCannot generate successful Makefile - " .
+        "INC is set on the command line\n\n";
+    prompt("Press return to see possible solutions");
+    print <<"EOT";
+
+INC has been set on the command line as:
+
+$_
+
+and there is no way this Makefile.PL can add the path to the DBI
+header files to INC. If you manually added INC to the command line
+remove it. If you are building from the CPAN shell perhaps your
+makepl_arg is set to include INC (as it is with Strawberry Perl). You
+need to remove INC from makepl_arg with:
+
+o conf makepl_arg ''
+
+If you cannot remove INC from the command line then you will need to hand
+edit the generated Makefile. Search it for :
+
+ #   MakeMaker 'CONFIGURE' Parameters:
+ #     INC => q[-I. -I/some_path/DBI]
+
+then add the -I/some_path/DBI to INC where it is set later in the
+Makefile.
+
+EOT
+        exit 0;
+    }
+}
 my %opts =
 (
     NAME	=> 'DBD::ODBC',
