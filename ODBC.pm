@@ -493,7 +493,7 @@ See L<DBI> for more information.
 =head2 Change log and FAQs
 
 Please note that the change log has been moved to
-DBD::ODBC::Changes.pm. To access this documentation, use
+DBD::ODBC::Changes. To access this documentation, use
 C<perldoc DBD::ODBC::Changes>.
 
 The FAQs have also moved to DBD::ODBC::FAQ.pm. To access the FAQs use
@@ -560,9 +560,9 @@ do - see L</CPAN Testers Reporting>.
 =item Report bugs
 
 If you find what you believe is a bug then enter it into the
-L<http://rt.cpan.org> system. Where possible include code which reproduces the
-problem including any schema required and the versions of software you
-are using.
+L<http://rt.cpan.org/Dist/Display.html?Name=DBD-ODBC> system. Where
+possible include code which reproduces the problem including any
+schema required and the versions of software you are using.
 
 If you are unsure whether you have found a bug report it anyway or
 post it to the dbi-users mailing list.
@@ -607,7 +607,7 @@ DBI specification.
 
 DBI documents the C<ReadOnly> attribute as being settleable and
 retrievable on connection and statement handles. In ODBC setting
-ReadOnly to true causes the connection attribute SQL_ATTR_ACCESS_MODE
+ReadOnly to true causes the connection attribute C<SQL_ATTR_ACCESS_MODE>
 to be set to C<SQL_MODE_READ_ONLY> and setting it to false will set the
 access mode to C<SQL_MODE_READ_WRITE> (which is the default in ODBC).
 
@@ -666,9 +666,11 @@ about this.
 =head3 odbc_async_exec
 
 Allow asynchronous execution of queries.  This causes a spin-loop
-(with a small "sleep") until the SQL is complete.  This is useful,
-however, if you want the error handling and asynchronous messages (see
-the L</odbc_err_handler> and F<t/20SQLServer.t> for an example of this.
+(with a small "sleep") until the ODBC API being called is complete
+(i.e., while the ODBC API returns C<SQL_STILL_EXECUTING>).  This is
+useful, however, if you want the error handling and asynchronous
+messages (see the L</odbc_err_handler> and F<t/20SQLServer.t> for an
+example of this.
 
 =head3 odbc_query_timeout
 
@@ -681,7 +683,7 @@ C<SQL_ATTR_LOGIN_TIMEOUT> and C<SQL_ATTR_CONNECTION_TIMEOUT>. Add
 
   { odbc_query_timeout => 30 }
 
-to your connect, set on the dbh before creating a statement or
+to your connect, set on the C<dbh> before creating a statement or
 explicitly set it on your statement handle. The odbc_query_timeout on
 a statement is inherited from the parent connection.
 
@@ -690,7 +692,7 @@ explicitly and the default of 0 (no time out) is implemented by the
 ODBC driver and not DBD::ODBC.
 
 Note that some ODBC drivers implement a maximum query timeout value
-and will limit time outs set above their maximum. You may see a
+and will limit timeouts set above their maximum. You may see a
 warning if your time out is capped by the driver but there is
 currently no way to retrieve the capped value back from the driver.
 
@@ -700,12 +702,12 @@ See F<t/20SqlServer.t> for an example.
 
 =head3 odbc_putdata_start
 
-odbc_putdata_start defines the size at which DBD::ODBC uses C<SQLPutData>
-and C<SQLParamData> to send larger objects to the database instead of
-simply binding them as normal with C<SQLBindParameter>. It is mostly a
-placeholder for future changes allowing chunks of data to be sent to
-the database and there is little reason for anyone to change it
-currently.
+C<odbc_putdata_start> defines the size at which DBD::ODBC uses
+C<SQLPutData> and C<SQLParamData> to send larger objects to the
+database instead of simply binding them as normal with
+C<SQLBindParameter>. It is mostly a placeholder for future changes
+allowing chunks of data to be sent to the database and there is little
+reason for anyone to change it currently.
 
 The default for odbc_putdata_start is 32768 because this value was
 hard-coded in DBD::ODBC until 1.16_1.
@@ -755,7 +757,7 @@ C<SQL_ROWSET_SIZE> attribute patch from Andrew Brown
   > SQL_ROWSET_SIZE as db handle option.
   >
   > The purpose to my madness is simple. SqlServer (7 anyway) by default
-  > supports only one select statement at once (using std ODBC cursors).
+  > supports only one select statement at once (using standard ODBC cursors).
   > According to the SqlServer documentation you can alter the default
   > setting of three values to force the use of server cursors - in
   > which case multiple selects are possible.
@@ -773,7 +775,8 @@ C<SQL_ROWSET_SIZE> attribute patch from Andrew Brown
   >
 
 In versions of SQL Server 2008 and later see "Multiple Active
-Statements (MAS)" in the DBD::ODBC::FAQ instead of using this attribute.
+Statements (MAS)" in the DBD::ODBC::FAQ instead of using this
+attribute.
 
 =head3 odbc_exec_direct
 
@@ -847,11 +850,6 @@ the connect method and a lot more. See L</Unicode>.
 
 When odbc_has_unicode is 1, DBD::ODBC will:
 
-=head3 odbc_out_connect_string
-
-After calling the connect method this will be the ODBC driver's
-out connection string - see documentation on SQLDriverConnect.
-
 =over
 
 =item bind columns the database declares as wide characters as SQL_Wxxx
@@ -866,21 +864,29 @@ a wide character (or where the parameter type is explicitly set to a
 wide type - SQL_Wxxx) can be UTF8 in Perl and will be mapped to UTF16
 before passing to the driver.
 
+=item SQL
+
+SQL passed to the C<prepare> or C<do> methods which has the UTF8 flag set
+will be converted to UTF16 before being passed to the ODBC APIs C<SQLPrepare>
+or C<SQLExecDirect>.
+
+=item connection strings
+
+Connection strings passed to the C<connect> method will be converted
+to UTF16 before being passed to the ODBC API C<SQLDriverConnectW>. This happens
+irrespective of whether the UTF8 flag is set on the perl connect strings
+because unixODBC requires an application to call SQLDriverConnectW to indicate
+it will be calling the wide ODBC APIs.
+
 =back
 
 NOTE: You will need at least Perl 5.8.1 to use UNICODE with DBD::ODBC.
-
-NOTE: At this time SQL statements are still treated as native encoding
-i.e. DBD::ODBC does not call SQLPrepareW with UNICODE strings. If you
-need a unicode constant in an SQL statement, you have to pass it as
-parameter or use SQL functions to convert your constant from native
-encoding to Unicode.
 
 NOTE: Binding of unicode output parameters is coded but untested.
 
 NOTE: When building DBD::ODBC on Windows ($^O eq 'MSWin32') the
 WITH_UNICODE macro is automatically added. To disable specify -nou as
-an argument to Makefile.PL (e.g. nmake Makefile.PL -nou). On non-Windows
+an argument to Makefile.PL (e.g. C<perl Makefile.PL -nou>). On non-Windows
 platforms the WITH_UNICODE macro is B<not> enabled by default and to enable
 you need to specify the -u argument to Makefile.PL. Please bare in mind
 that some ODBC drivers do not support SQL_Wxxx columns or parameters.
@@ -890,6 +896,11 @@ untested.  Let me know how you get on with it.
 
 UNICODE support in ODBC Drivers differs considerably. Please read the
 README.unicode file for further details.
+
+=head3 odbc_out_connect_string
+
+After calling the connect method this will be the ODBC driver's
+out connection string - see documentation on SQLDriverConnect.
 
 =head3 odbc_version
 
@@ -909,14 +920,14 @@ now 3.x, this can be used to force 2.x behavior via something like: my
 Use this attribute to determine if there are more result sets
 available.  SQL Server supports this feature.  Use this as follows:
 
-do {
-   my @row;
-   while (@row = $sth->fetchrow_array()) {
-      # do stuff here
-   }
-} while ($sth->{odbc_more_results});
+  do {
+     my @row;
+     while (@row = $sth->fetchrow_array()) {
+        # do stuff here
+     }
+  } while ($sth->{odbc_more_results});
 
-Note that with multiple result sets and output parameters (i.e. using
+Note that with multiple result sets and output parameters (i.e,. using
 bind_param_inout, don't expect output parameters to be bound until ALL
 result sets have been retrieved.
 
@@ -924,7 +935,7 @@ result sets have been retrieved.
 
 You use DBD::ODBC private functions like this:
 
-  $dbh->func(arg, private_function_name);
+  $dbh->func(arg, private_function_name, @args);
 
 =head3 GetInfo
 
@@ -936,7 +947,7 @@ e.g.
 
   $value = $dbh->func(6, 'GetInfo');
 
-which returns the SQL_DRIVER_NAME.
+which returns the C<SQL_DRIVER_NAME>.
 
 This function returns a scalar value, which can be a numeric or string
 value depending on the information value requested.
@@ -962,23 +973,23 @@ This function returns a DBI statement handle for the SQLGetTypeInfo
 result-set containing many columns of type attributes (see ODBC
 specification).
 
-NOTE: It is VERY important that the use DBI includes the
-qw(:sql_types) so that values like SQL_VARCHAR are correctly
+NOTE: It is VERY important that the C<use DBI> includes the
+C<qw(:sql_types)> so that values like SQL_VARCHAR are correctly
 interpreted.  This "imports" the sql type names into the program's
-name space.  A very common mistake is to forget the qw(:sql_types) and
-obtain strange results.
+name space.  A very common mistake is to forget the C<qw(:sql_types)>
+and obtain strange results.
 
 =head3 GetFunctions
 
 This function maps to the ODBC SQLGetFunctions API which returns
 information on whether a function is supported by the ODBC driver.
 
-The argument should be SQL_API_ALL_FUNCTIONS (0) for all functions or
-a valid ODBC function number (e.g. SQL_API_SQLDESCRIBEPARAM which is
-58). See ODBC specification or examine your sqlext.h and sql.h header
-files for all the SQL_API_XXX macros.
+The argument should be C<SQL_API_ALL_FUNCTIONS> (0) for all functions
+or a valid ODBC function number (e.g. C<SQL_API_SQLDESCRIBEPARAM>
+which is 58). See ODBC specification or examine your sqlext.h and
+sql.h header files for all the SQL_API_XXX macros.
 
-If called with SQL_API_ALL_FUNCTIONS (0), then a 100 element array is
+If called with C<SQL_API_ALL_FUNCTIONS> (0), then a 100 element array is
 returned where each element will contain a '1' if the ODBC function with
 that SQL_API_XXX index is supported or '' if it is not.
 

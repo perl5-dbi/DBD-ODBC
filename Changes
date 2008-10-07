@@ -31,8 +31,21 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
  Try to produce a Module::Install build.
  There is a blob_read method in DBI (undocumented) that DBD:DB2 uses and
    might be useful in DBD::ODBC.
+ The SQL_DRIVER_ODBC_VER attribute should be odbc_SQL_DRIVER_ODBC_VER.
 
 =head1 CHANGES
+
+=head2 Changes in DBD::ODBC 1.17_1 month NN, 2008
+
+Missing newline from end of META.yml upsets cpan
+
+Add code to Makefile.PL to spot command line containing INC, outline
+problem and resolution and not generate Makefile to avoid cpan-testers
+failures.
+
+Loads of pod formatting changes including a section in the wrong place
+
+New kwalitee test
 
 =head2 Changes in DBD::ODBC 1.17 September 22, 2008
 
