@@ -47,6 +47,14 @@ Loads of pod formatting changes including a section in the wrong place
 
 New kwalitee test
 
+Fix rt 39841. Big in SQL Server ODBC driver which describes parameters
+by rearranging your SQL to do a select on the columns matching the
+parameters.  Sometimes it gets this wrong and ends up describing the
+wrong column. This can lead to a varchar(10) being described with a
+column-size less than 10 and hence you get data truncation on execute.
+
+Added a test case for rt 39841.
+
 =head2 Changes in DBD::ODBC 1.17 September 22, 2008
 
 In the absence of any bug reports since 1.16_4 this is the official

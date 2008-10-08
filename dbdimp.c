@@ -2056,11 +2056,12 @@ int dbd_describe(SV *h, imp_sth_t *imp_sth, int more)
         if (DBIc_TRACE(imp_sth, 0, 0, 8))
             PerlIO_printf(DBIc_LOGPIO(imp_dbh),
                           "   DescribeCol column = %d, name = %s, "
-                          "len = %d, type = %s, "
+                          "len = %d, type = %s(%d), "
                           "precision = %ld, scale = %d, nullable = %d\n",
                           i+1, fbh->ColName,
                           fbh->ColNameLen,
                           S_SqlTypeToString(fbh->ColSqlType),
+                          fbh->ColSqlType,
                           fbh->ColDef, fbh->ColScale, fbh->ColNullable);
         rc = SQLColAttributes(imp_sth->hstmt,
                               (SQLSMALLINT)(i+1),SQL_COLUMN_DISPLAY_SIZE,
@@ -3321,6 +3322,18 @@ static int rebind_param(
        ((-phs->strlen_or_ind + SQL_LEN_DATA_AT_EXEC_OFFSET) >= 409600)) {
        phs->strlen_or_ind = SQL_LEN_DATA_AT_EXEC(0);
        buffer_length = 0;
+   }
+   /*
+    * workaround bug in SQL Server ODBC driver where it can describe some
+    * parameters (especially in SQL using sub selects) the wrong way.
+    * If this is a varchar then the column_size must be at least as big
+    * as the buffer size but if SQL Server associated the wrong column with
+    * our parameter it could get a totally different size. Without this
+    * a varchar(10) column can be desribed as a varchar(n) where n is less
+    * than 10 and this leads to data truncation errors - see rt 39841.
+    */
+   if ((phs->sql_type == SQL_VARCHAR) && (column_size < buffer_length)) {
+       column_size = buffer_length;
    }
    rc = SQLBindParameter(imp_sth->hstmt,
 			 phs->idx, param_type, value_type, phs->sql_type,
