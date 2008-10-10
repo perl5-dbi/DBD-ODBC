@@ -413,6 +413,107 @@ Example (using MSSQL Server):
   my $DSN = 'driver={SQL Server};Server=server_name;database=database_name;uid=user;pwd=password;';
   my $dbh = DBI->connect("dbi:ODBC:$DSN") or die "$DBI::errstr\n";
 
+=head2 Why do I get data truncated error from SQL Server when inserting with parameters?
+
+DBD::ODBC attempts to use the ODBC API C<SQLDescribeParam> to obtain
+information about parameters in parameterised SQL. e.g.,
+
+  insert into mytable (column1) values(?)
+
+The C<?> is a parameter marker. You supply the parameter value (in
+this case parameter 1) with a call to the C<bind_param> method or by
+adding the parameter to the C<execute> method call. When DBD::ODBC
+sees the parameter marker in the SQL it will call C<SQLDescribeParam>
+to obtain information about the parameter size and type etc (assuming
+your ODBC driver supports C<SQLDescribeParam>).
+
+When you call C<SQLDescribeParam> in the MS SQL Server ODBC driver the
+driver will scan your SQL attempting to discover the columns in your
+database the parameters align with. e.g., in the above case the
+parameter to be bound is linked with "column1" so C<SQLDescribeParam>
+should return information about "column1". The SQL Server ODBC driver
+finds information about "column1" (in this example) by creating SQL such
+as:
+
+  select column1 from mytable where 1 = 2
+
+then looking at the column details. Unfortunately, some SQL confuses
+SQL Server and it will generate SQL to find out about your parameters
+which examines the wrong columns and on rare occasions it may even
+generate totally incorrect SQL. The test case F<t/rt_39841.t>
+domonstrates a couple of these.
+
+The upshot of this is that DBD::ODBC is sometimes lied to about
+parameters and will then bind your parameters incorrectly. This can lead
+to later errors when C<execute> is called. This happens most commonly
+when using parameters in SQL with sub-selects. For example:
+
+  create table one (a1 integer, a2 varchar(10))
+  create table two (b1 varchar(10), b2 varchar(20))
+
+  insert into one values(1, 'aaaaaaaaaa')
+  insert into two values('aaaaaaaaaa','bbbbbbbbbbbbbbbbbbbb')
+
+  select b1, (select a2 from one where a2 = b1) from two where b2 = ?
+
+  param 1 bound as 'bbbbbbbbbbbbbbbbbbbb'
+
+Clearly in this example, the one and only parameter is for two.b2 which
+is a varchar(20) but when SQL Server rearranges your SQL to describe
+the parameter it issues:
+
+  select a2 from one where 1 = 0
+
+and DBD::ODBC is told the parameter is a VARCHAR(10). In DBD::ODBC
+1.17 this would then lead to a data truncation error because parameter
+1 would be bound as 'bbbbbbbbbbbbbbbbbbbb' but with a column size of
+10 as that is what SQLDescribeParam returned. DBD::ODBC 1.17_1 (and
+later) works around this problem for VARCHAR columns because it is
+obvious a VARCHAR parameter of length 20 cannot have a column size of
+10 so the column size is increased to the length of the parameter.
+
+However, a more difficult error can occur when SQL Server describes
+the parameter as totally the wrong type. The first example in
+F<t/rt_39841.t> demonstrates this. SQL Server describes a VARCHAR
+parameter as an integer which DBD::ODBC has little choice to believe
+but when something like 'bbbbbbbbbb' is bound as an integer, SQL
+Server will then return an error like "invalid value for cast
+specification". The only way around this is to specifically name the
+parameter type. e.g.,
+
+  create table one (a1 integer, a2 varchar(20))
+  create table two (b1 double precision, b2 varchar(8))
+
+  insert into one values(1, 'aaaaaaaaaa')
+  insert into two values(1, 'bbbbbbbb')
+
+  select b1, ( select a2 from one where a1 = b1 ) from two where b2 = ?
+
+  param 1 bound as 'bbbbbbbbbb'
+
+Clearly parameter 1 is a varchar(8) but SQL Server rearranges the SQL to:
+
+  select a1 from one where 1 = 2
+
+when it should have run
+
+  select b2 from two where 1 = 2
+
+As a result parameter 1 is described as an integer and this leads to the
+problem. To workaround this problem you would need to bind parameter 1
+naming the SQL type of the parameter using something like:
+
+  use DBI qw(:sql_types);
+
+  bind_param(1, 'bbbbbbbbbb', SQL_VARCHAR);
+
+as omitting SQL_VARCHAR will cause DBD::ODBC to use the type
+C<SQLDescribeParam> returned.
+
+=head2 Why do I get invalid value for cast specification (22018) from SQL Server when inserting with parameters?
+
+See L<Why do I get invalid value for cast specification (22018) from SQL Server when inserting with parameters?>
+
 =head1 AUTHOR
 
 Parts of this document were written by Tim Bunce,
