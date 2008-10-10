@@ -578,8 +578,8 @@ AS
            pass($tst);
        } else {
            diag("DSN=$dsn\n");
-           fail($tst);
-           diag("\nNOTE: If you failed this test is may just be because your SQL Server driver\nis too old to handle the MARS_Connection attribute. This test cannot\neasily skip this test for old drivers as there is no definite SQL Server\ndriver version it can check.\n\n");
+           diag("\nNOTE: You failed this test because your SQL Server driver\nis too old to handle the MARS_Connection attribute. This test cannot\neasily skip this test for old drivers as there is no definite SQL Server\ndriver version it can check.\n\n");
+           skip 'WARNING: driver does NOT support MARS_Connection', 1;
        }
        $dbh->disconnect; # throw away mars connection
        $dbh = DBI->connect;
