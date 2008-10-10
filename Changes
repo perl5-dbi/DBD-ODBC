@@ -47,13 +47,23 @@ Loads of pod formatting changes including a section in the wrong place
 
 New kwalitee test
 
-Fix rt 39841. Big in SQL Server ODBC driver which describes parameters
+Fix rt 39841. Bug in SQL Server ODBC driver which describes parameters
 by rearranging your SQL to do a select on the columns matching the
 parameters.  Sometimes it gets this wrong and ends up describing the
 wrong column. This can lead to a varchar(10) being described with a
 column-size less than 10 and hence you get data truncation on execute.
 
 Added a test case for rt 39841.
+
+Fix rt 39897. 1.17 added support for varchar(max) in SQL Server
+but it broke support for SQL_VARCHAR columns in that they had LongReadLen
+and LongTruncOk applied to them. This means that in 1.16 you could retrieve
+a SQL_VARCHAR column without worrying about how long it was but in 1.17
+if the same column was greater than 80 characters then you would
+get a truncated error. The only way the around this was to set
+LongTruncOk or LongReadLen.
+
+Added a test case for rt 39897.
 
 =head2 Changes in DBD::ODBC 1.17 September 22, 2008
 

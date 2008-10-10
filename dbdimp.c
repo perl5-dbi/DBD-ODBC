@@ -2168,8 +2168,12 @@ int dbd_describe(SV *h, imp_sth_t *imp_sth, int more)
             break;
 # endif	/* WITH_UNICODE */
 #endif
-          case SQL_LONGVARCHAR:
           case SQL_VARCHAR:
+            if (fbh->ColDef == 0) {
+                fbh->ColDisplaySize = DBIc_LongReadLen(imp_sth)+1;
+            }
+            break;
+          case SQL_LONGVARCHAR:
 	    fbh->ColDisplaySize = DBIc_LongReadLen(imp_sth)+1;
 	    break;
 #ifdef TIMESTAMP_STRUCT	/* XXX! */
