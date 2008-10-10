@@ -71,7 +71,7 @@ SKIP: {
     test_2($dbh);       # 4 tests
 };
 
-# test we can bind to b2 with non-existant value.
+#
 # A bug in the SQL Server OBDC driver causes SQLDescribeParam to
 # report the parameter as an integer of column_size 10 instead of
 # a varchar of column size 10. Thus when you execute with 'bbbbbb'
@@ -87,7 +87,7 @@ sub test_1
 {
     $dbh = shift;
     my $sth;
-	  	  
+
     eval {
         $dbh->do('create table PERL_DBD_39841a (a1 integer, a2 varchar(20))');
         $dbh->do('create table PERL_DBD_39841b (b1 double precision, b2 varchar(8))');
@@ -211,23 +211,18 @@ sub test_1
     };
 }
 
-# test we can bind to b2 with non-existant value.
-# A bug in the SQL Server OBDC driver causes SQLDescribeParam to
-# report the parameter as an integer of column_size 10 instead of
-# a varchar of column size 10. Thus when you execute with 'bbbbbb'
-# SQL Server will complain that an unsupported conversion has occurred.
-# We can work around this by specifically telling DBD::ODBC to bind
-# as a VARCHAR.
-# The bug is due to SQL Server rearranging the SQL above to:
-# select a1 from PERL_DBD_38941a where 1 = 2
-# and it should have run
-# select b2 from PERL_DBD_38941b where 1 = 2
+#
+# Here SQL Server gets confused and rearranges the SQL to find out about
+# PERL_DBD_39841a.a2 when it should have returned information about
+# PERL_DBD_39841b.b2. This used to lead to DBD::ODBC binding p1 as
+# 'bbbbbbbbbbbbbbbbbbbb' but specifying a column size of 10 - hence
+# data truncation error.
 #
 sub test_2
 {
     $dbh = shift;
     my $sth;
-	  	  
+
     eval {
 	local $dbh->{PrintError} = 1;
         $dbh->do('create table PERL_DBD_39841a (a1 integer, a2 varchar(10))');
