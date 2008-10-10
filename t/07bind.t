@@ -7,7 +7,7 @@ $| = 1;
 my $has_test_nowarnings = 1;
 eval "require Test::NoWarnings";
 $has_test_nowarnings = undef if $@;
-my $tests = 15;
+my $tests = 21;
 $tests += 1 if $has_test_nowarnings;
 plan tests => $tests;
 
@@ -96,12 +96,18 @@ my $sth = $dbh->prepare("insert into $ODBCTEST::table_name (COL_A, COL_C) values
 $sth->bind_param(1, 1, SQL_INTEGER);
 $sth->bind_param(2, "test", SQL_LONGVARCHAR);
 my $ref = $sth->{ParamValues};
-my $key;
-# foreach $key (keys %$ref) {
-   # print "param $key: $ref->{$key}\n";
-# }
+is(ref($ref), 'HASH', 'ParamValues returns a hash ref');
+
 is($ref->{1}, 1, "ParamValues test integer");
 is($ref->{2}, "test", "Paramvalues test string");
+
+# test param types
+$ref = $sth->{ParamTypes};
+is(ref($ref), 'HASH', 'ParamValues returns a hash ref');
+ok(exists($ref->{1}), 'p1 exists');
+ok(exists($ref->{1}), 'p2 exists');
+like($ref->{1}, qr/^-?\d+$/, 'numeric SQL type on p1');
+like($ref->{2}, qr/^-?\d+$/, 'numeric SQL type on p2');
 
 # test numbered parameters
 eval {

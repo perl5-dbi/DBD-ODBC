@@ -8,7 +8,6 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
 
 =head1 Todo
 
- META.yml no longer seems to parse on pause
  Add array parameter binding (per new DBI Spec)
  Add row caching/multiple row fetches to speed selects
  Better/more tests on multiple statement handles which ensure the
@@ -32,6 +31,11 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
  There is a blob_read method in DBI (undocumented) that DBD:DB2 uses and
    might be useful in DBD::ODBC.
  The SQL_DRIVER_ODBC_VER attribute should be odbc_SQL_DRIVER_ODBC_VER.
+ Why does level 15 tracing of any DBD::ODBC script show alot of these:
+   !!DBD::ODBC unsupported attribute passed (PrintError)
+   !!DBD::ODBC unsupported attribute passed (Username)
+   !!DBD::ODBC unsupported attribute passed (dbi_connect_closure)
+   !!DBD::ODBC unsupported attribute passed (LongReadLen)
 
 =head1 CHANGES
 
@@ -71,6 +75,9 @@ In the absence of any bug reports since 1.16_4 this is the official
 1.17 release. See below for changes since 1.16.
 
 Minor pod changes.
+
+Added support for ParamTypes (see DBI spec) and notes in DBD::ODBC
+pod.
 
 =head2 Changes in DBD::ODBC 1.16_4 September 12, 2008
 

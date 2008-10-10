@@ -4070,7 +4070,7 @@ static T_st_params S_st_fetch_params[] =
    s_A("sol_length",1),         /* 8 */
    s_A("CursorName",1),		/* 9 */
    s_A("odbc_more_results",1),	/* 10 */
-   s_A("ParamValues",1),        /* 11 */
+   s_A("ParamValues",0),        /* 11 */
 
    s_A("LongReadLen",0),        /* 12 */
    s_A("odbc_ignore_named_placeholders",0),	/* 13 */
@@ -4078,6 +4078,7 @@ static T_st_params S_st_fetch_params[] =
    s_A("odbc_force_rebind",0),	/* 15 */
    s_A("odbc_query_timeout",0),	/* 16 */
    s_A("odbc_putdata_start",0),	/* 17 */
+   s_A("ParamTypes",0),        /* 18 */
    s_A("",0),			/* END */
 };
 
@@ -4239,7 +4240,7 @@ SV *dbd_st_FETCH_attrib(SV *sth, imp_sth_t *imp_sth, SV *keysv)
 	    dbd_st_finish(sth, imp_sth);
 	 }
 	 break;
-      case 11:
+      case 11:                                  /* ParamValues */
       {
 	 /* not sure if there's a memory leak here. */
 	 HV *paramvalues = newHV();
@@ -4259,21 +4260,21 @@ SV *dbd_st_FETCH_attrib(SV *sth, imp_sth_t *imp_sth, SV *keysv)
 	 }
 	 /* ensure HV is freed when the ref is freed */
 	 retsv = newRV_noinc((SV *)paramvalues);
+         break;
       }
-      break;
-      case 12:
+      case 12: /* LongReadLen */
 	 retsv = newSViv(DBIc_LongReadLen(imp_sth));
 	 break;
-      case 13:
+      case 13: /* odbc_ignore_named_placeholders */
 	 retsv = newSViv(imp_sth->odbc_ignore_named_placeholders);
 	 break;
-      case 14:
+      case 14: /* odbc_default_bind_type */
 	 retsv = newSViv(imp_sth->odbc_default_bind_type);
 	 break;
-      case 15: /* force rebind */
+      case 15: /* odbc_force_rebind */
 	 retsv = newSViv(imp_sth->odbc_force_rebind);
 	 break;
-      case 16: /* query timeout */
+      case 16: /* odbc_query_timeout */
         /*
          * -1 is our internal flag saying odbc_query_timeout has never been
          * set so we map it back to the default for ODBC which is 0
@@ -4287,6 +4288,28 @@ SV *dbd_st_FETCH_attrib(SV *sth, imp_sth_t *imp_sth, SV *keysv)
       case 17: /* odbc_putdata_start */
         retsv = newSViv(imp_sth->odbc_putdata_start);
         break;
+      case 18:                                  /* ParamTypes */
+      {
+	 /* not sure if there's a memory leak here. */
+	 HV *paramtypes = newHV();
+	 if (imp_sth->all_params_hv) {
+	    HV *hv = imp_sth->all_params_hv;
+	    SV *sv;
+	    char *key;
+	    I32 retlen;
+	    hv_iterinit(hv);
+	    while( (sv = hv_iternextsv(hv, &key, &retlen)) != NULL ) {
+	       if (sv != &sv_undef) {
+		  phs_t *phs = (phs_t*)(void*)SvPVX(sv);
+		  hv_store(paramtypes, phs->name, (I32)strlen(phs->name),
+                           newSViv(phs->sql_type), 0);
+	       }
+	    }
+	 }
+	 /* ensure HV is freed when the ref is freed */
+	 retsv = newRV_noinc((SV *)paramtypes);
+         break;
+      }
       default:
 	 return Nullsv;
    }
