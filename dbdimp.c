@@ -4300,9 +4300,12 @@ SV *dbd_st_FETCH_attrib(SV *sth, imp_sth_t *imp_sth, SV *keysv)
 	    hv_iterinit(hv);
 	    while( (sv = hv_iternextsv(hv, &key, &retlen)) != NULL ) {
 	       if (sv != &sv_undef) {
-		  phs_t *phs = (phs_t*)(void*)SvPVX(sv);
-		  hv_store(paramtypes, phs->name, (I32)strlen(phs->name),
-                           newSViv(phs->sql_type), 0);
+                   HV *subh = newHV();
+                   
+                   phs_t *phs = (phs_t*)(void*)SvPVX(sv);
+                   hv_store(subh, "TYPE", 4, newSViv(phs->sql_type), 0);
+                   hv_store(paramtypes, phs->name, (I32)strlen(phs->name),
+                            newRV_noinc((SV *)subh), 0);
 	       }
 	    }
 	 }

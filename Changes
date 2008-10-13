@@ -36,10 +36,27 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
    !!DBD::ODBC unsupported attribute passed (Username)
    !!DBD::ODBC unsupported attribute passed (dbi_connect_closure)
    !!DBD::ODBC unsupported attribute passed (LongReadLen)
+  http://groups.google.com/group/perl.dbd.pg.changes/browse_thread/thread/8205bf83b5a48f63/cf43d87fe644798f?hl=en&q=easysoft&pli=1
+  http://www.nntp.perl.org/group/perl.dbi.users/2008/10/msg33322.html
+  Add a perlcritic test
 
 =head1 CHANGES
 
-=head2 Changes in DBD::ODBC 1.17_1 month NN, 2008
+=head2 Changes in DBD::ODBC 1.17_2 October 13, 2008
+
+Changed ParamTypes attribute to be as specification i.e.,
+
+  {
+    parameter_1 => {TYPE => sql_type}
+    parameter_2 => {TYPE => sql_type}
+    ...
+  }
+
+and changed the tests in 07bind.t to reflect this.
+
+A few minor perlcritic changes to ODBC.pm.
+
+=head2 Changes in DBD::ODBC 1.17_1 October 10, 2008
 
 Missing newline from end of META.yml upsets cpan
 

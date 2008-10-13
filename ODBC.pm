@@ -8,6 +8,8 @@
 # You may distribute under the terms of either the GNU General Public
 # License or the Artistic License, as specified in the Perl README file.
 
+## no critic (ProhibitManyArgs)
+
 require 5.006;
 
 $DBD::ODBC::VERSION = '1.17_1';
@@ -27,10 +29,10 @@ $DBD::ODBC::VERSION = '1.17_1';
 
     bootstrap DBD::ODBC $VERSION;
 
-    $err = 0;		# holds error code   for DBI::err
-    $errstr = "";	# holds error string for DBI::errstr
+    $err = 0;           # holds error code   for DBI::err
+    $errstr = "";       # holds error string for DBI::errstr
     $sqlstate = "00000";
-    $drh = undef;	# holds driver handle once initialised
+    $drh = undef;       # holds driver handle once initialised
 
     sub parse_trace_flag {
         my ($class, $name) = @_;
@@ -74,6 +76,7 @@ $DBD::ODBC::VERSION = '1.17_1';
     use strict;
     use warnings;
 
+    ## no critic (ProhibitBuiltinHomonyms)
     sub connect {
 	my $drh = shift;
 	my($dbname, $user, $auth, $attr)= @_;
@@ -90,10 +93,11 @@ $DBD::ODBC::VERSION = '1.17_1';
 	# Call ODBC logon func in ODBC.xs file
 	# and populate internal handle data.
 
-	DBD::ODBC::db::_login($this, $dbname, $user, $auth, $attr) or return undef;
+	DBD::ODBC::db::_login($this, $dbname, $user, $auth, $attr) or return;
 
 	$this;
     }
+    ## use critic
 
 }
 
@@ -139,7 +143,7 @@ $DBD::ODBC::VERSION = '1.17_1';
 	# and populate internal handle data.
 
 	DBD::ODBC::st::_prepare($sth, $statement, @attribs)
-	    or return undef;
+	    or return;
 
 	$sth;
     }
@@ -155,7 +159,7 @@ $DBD::ODBC::VERSION = '1.17_1';
 	my $sth = DBI::_new_sth($dbh, { 'Statement' => "SQLColumns" });
 
 	_columns($dbh,$sth, $catalog, $schema, $table, $column)
-	    or return undef;
+	    or return;
 
 	$sth;
     }
@@ -171,7 +175,7 @@ $DBD::ODBC::VERSION = '1.17_1';
 	my $sth = DBI::_new_sth($dbh, { 'Statement' => "SQLColumns" });
 
 	_columns($dbh,$sth, $catalog, $schema, $table, $column)
-	    or return undef;
+	    or return;
 
 	$sth;
     }
@@ -197,7 +201,7 @@ $DBD::ODBC::VERSION = '1.17_1';
 	my $sth = DBI::_new_sth($dbh, { 'Statement' => "SQLTables" });
 
 	DBD::ODBC::st::_tables($dbh,$sth, $catalog, $schema, $table, $type)
-	      or return undef;
+	      or return;
 	$sth;
     }
 
@@ -211,10 +215,9 @@ $DBD::ODBC::VERSION = '1.17_1';
        $schema = "" if (!$schema);
        $table = "" if (!$table);
        DBD::ODBC::st::_primary_keys($dbh,$sth, $catalog, $schema, $table )
-	     or return undef;
+	     or return;
        $sth;
     }
-
     sub statistics_info {
        my ($dbh, $catalog, $schema, $table, $unique, $quick ) = @_;
 
@@ -229,7 +232,7 @@ $DBD::ODBC::VERSION = '1.17_1';
 
        DBD::ODBC::st::_statistics($dbh, $sth, $catalog, $schema, $table,
                                  $unique, $quick)
-	     or return undef;
+	     or return;
        $sth;
     }
 
@@ -245,7 +248,7 @@ $DBD::ODBC::VERSION = '1.17_1';
        $fkcatalog = "" if (!$fkcatalog);
        $fkschema = "" if (!$fkschema);
        $fktable = "" if (!$fktable);
-       _GetForeignKeys($dbh, $sth, $pkcatalog, $pkschema, $pktable, $fkcatalog, $fkschema, $fktable) or return undef;
+       _GetForeignKeys($dbh, $sth, $pkcatalog, $pkschema, $pktable, $fkcatalog, $fkschema, $fktable) or return;
        $sth;
     }
 
@@ -298,9 +301,9 @@ $DBD::ODBC::VERSION = '1.17_1';
 	    $DBD::ODBC::sqlstate = "00000";
 	    return 1 if $ok;
 	}
-	return 1 if $state eq 'S0002';	# Base table not found
+        return 1 if $state eq 'S0002';  # Base table not found
  	return 1 if $state eq '42S02';  # Base table not found.Solid EE v3.51
-	return 1 if $state eq 'S0022';	# Column not found
+        return 1 if $state eq 'S0022';  # Column not found
 	return 1 if $state eq '37000';  # statement could not be prepared (19991011, JLU)
 	# return 1 if $state eq 'S1000';  # General Error? ? 5/30/02, JLU.  This is what Openlink is returning
 	# We assume that any other error means the database
@@ -317,7 +320,7 @@ $DBD::ODBC::VERSION = '1.17_1';
 	# handle SQL_DRIVER_HSTMT, SQL_DRIVER_HLIB and
 	# SQL_DRIVER_HDESC specially
 	if ($item == 5 || $item == 135 || $item == 76) {
-	   return undef;
+	   return;
 	}
 	return _GetInfo($dbh, $item);
     }
@@ -325,6 +328,7 @@ $DBD::ODBC::VERSION = '1.17_1';
     # new override of do method provided by Merijn Broeren
     # this optimizes "do" to use SQLExecDirect for simple
     # do statements without parameters.
+    ## no critic (ProhibitBuiltinHomonyms)
     sub do {
         my($dbh, $statement, $attr, @params) = @_;
         my $rows = 0;
@@ -347,7 +351,7 @@ $DBD::ODBC::VERSION = '1.17_1';
         }
         return $rows
     }
-
+    ## use critic
     #
     # can also be called as $dbh->func($sql, ExecDirect);
     # if, for some reason, there are compatibility issues
@@ -374,11 +378,11 @@ $DBD::ODBC::VERSION = '1.17_1';
     # See the ODBC documentation for more information about this call.
     #
     sub GetStatistics {
-			my ($dbh, $Catalog, $Schema, $Table, $Unique) = @_;
-			# create a "blank" statement handle
-			my $sth = DBI::_new_sth($dbh, { 'Statement' => "SQLStatistics" });
-			_GetStatistics($dbh, $sth, $Catalog, $Schema, $Table, $Unique) or return undef;
-			$sth;
+        my ($dbh, $Catalog, $Schema, $Table, $Unique) = @_;
+        # create a "blank" statement handle
+        my $sth = DBI::_new_sth($dbh, { 'Statement' => "SQLStatistics" });
+        _GetStatistics($dbh, $sth, $Catalog, $Schema, $Table, $Unique) or return;
+        $sth;
     }
 
     # Call the ODBC function SQLForeignKeys
@@ -386,11 +390,11 @@ $DBD::ODBC::VERSION = '1.17_1';
     # See the ODBC documentation for more information about this call.
     #
     sub GetForeignKeys {
-			my ($dbh, $PK_Catalog, $PK_Schema, $PK_Table, $FK_Catalog, $FK_Schema, $FK_Table) = @_;
-			# create a "blank" statement handle
-			my $sth = DBI::_new_sth($dbh, { 'Statement' => "SQLForeignKeys" });
-			_GetForeignKeys($dbh, $sth, $PK_Catalog, $PK_Schema, $PK_Table, $FK_Catalog, $FK_Schema, $FK_Table) or return undef;
-			$sth;
+        my ($dbh, $PK_Catalog, $PK_Schema, $PK_Table, $FK_Catalog, $FK_Schema, $FK_Table) = @_;
+        # create a "blank" statement handle
+        my $sth = DBI::_new_sth($dbh, { 'Statement' => "SQLForeignKeys" });
+        _GetForeignKeys($dbh, $sth, $PK_Catalog, $PK_Schema, $PK_Table, $FK_Catalog, $FK_Schema, $FK_Table) or return;
+        $sth;
     }
 
     # Call the ODBC function SQLPrimaryKeys
@@ -398,11 +402,11 @@ $DBD::ODBC::VERSION = '1.17_1';
     # See the ODBC documentation for more information about this call.
     #
     sub GetPrimaryKeys {
-			my ($dbh, $Catalog, $Schema, $Table) = @_;
-			# create a "blank" statement handle
-			my $sth = DBI::_new_sth($dbh, { 'Statement' => "SQLPrimaryKeys" });
-			_GetPrimaryKeys($dbh, $sth, $Catalog, $Schema, $Table) or return undef;
-			$sth;
+        my ($dbh, $Catalog, $Schema, $Table) = @_;
+        # create a "blank" statement handle
+        my $sth = DBI::_new_sth($dbh, { 'Statement' => "SQLPrimaryKeys" });
+        _GetPrimaryKeys($dbh, $sth, $Catalog, $Schema, $Table) or return;
+        $sth;
     }
 
     # Call the ODBC function SQLSpecialColumns
@@ -413,7 +417,7 @@ $DBD::ODBC::VERSION = '1.17_1';
 	my ($dbh, $Identifier, $Catalog, $Schema, $Table, $Scope, $Nullable) = @_;
 	# create a "blank" statement handle
 	my $sth = DBI::_new_sth($dbh, { 'Statement' => "SQLSpecialColumns" });
-	_GetSpecialColumns($dbh, $sth, $Identifier, $Catalog, $Schema, $Table, $Scope, $Nullable) or return undef;
+	_GetSpecialColumns($dbh, $sth, $Identifier, $Catalog, $Schema, $Table, $Scope, $Nullable) or return;
 	$sth;
     }
 
@@ -422,7 +426,7 @@ $DBD::ODBC::VERSION = '1.17_1';
 	# create a "blank" statement handle
 	my $sth = DBI::_new_sth($dbh, { 'Statement' => "SQLGetTypeInfo" });
 	# print "SQL Type is $sqltype\n";
-	_GetTypeInfo($dbh, $sth, $sqltype) or return undef;
+	_GetTypeInfo($dbh, $sth, $sqltype) or return;
 	$sth;
     }
 
@@ -430,7 +434,7 @@ $DBD::ODBC::VERSION = '1.17_1';
 	my ($dbh, $sqltype) = @_;
 	$sqltype = DBI::SQL_ALL_TYPES unless defined $sqltype;
 	my $sth = DBI::_new_sth($dbh, { 'Statement' => "SQLGetTypeInfo" });
-	_GetTypeInfo($dbh, $sth, $sqltype) or return undef;
+	_GetTypeInfo($dbh, $sth, $sqltype) or return;
 	my $info = $sth->fetchall_arrayref;
 	unshift @$info, {
 	    map { ($sth->{NAME}->[$_] => $_) } 0..$sth->{NUM_OF_FIELDS}-1
@@ -458,7 +462,7 @@ $DBD::ODBC::VERSION = '1.17_1';
                };
     }
 
-    sub ColAttributes {		# maps to SQLColAttributes
+    sub ColAttributes { # maps to SQLColAttributes
 	my ($sth, $colno, $desctype) = @_;
 	# print "before ColAttributes $colno\n";
 	my $tmp = _ColAttributes($sth, $colno, $desctype);
