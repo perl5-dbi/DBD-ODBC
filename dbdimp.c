@@ -4301,7 +4301,7 @@ SV *dbd_st_FETCH_attrib(SV *sth, imp_sth_t *imp_sth, SV *keysv)
 	    while( (sv = hv_iternextsv(hv, &key, &retlen)) != NULL ) {
 	       if (sv != &sv_undef) {
                    HV *subh = newHV();
-                   
+
                    phs_t *phs = (phs_t*)(void*)SvPVX(sv);
                    hv_store(subh, "TYPE", 4, newSViv(phs->sql_type), 0);
                    hv_store(paramtypes, phs->name, (I32)strlen(phs->name),

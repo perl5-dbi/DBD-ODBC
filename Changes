@@ -28,17 +28,18 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
    so anyone binding a lob has to have all of it available before it can
    be bound.
  Try to produce a Module::Install build.
- There is a blob_read method in DBI (undocumented) that DBD:DB2 uses and
-   might be useful in DBD::ODBC.
+ There is a blob_read method in DBI (undocumented) that DBD:DB2 & DBD::Pg
+   use and might be useful in DBD::ODBC.
  The SQL_DRIVER_ODBC_VER attribute should be odbc_SQL_DRIVER_ODBC_VER.
  Why does level 15 tracing of any DBD::ODBC script show alot of these:
    !!DBD::ODBC unsupported attribute passed (PrintError)
    !!DBD::ODBC unsupported attribute passed (Username)
    !!DBD::ODBC unsupported attribute passed (dbi_connect_closure)
    !!DBD::ODBC unsupported attribute passed (LongReadLen)
-  http://groups.google.com/group/perl.dbd.pg.changes/browse_thread/thread/8205bf83b5a48f63/cf43d87fe644798f?hl=en&q=easysoft&pli=1
-  http://www.nntp.perl.org/group/perl.dbi.users/2008/10/msg33322.html
-  Add a perlcritic test
+  strawberry perl build issue:
+    http://groups.google.com/group/perl.dbd.pg.changes/browse_thread/thread/8205bf83b5a48f63/cf43d87fe644798f?hl=en&q=easysoft&pli=1
+    http://www.nntp.perl.org/group/perl.dbi.users/2008/10/msg33322.html
+  Add a perlcritic test - see DBD::Pg
 
 =head1 CHANGES
 
@@ -55,6 +56,8 @@ Changed ParamTypes attribute to be as specification i.e.,
 and changed the tests in 07bind.t to reflect this.
 
 A few minor perlcritic changes to ODBC.pm.
+
+Added 99_yaml.t test to check META.yml.
 
 =head2 Changes in DBD::ODBC 1.17_1 October 10, 2008
 
