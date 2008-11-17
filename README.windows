@@ -59,7 +59,7 @@ overrides what MakeMaker attempts to add to INC. As a result, the
 build will probably be missing the include path for the DBIXS.h
 module.
 
-I know of no way to fix this over than to download DBD::ODBC and build
-it yourself without using cpan.
-
 See http://rt.cpan.org/Public/Bug/Display.html?id=32811.
+
+Since DBD::ODBC 1.17_2 I believe we have a workaround in the
+Makefile.PL that stops this happening.

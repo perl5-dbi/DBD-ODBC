@@ -92,5 +92,7 @@ t/UChelp.pm
 t/pod.t
 t/pod-coverage.t
 t/rt_38977.t
+t/rt_39841.t
+t/rt_39897.t
 unicode_helper.c
 unicode_helper.h

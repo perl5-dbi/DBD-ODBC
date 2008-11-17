@@ -43,7 +43,7 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
 
 =head1 CHANGES
 
-=head2 Changes in DBD::ODBC 1.17_2 October 13, 2008
+=head2 Changes in DBD::ODBC 1.17_2 November 17, 2008
 
 Changed ParamTypes attribute to be as specification i.e.,
 
@@ -58,6 +58,9 @@ and changed the tests in 07bind.t to reflect this.
 A few minor perlcritic changes to ODBC.pm.
 
 Added 99_yaml.t test to check META.yml.
+
+Added patch from Spicy Jack to workaround problems with Strawberry
+Perl setting INC on the command line when running Makefile.PL.
 
 =head2 Changes in DBD::ODBC 1.17_1 October 10, 2008
 
