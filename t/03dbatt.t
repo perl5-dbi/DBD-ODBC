@@ -7,7 +7,7 @@ use strict;
 my $has_test_nowarnings = 1;
 eval "require Test::NoWarnings";
 $has_test_nowarnings = undef if $@;
-my $tests = 22 + 4;
+my $tests = 25 + 4;
 
 $tests += 1 if $has_test_nowarnings;
 plan tests => $tests;
@@ -157,6 +157,12 @@ is($sth_timeout->{odbc_query_timeout}, 30, "verify dbh setting for query_timeout
 $sth_timeout->{odbc_query_timeout} = 1;
 is($sth_timeout->{odbc_query_timeout}, 1, "verify sth query_timeout can be overridden");
 
+# odbc_column_display_size
+is($dbh->{odbc_column_display_size}, 2001, 'verify default for odbc_column_display_size');
+ok($dbh->{odbc_column_display_size} = 3000, 'set odbc_column_display_size');
+is($dbh->{odbc_column_display_size}, 3000,
+   'verify changed odbc_column_display_size');
+
 $dbh->disconnect;
 exit 0;
 # avoid annoying warning
@@ -166,7 +172,7 @@ print $DBI::errstr;
 
 # ------------------------------------------------------------
 # returns true when a row remains inserted after a rollback.
-# this means that autocommit is ON. 
+# this means that autocommit is ON.
 # ------------------------------------------------------------
 sub commitTest {
     my $dbh = shift;
@@ -183,7 +189,7 @@ sub commitTest {
       $dbh->commit();
     }
 
-    my $supported = $dbh->get_info(46); # SQL_TXN_CAPABLE 
+    my $supported = $dbh->get_info(46); # SQL_TXN_CAPABLE
     # print "Transactions supported: $supported\n";
     if (!$supported) {
 	return -1;
@@ -210,7 +216,7 @@ sub commitTest {
 	$rc = 0;
     }
     # in case not all rows have been returned..there shouldn't be more than one.
-    $sth->finish(); 
+    $sth->finish();
     $rc;
 }
 

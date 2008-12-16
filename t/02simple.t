@@ -71,7 +71,7 @@ SKIP: {
 SKIP: {
     skip "DBI too old for private_attribute_info", 3
 	if ($DBI::VERSION < 1.54);
-	
+
     my $sql;
     my $drv = $dbh->get_info(17);
     if ($drv =~ /Oracle/i) {

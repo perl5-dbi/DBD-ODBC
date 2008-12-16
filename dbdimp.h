@@ -70,6 +70,10 @@ struct imp_dbh_st {
     SV *out_connect_string;
     /* default row cache size in rows for statements */
     int  RowCacheSize;
+    /* if SQL_COLUMN_DISPLAYS_SIZE or SQL_COLUMN_LENGTH are not defined or
+     * SQLColAttributes for these attributes fails we fallback on a default
+     * value. */
+    SQLLEN odbc_column_display_size;
     char odbc_driver_name[80];
     char odbc_driver_version[20];
 };
@@ -116,6 +120,7 @@ struct imp_sth_st {
        /* multiple result sets */
     SQLINTEGER odbc_query_timeout;
     IV odbc_putdata_start;
+    IV odbc_column_display_size;
 };
 #define IMP_STH_EXECUTING	0x0001
 

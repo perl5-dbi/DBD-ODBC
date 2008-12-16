@@ -512,7 +512,17 @@ C<SQLDescribeParam> returned.
 
 =head2 Why do I get invalid value for cast specification (22018) from SQL Server when inserting with parameters?
 
-See L<Why do I get invalid value for cast specification (22018) from SQL Server when inserting with parameters?>
+See L<http://support.microsoft.com/kb/269011> on the microsoft web site for
+a bug you may have hit.
+
+In Perl the most common reason for this is that you have bound column
+data in SQL which does not match the column type in the database and
+the ODBC driver cannot perform the necessary conversion. DBD::ODBC
+mostly binds all column data as strings and lets the ODBC driver
+convert the string to the right column type. If you supply a string
+which cannot be converted to the native column type you will get this
+error e.g., if you attempt to bind a non-datetime string to a datetime
+column or a non-numeric string to a numeric column.
 
 =head1 AUTHOR
 
