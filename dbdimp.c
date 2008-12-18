@@ -2978,10 +2978,11 @@ static void get_param_type(SV *sth, imp_sth_t *imp_sth, phs_t *phs)
        } else {
            if (DBIc_TRACE(imp_sth, 0, 0, 5))
                PerlIO_printf(DBIc_LOGPIO(imp_dbh),
-                             "      SQLDescribeParam %s: SqlType=%s "
+                             "      SQLDescribeParam %s: SqlType=%s(%d) "
                              "param_size=%d Scale=%d Nullable=%d\n",
                              phs->name,
                              S_SqlTypeToString(phs->described_sql_type),
+                             phs->described_sql_type,
                              phs->param_size, ibScale, fNullable);
 
            /*
@@ -3346,7 +3347,7 @@ static int rebind_param(
     *      The text, ntext, or image pointer value conflicts with the column
     *      name specified.)
     *
-    *  There appear to be 2 workarounds but I was not prepared to the first.
+    *  There appear to be 2 workarounds but I was not prepared to do the first.
     *  The first is simply to set the indicator to SQL_LEN_DATA_AT_EXEC(409600)
     *  if the parameter was larger than 409600 - miraculously it works but
     *  shouldn't according to MSDN.
