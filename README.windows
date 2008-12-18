@@ -63,3 +63,58 @@ See http://rt.cpan.org/Public/Bug/Display.html?id=32811.
 
 Since DBD::ODBC 1.17_2 I believe we have a workaround in the
 Makefile.PL that stops this happening.
+
+Reported issues and workarounds
+===============================
+
+Visual Studio 6.0 and SDK Feb 2003
+==================================
+
+It has been reported to me that there are problems building DBD::ODBC
+with VS 6 on some setups (thanks to JHF Remmelzwaal for the following
+example and workaround).
+
+Initially an nmake failed with:
+
+C:\Program Files\Microsoft SDK\Include\.\windows.h(157) : fatal error
+C1083: Cannot open include file: 'excpt.h': No such file or directory
+
+This was solved by:
+
+set PASTHRU_INC=-I"c:\Program Files\Microsoft SDK\include" -I"c:\Program Files\Microsoft Visual Studio\VC98\include"
+
+which led to:
+
+ODBC.obj : error LNK2001: unresolved external symbol __fltused
+dbdimp.obj : error LNK2001: unresolved external symbol __fltused
+unicode_helper.obj : error LNK2001: unresolved external symbol __fltused
+ODBC.obj : error LNK2001: unresolved external symbol __imp__sprintf
+dbdimp.obj : error LNK2001: unresolved external symbol __imp__sprintf
+ODBC.obj : error LNK2001: unresolved external symbol _strcpy
+dbdimp.obj : error LNK2001: unresolved external symbol _strcpy
+dbdimp.obj : error LNK2001: unresolved external symbol __imp__strncmp
+dbdimp.obj : error LNK2001: unresolved external symbol __imp__toupper
+dbdimp.obj : error LNK2001: unresolved external symbol __imp__strncpy
+dbdimp.obj : error LNK2001: unresolved external symbol __imp__strstr
+dbdimp.obj : error LNK2001: unresolved external symbol _memcpy
+dbdimp.obj : error LNK2001: unresolved external symbol _memset
+dbdimp.obj : error LNK2001: unresolved external symbol _strlen
+unicode_helper.obj : error LNK2001: unresolved external symbol _strlen
+dbdimp.obj : error LNK2001: unresolved external symbol _strcmp
+dbdimp.obj : error LNK2001: unresolved external symbol _strcat
+dbdimp.obj : error LNK2001: unresolved external symbol __imp__atoi
+dbdimp.obj : error LNK2001: unresolved external symbol _abs
+dbdimp.obj : error LNK2001: unresolved external symbol __imp___pctype
+dbdimp.obj : error LNK2001: unresolved external symbol __imp___isctype
+dbdimp.obj : error LNK2001: unresolved external symbol __imp____mb_cur_max
+dbdimp.obj : error LNK2001: unresolved external symbol __imp__strchr
+unicode_helper.obj : error LNK2001: unresolved external symbol __imp__wcslen
+LINK : error LNK2001: unresolved external symbol __DllMainCRTStartup@12
+blib\arch\auto\DBD\ODBC\ODBC.dll : fatal error LNK1120: 20 unresolved externals
+NMAKE : fatal error U1077: 'link' : return code '0x460'
+
+which was resolved by adding
+
+c:\Program Files\Microsoft Visual Studio\VC98\Lib\MSVCRTD.LIB"
+
+to end of LDLOADLIBS in the Makefile.

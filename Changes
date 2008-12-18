@@ -49,10 +49,15 @@ Reinstated the answer in the FAQ for "Why do I get invalid value for
 cast specification" which had got lost - thanks to EvanCarroll in
 rt41663.
 
-rt 41713. Applied patch from eremmel to handle ODBC drivers which do not
-support SQL_COLUMN_DISPLAY_SIZE and SQL_COLUMN_LENGTH attributes in the
-SQLColAttributes calls. Specifically, the driver he was using was
-the "Infor Integration ODBC driver".
+rt 41713. Applied patch from JHF Remmelzwaal to handle ODBC drivers
+which do not support SQL_COLUMN_DISPLAY_SIZE and SQL_COLUMN_LENGTH
+attributes in the SQLColAttributes calls after SQLTables and
+SQLColumns. Specifically, the driver he was using was the "Infor
+Integration ODBC driver".
+
+Added notes from JHF Remmelzwaal on resolving some problems he came
+across building DBD::ODBC on Windows with Visual Studio 6.0 and SDK
+Feb 2003.
 
 New odbc_column_display_size attribute for when drivers does not
 return a display size.

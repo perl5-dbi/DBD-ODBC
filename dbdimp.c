@@ -54,6 +54,7 @@ static const char *cSqlColumns = "SQLColumns(%s,%s,%s,%s)";
 static const char *cSqlGetTypeInfo = "SQLGetTypeInfo(%d)";
 static void       AllODBCErrors(HENV henv, HDBC hdbc, HSTMT hstmt, int output, PerlIO *logfp);
 static int check_connection_active(SV *h);
+static int build_results(SV *sth, SV *dbh, RETCODE orc);
 
 /* AV *dbd_st_fetch(SV * sth, imp_sth_t *imp_sth); */
 int dbd_describe(SV *h, imp_sth_t *imp_sth, int more);
@@ -281,9 +282,10 @@ static void odbc_handle_outparams(imp_sth_t *imp_sth, int debug)
 
 
 
-int build_results(SV *sth, RETCODE orc)
+static int build_results(SV *sth, SV *dbh, RETCODE orc)
 {
    RETCODE rc;
+   D_imp_dbh(dbh);
    D_imp_sth(sth);
    dTHR;
 
@@ -297,6 +299,8 @@ int build_results(SV *sth, RETCODE orc)
    imp_sth->RowBuffer = NULL;
    imp_sth->RowCount = -1;
    imp_sth->eod = -1;
+
+   imp_sth->odbc_column_display_size = imp_dbh->odbc_column_display_size;
 
    if (!dbd_describe(sth, imp_sth, 0)) {
       /* SQLFreeStmt(imp_sth->hstmt, SQL_DROP); */ /* TBD: 3.0 update */
@@ -1487,8 +1491,7 @@ int dbd_st_tables(
       imp_sth->hstmt = SQL_NULL_HSTMT;
       return 0;
    }
-
-   return build_results(sth,rc);
+   return build_results(sth, dbh, rc);
 }
 
 
@@ -1550,7 +1553,7 @@ int dbd_st_primary_keys(
       return 0;
    }
 
-   return build_results(sth,rc);
+   return build_results(sth, dbh, rc);
 }
 
 
@@ -1622,7 +1625,7 @@ int dbd_st_statistics(
       return 0;
    }
 
-   return build_results(sth,rc);
+   return build_results(sth, dbh, rc);
 }
 
 
@@ -2108,7 +2111,6 @@ int dbd_describe(SV *h, imp_sth_t *imp_sth, int more)
 		     "supported, fallback on %d\n", fbh->ColLength);
 	    }
 	    rc = SQL_SUCCESS;
-	    break;
         } else if (DBIc_TRACE(imp_sth, 0, 0, 8)) {
             TRACE1(imp_sth, "     column length = %ld\n", fbh->ColLength);
         }
@@ -4518,7 +4520,7 @@ int		 Unique;
       dbd_error(sth, rc, "odbc_get_statistics/SQLGetStatistics");
       return 0;
    }
-   return build_results(sth,rc);
+   return build_results(sth, dbh, rc);
 }
 #endif /* THE_FOLLOWING_NO_LONGER_USED_REPLACE_BY_dbd_st_primary_keys */
 
@@ -4560,7 +4562,7 @@ char * TableName;
       dbd_error(sth, rc, "odbc_get_primary_keys/SQLPrimaryKeys");
       return 0;
    }
-   return build_results(sth,rc);
+   return build_results(sth, dbh, rc);
 }
 #endif /* THE_FOLLOWING_NO_LONGER_USED_REPLACE_BY_dbd_st_primary_keys */
 
@@ -4606,7 +4608,7 @@ int    Nullable;
       dbd_error(sth, rc, "odbc_get_special_columns/SQLSpecialClumns");
       return 0;
    }
-   return build_results(sth,rc);
+   return build_results(sth, dbh, rc);
 }
 
 
@@ -4671,7 +4673,7 @@ char * FK_TableName;
       dbd_error(sth, rc, "odbc_get_foreign_keys/SQLForeignKeys");
       return 0;
    }
-   return build_results(sth,rc);
+   return build_results(sth, dbh, rc);
 }
 
 
@@ -4750,7 +4752,7 @@ int ftype;
       return 0;
    }
 
-   return build_results(sth,rc);
+   return build_results(sth, dbh, rc);
 }
 
 
@@ -4960,8 +4962,7 @@ char *column;
         imp_sth->hstmt = SQL_NULL_HSTMT;
         return 0;
     }
-
-    return build_results(sth,rc);
+    return build_results(sth, dbh, rc);
 }
 
 
