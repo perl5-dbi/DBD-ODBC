@@ -70,6 +70,9 @@ enabled.
 
 Minor changes to diagnostic output in some rt tests.
 
+One of the rt tests was not skipping the corect number of tests if the
+driver was not SQL Server.
+
 =head2 Changes in DBD::ODBC 1.17_2 November 17, 2008
 
 Changed ParamTypes attribute to be as specification i.e.,
