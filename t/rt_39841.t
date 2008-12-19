@@ -126,10 +126,9 @@ sub test_1
                 diag($dbh->errstr);
 		diag($dbh->state);
 		if ($dbh->state eq '22018') {
-		    diag("\nNOTE: Your SQL Server ODBC driver has a bug " .
-			 "which can describe parameters in SQL using sub " .
-			 "selects incorrectly. In this case a VARCHAR(8) " .
-			 "parameter is described as an INTEGER\n\n");
+                    diag("\nNOTE: Your SQL Server ODBC driver has a bug which can describe parameters\n");
+                    diag("in SQL using sub selects incorrectly. In this case a VARCHAR(8) parameter\n");
+                    diag("is described as an INTEGER\n\n");
 		    skip 'test_1 execute failed - bug in SQL Server ODBC Driver', 5;
 		} else {
 		    skip 'test_1 execute failed with unexpected error', 5;

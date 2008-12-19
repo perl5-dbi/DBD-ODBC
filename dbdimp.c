@@ -2341,7 +2341,7 @@ int dbd_st_execute(
 	       phs_t *phs = (phs_t*)(void*)SvPVX(sv);
 	       if (!rebind_param(sth, imp_sth, phs)) return -2;
 	       if (DBIc_TRACE(imp_sth, 0, 0, 8)) {
-		  if (phs->value_type == SQL_C_CHAR) {
+		  if (SvOK(phs->sv) && (phs->value_type == SQL_C_CHAR)) {
                       char sbuf[256];
                       unsigned int i = 0;
 

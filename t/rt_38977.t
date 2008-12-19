@@ -92,16 +92,12 @@ SKIP: {
             ok(!$ev, "execute insert");
             if ($ev) {
                 diag("Execute for insert into varchar(max) failed with $ev");
-                my $msg = <<"EOT";
-
-Some SQL Server drivers such as the native client 09.00.1399 driver fail this
-test with a HY104, "Invalid precision error".
-You have driver $driver_name at version $driver_version.
-There is a free upgrade from Microsoft of the native client driver to
-10.00.1600 which you will need if you intend to insert into varchar(max)
-columns.
-EOT
-                diag($msg);
+                diag(q/Some SQL Server drivers such as the native client 09.00.1399 / .
+                     q/driver fail this test with a HY104, "Invalid precision error". / .
+                     qq/You have driver $driver_name at version $driver_version. / .
+                     q/There is a free upgrade from Microsoft of the native client driver /.
+                     q/to 10.00.1600 which you will need if you intend to insert / .
+                     q/into varchar(max) columns./);
             }
         };
     };

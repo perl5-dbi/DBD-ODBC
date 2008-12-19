@@ -43,7 +43,7 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
 
 =head1 CHANGES
 
-=head2 Changes in DBD::ODBC 1.17_3 XXX XX, XXXX
+=head2 Changes in DBD::ODBC 1.17_3 December 19, 2008
 
 Reinstated the answer in the FAQ for "Why do I get invalid value for
 cast specification" which had got lost - thanks to EvanCarroll in
@@ -63,6 +63,12 @@ New odbc_column_display_size attribute for when drivers does not
 return a display size.
 
 Loads of tracing changes to make it easier for me to debug problems.
+
+Fixed bug in tracing of dbd_execute when parameter is char but undef
+which was leading to an access violation on Windows when tracing
+enabled.
+
+Minor changes to diagnostic output in some rt tests.
 
 =head2 Changes in DBD::ODBC 1.17_2 November 17, 2008
 
