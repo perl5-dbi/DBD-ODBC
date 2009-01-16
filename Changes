@@ -43,6 +43,10 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
 
 =head1 CHANGES
 
+=head2 Changes in DBD::ODBC 1.18 January 16, 2009
+
+Major release of all the 1.17 development releases below.
+
 =head2 Changes in DBD::ODBC 1.17_3 December 19, 2008
 
 Reinstated the answer in the FAQ for "Why do I get invalid value for
@@ -70,7 +74,7 @@ enabled.
 
 Minor changes to diagnostic output in some rt tests.
 
-One of the rt tests was not skipping the corect number of tests if the
+One of the rt tests was not skipping the correct number of tests if the
 driver was not SQL Server.
 
 =head2 Changes in DBD::ODBC 1.17_2 November 17, 2008
