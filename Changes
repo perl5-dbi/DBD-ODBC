@@ -43,6 +43,12 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
 
 =head1 CHANGES
 
+=head2 Changes in DBD::ODBC 1.18_1 March NN, 2009
+
+Fixed bug reported by Toni Salomäki leading to a describe failed error
+when calling procedures with no results. Test cases added to
+20SqlServer.t.
+
 =head2 Changes in DBD::ODBC 1.18 January 16, 2009
 
 Major release of all the 1.17 development releases below.

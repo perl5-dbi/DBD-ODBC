@@ -9,7 +9,7 @@ $| = 1;
 my $has_test_nowarnings = 1;
 eval "require Test::NoWarnings";
 $has_test_nowarnings = undef if $@;
-my $tests = 53;
+my $tests = 63;
 $tests += 1 if $has_test_nowarnings;
 plan tests => $tests;
 
@@ -89,6 +89,90 @@ sub varmax_test
     };
     eval {$dbh->do(q/drop table PERL_DBD_TABLE1/);};
 }
+
+sub _do_proc
+{
+    my ($dbh, $proc) = @_;
+
+    my $sth;
+
+    eval {$sth = $dbh->prepare($proc, {odbc_exec_direct => 1})};
+    my $ev = $@;
+    diag($ev) if $ev;
+    ok(!$ev, "prepare for $proc");
+
+  SKIP: {
+        skip "prepare for $proc failed", 3 if $ev;
+      SKIP: {
+            eval {$sth->execute};
+            $ev = $@;
+            diag($ev) if $ev;
+            ok(!$ev, "execute for $proc");
+
+          SKIP: {
+                skip "execute for $proc failed", 2 if $ev;
+
+                my $fields;
+                eval {$fields = $sth->{NUM_OF_FIELDS}};
+                $ev = $@;
+                diag($ev) if $ev;
+                ok(!$ev, "NUM_OF_FIELDS for $proc");
+                like($fields, qr|^\d+$|, "numeric fields");
+            };
+            $sth->finish;
+        };
+    };
+}
+
+sub procs_with_no_results
+{
+    my $dbh = shift;
+
+    local $dbh->{PrintError} = 0;
+
+    eval {$dbh->do(q/drop procedure PERL_DBD_PROC1/)};
+    eval {$dbh->do(q/drop procedure PERL_DBD_PROC2/)};
+
+    my $proc1 = <<EOT;
+create procedure PERL_DBD_PROC1 as
+begin
+select * from master..sysprocesses
+delete from #tmp
+end
+EOT
+
+    my $proc2 = <<EOT;
+create procedure PERL_DBD_PROC2 as
+begin
+select * into #tmp from master..sysprocesses
+delete from #tmp
+end
+EOT
+
+    eval {$dbh->do($proc1)};
+    my $ev = $@;
+    diag($ev) if $ev;
+    ok(!$ev, 'create perl_dbd_proc1 procedure');
+  SKIP: {
+        skip 'failed to create perl_dbd_proc1 procedure', 9 if $ev;
+
+      SKIP: {
+            eval {$dbh->do($proc2)};
+            $ev = $@;
+            diag($ev) if $ev;
+            ok(!$ev, 'create perl_dbd_proc2 procedure');
+
+          SKIP: {
+                skip 'failed toc reate perl_dbd_proc2 procedure', 8 if $ev;
+
+                _do_proc($dbh, 'perl_dbd_proc1');
+
+                _do_proc($dbh, 'perl_dbd_proc2');
+            };
+        };
+    };
+}
+
 sub Multiple_concurrent_stmts {
    my ($dbh, $expect) = @_;
    my $sth = $dbh->prepare("select * from PERL_DBD_TABLE1");
@@ -123,7 +207,7 @@ my $sth;
 
 my $dbname = $dbh->get_info(17); # DBI::SQL_DBMS_NAME
 SKIP: {
-   skip "Microsoft SQL Server tests not supported using $dbname", 51
+   skip "Microsoft SQL Server tests not supported using $dbname", 61
        unless ($dbname =~ /Microsoft SQL Server/i);
 
    getinfo($dbh);
@@ -131,6 +215,8 @@ SKIP: {
    varmax_test($dbh, 'varchar');
    varmax_test($dbh, 'varbinary');
    varmax_test($dbh, 'nvarchar');
+
+   procs_with_no_results($dbh);
 
    # the times chosen below are VERY specific to NOT cause rounding errors,
    # but may cause different errors on different versions of SQL Server.

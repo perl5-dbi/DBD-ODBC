@@ -129,26 +129,31 @@ Getopt::Long::GetOptions("g!" => \$opt_g,
                          "o=s" => \$opt_o,
                          "u!" => \$opt_u) or die "Invalid arguments\n";
 if (($ENV{LANG} || '') =~ m/utf-?8/i) {
-    print <<"EOF";
+    print <<"EOT";
 
 Your LANG environment variable is set to "$ENV{LANG}"\a
 This is known to cause problems in some perl installations - even stopping
 this Makefile.PL to run without errors. If you have problems please try
 re-running with LANG unset or with the utf part of LANG removed.
 
-EOF
+EOT
     sleep 4;
 }
 
 if ($Config{useithreads}) {
-    print <<"EOF";
+    print <<'EOT';
 You are using a Perl configured with threading enabled\a.
 Please read the warnings in DBI about this.
+
+EOT
+    if ($^O ne 'MSWin32') {
+        print <<'EOT';
 You should also be aware that on non-Windows platforms ODBC drivers come
 in two forms, thread-safe and non-thread-safe drivers and you may need
 to make sure you are using the right one.
 
-EOF
+EOT
+    }
     prompt("Press return to continue...");
 }
 print "Overriding ODBC Directory with command line option: $opt_o\n"

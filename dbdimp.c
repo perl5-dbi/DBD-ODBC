@@ -1990,6 +1990,7 @@ int dbd_describe(SV *h, imp_sth_t *imp_sth, int more)
     if (num_fields == 0) {
         if (DBIc_TRACE(imp_sth, 0, 0, 4))
             TRACE0(imp_dbh, "    dbd_describe skipped (no result cols)\n");
+        imp_sth->done_desc = 1;
         return 1;
     }
 
