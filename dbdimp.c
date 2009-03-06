@@ -3096,8 +3096,7 @@ static int rebind_param(
 #else
        SvGROW(phs->sv, (phs->maxlen < 28) ? 28 : phs->maxlen+1);
 #endif /* WITH_UNICODE */
-   }
-   else {
+   } else {
        /* phs->sv is copy of real variable, upgrade to at least string */
        (void)SvUPGRADE(phs->sv, SVt_PV);
    }
@@ -3146,10 +3145,11 @@ static int rebind_param(
 #endif /* WITH_UNICODE */
 
    if (DBIc_TRACE(imp_sth, 0, 0, 4)) {
-       PerlIO_printf(DBIc_LOGPIO(imp_dbh),
-                     "      bind %s '%.100s' value_len=%d maxlen=%ld null=%d)\n",
-                     phs->name, SvOK(phs->sv) ? phs->sv_buf : "(null)",
-                     value_len,(long)phs->maxlen, SvOK(phs->sv) ? 0 : 1);
+       PerlIO_printf(
+           DBIc_LOGPIO(imp_dbh),
+           "      bind %s '%.100s' value_len=%d maxlen=%ld null=%d)\n",
+           phs->name, SvOK(phs->sv) ? phs->sv_buf : "(null)",
+           value_len,(long)phs->maxlen, SvOK(phs->sv) ? 0 : 1);
    }
 
    /*
@@ -3205,12 +3205,12 @@ static int rebind_param(
 
    /* When we fill a LONGVARBINARY, the CTYPE must be set to SQL_C_BINARY */
    if (value_type == SQL_C_CHAR) {	/* could be changed by bind_plh */
+       d_digits = 0;                            /* not relevent to char types */
       switch(phs->sql_type) {
 	 case SQL_LONGVARBINARY:
 	 case SQL_BINARY:
 	 case SQL_VARBINARY:
 	    value_type = SQL_C_BINARY;
-            d_digits = 0;
             column_size = default_column_size;
 	    break;
 #ifdef SQL_WLONGVARCHAR
@@ -3219,7 +3219,6 @@ static int rebind_param(
          case SQL_CHAR:
          case SQL_VARCHAR:
 	 case SQL_LONGVARCHAR:
-            d_digits = 0;
             column_size = default_column_size;
 	    break;
 	 case SQL_DATE:
@@ -3230,8 +3229,6 @@ static int rebind_param(
 	 case SQL_TIMESTAMP:
 	 case SQL_TYPE_TIMESTAMP:
 	    d_digits = 0;		/* tbd: millisecondS?) */
-	    /* bug fix! if phs->sv is not OK, then there's a chance
-	     * we go through garbage data to determine the length */
 	    if (SvOK(phs->sv)) {
 	       char *cp;
 	       if (phs->sv_buf && *phs->sv_buf) {
@@ -3253,7 +3250,9 @@ static int rebind_param(
 	 default:
 	    break;
       }
-   }
+   } else if ( value_type = SQL_C_WCHAR) {
+   		d_digits = 0;
+  }
 
    if (!SvOK(phs->sv)) {
        phs->strlen_or_ind = SQL_NULL_DATA;
@@ -3304,19 +3303,7 @@ static int rebind_param(
       value_ptr = (UCHAR*) phs;
    }
 
-   if (DBIc_TRACE(imp_sth, 0, 0, 5)) {
-      PerlIO_printf(
-          DBIc_LOGPIO(imp_dbh),
-          "    SQLBindParameter: idx=%d: param_type=%d, name=%s, "
-          "value_type=%d, SQL_Type=%d, column_size=%d, d_digits=%d, "
-          "value_ptr=%p, buffer_length=%d, cbValue=%d, param_size=%d\n",
-          phs->idx, param_type, phs->name, value_type, phs->sql_type,
-          column_size, d_digits, value_ptr, buffer_length, phs->strlen_or_ind,
-          phs->param_size);
-      /* avoid tracing data_at_exec as value_ptr will point to phs */
-      if ((value_type == SQL_C_CHAR) && (phs->strlen_or_ind > 0)) {
-          TRACE1(imp_sth, "      Param value = %s\n", value_ptr);
-      }
+
 #if THE_FOLLOWING_CODE_IS_FLAWED_AND_BROKEN
       /*
        * value_ptr is not null terminated - it is a byte array so PVallocW
@@ -3331,7 +3318,7 @@ static int rebind_param(
       }
 #endif /* WITH_UNICODE */
 #endif
-   }
+
 
    /*
     *  The following code is a workaround for a problem in SQL Server
@@ -3363,6 +3350,26 @@ static int rebind_param(
        phs->strlen_or_ind = SQL_LEN_DATA_AT_EXEC(0);
        buffer_length = 0;
    }
+#if defined(WITH_UNICODE)
+   /*
+    * rt43384 - MS Access does not seem to like us binding parameters as
+    * wide characters and then SQLBindParameter column_size to byte length.
+    * e.g., if you have a text(255) column and try and insert 190 ascii chrs
+    * then the unicode enabled version of DBD::ODBC will convert those 190
+    * ascii chrs to wide chrs and hence double the size to 380. If you pass
+    * 380 to Access for column_size it just returns an invalid precision
+    * value. This changes to column_size to chrs instead of bytes but
+    * only if column_size is not reduced to 0 - which also produces
+    * an access error e.g., in the empty string '' case.
+    */
+    else if ((strcmp(imp_dbh->odbc_driver_name, "odbcjt32.dll") == 0) &&
+             (value_type == SQL_C_WCHAR) && (column_size > 1)) {
+        column_size = column_size / 2;
+        if (DBIc_TRACE(imp_sth, 0, 0, 4))
+            TRACE0(imp_dbh, "    MSAccess - setting chrs not bytes\n");
+   }
+#endif
+
    /*
     * workaround bug in SQL Server ODBC driver where it can describe some
     * parameters (especially in SQL using sub selects) the wrong way.
@@ -3374,6 +3381,20 @@ static int rebind_param(
     */
    if ((phs->sql_type == SQL_VARCHAR) && (column_size < buffer_length)) {
        column_size = buffer_length;
+   }
+   if (DBIc_TRACE(imp_sth, 0, 0, 5)) {
+      PerlIO_printf(
+          DBIc_LOGPIO(imp_dbh),
+          "    SQLBindParameter: idx=%d: param_type=%d, name=%s, "
+          "value_type=%d, SQL_Type=%d, column_size=%d, d_digits=%d, "
+          "value_ptr=%p, buffer_length=%d, cbValue=%d, param_size=%d\n",
+          phs->idx, param_type, phs->name, value_type, phs->sql_type,
+          column_size, d_digits, value_ptr, buffer_length, phs->strlen_or_ind,
+          phs->param_size);
+      /* avoid tracing data_at_exec as value_ptr will point to phs */
+      if ((value_type == SQL_C_CHAR) && (phs->strlen_or_ind > 0)) {
+          TRACE1(imp_sth, "      Param value = %s\n", value_ptr);
+      }
    }
    rc = SQLBindParameter(imp_sth->hstmt,
 			 phs->idx, param_type, value_type, phs->sql_type,

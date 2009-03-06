@@ -39,6 +39,7 @@ END {
             local $dbh->{PrintError} = 0;
             $dbh->do(q/drop table PERL_DBD_rt_39897/);
         };
+        $dbh->disconnect;
     }
     Test::NoWarnings::had_no_warnings()
           if ($has_test_nowarnings);

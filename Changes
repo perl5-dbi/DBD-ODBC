@@ -49,6 +49,10 @@ Fixed bug reported by Toni Salomäki leading to a describe failed error
 when calling procedures with no results. Test cases added to
 20SqlServer.t.
 
+Fixed bug rt 43384 reported by oyse where you cannot insert more than
+127 characters into a Microsoft Access text(255) column when DBD::ODBC
+is built in unicode mode.
+
 =head2 Changes in DBD::ODBC 1.18 January 16, 2009
 
 Major release of all the 1.17 development releases below.
