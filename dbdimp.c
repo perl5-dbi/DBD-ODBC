@@ -3,7 +3,7 @@
  * portions Copyright (c) 1994,1995,1996,1997  Tim Bunce
  * portions Copyright (c) 1997 Thomas K. Wenrich
  * portions Copyright (c) 1997-2001 Jeff Urlwin
- * portions Copyright (c) 2007-2008 Martin J. Evans
+ * portions Copyright (c) 2007-2009 Martin J. Evans
  *
  * You may distribute under the terms of either the GNU General Public
  * License or the Artistic License, as specified in the Perl README file.
@@ -3382,6 +3382,21 @@ static int rebind_param(
    if ((phs->sql_type == SQL_VARCHAR) && (column_size < buffer_length)) {
        column_size = buffer_length;
    }
+   /*
+    * Yet another workaround for SQL Server native client.
+    * If you have a varbinary(max) or varchar(max) you have to pass 0
+    * for the column_size or you get HY104 "Invalid precision value".
+    * See rt_38977.t which causes this.
+    * The versions of native client I've seen this with are:
+    * 2007.100.1600.22 sqlncli10.dll driver version = ?
+    * 2005.90.1399.00 SQLNCLI.DLL driver version = 09.00.1399
+    */
+   if (((strcmp(imp_dbh->odbc_driver_name, "sqlncli10.dll") == 0) ||
+        ((strcmp(imp_dbh->odbc_driver_name, "SQLNCLI.DLL") == 0))) &&
+       (phs->strlen_or_ind < 0) &&
+       (phs->param_size == 0)) {
+       column_size = 0;
+   } 
    if (DBIc_TRACE(imp_sth, 0, 0, 5)) {
       PerlIO_printf(
           DBIc_LOGPIO(imp_dbh),

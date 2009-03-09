@@ -3,7 +3,7 @@
 # Copyright (c) 1994,1995,1996,1998  Tim Bunce
 # portions Copyright (c) 1997-2004  Jeff Urlwin
 # portions Copyright (c) 1997  Thomas K. Wenrich
-# portions Copyright (c) 2007-2008 Martin J. Evans
+# portions Copyright (c) 2007-2009 Martin J. Evans
 #
 # You may distribute under the terms of either the GNU General Public
 # License or the Artistic License, as specified in the Perl README file.
@@ -12,7 +12,7 @@
 
 require 5.006;
 
-$DBD::ODBC::VERSION = '1.18_1';
+$DBD::ODBC::VERSION = '1.18_2';
 
 {
     package DBD::ODBC;
