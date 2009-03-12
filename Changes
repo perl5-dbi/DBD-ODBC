@@ -43,6 +43,19 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
 
 =head1 CHANGES
 
+=head2 Changes in DBD::ODBC 1.18_3 March 12, 2009
+
+A mistake in the MANIFEST lead to the rt_43384.t test being omitted.
+
+Brian Becker reported the tables PERL_DBD_39897 and PERL_DBD_TEST are
+left behind after testing. I've fixed the former but not the latter
+yet.
+
+Yet another variation on the changes for rt 43384. If the parameter is
+bound specifically as SQL_VARCHAR, you for invalid precision
+error. Thanks to Øystein Torget for finding this and helping me verify
+the fix.
+
 =head2 Changes in DBD::ODBC 1.18_2 March 9, 2009
 
 Added yet another workaround for the SQL Server Native Client driver
@@ -56,9 +69,9 @@ Fixed bug reported by Toni Salomäki leading to a describe failed error
 when calling procedures with no results. Test cases added to
 20SqlServer.t.
 
-Fixed bug rt 43384 reported by oyse where you cannot insert more than
-127 characters into a Microsoft Access text(255) column when DBD::ODBC
-is built in unicode mode.
+Fixed bug rt 43384 reported by Øystein Torget where you cannot insert
+more than 127 characters into a Microsoft Access text(255) column when
+DBD::ODBC is built in unicode mode.
 
 =head2 Changes in DBD::ODBC 1.18 January 16, 2009
 

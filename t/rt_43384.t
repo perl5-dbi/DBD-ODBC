@@ -8,7 +8,7 @@ $| = 1;
 my $has_test_nowarnings = 1;
 eval "require Test::NoWarnings";
 $has_test_nowarnings = undef if $@;
-my $tests = 6;
+my $tests = 9;
 $tests += 1 if $has_test_nowarnings;
 plan tests => $tests;
 
@@ -44,7 +44,7 @@ my $sth;
 
 my $dbname = $dbh->get_info(17); # DBI::SQL_DBMS_NAME
 SKIP: {
-   skip "Microsoft Access tests not supported using $dbname", 4
+   skip "Microsoft Access tests not supported using $dbname", 7
        unless ($dbname =~ /Access/i);
 
    eval {
@@ -67,6 +67,12 @@ SKIP: {
            eval {$sth->execute($data, $data);};
            $ev = $@;
            ok(!$ev, 'inserted into test table');
+
+           ok ($sth->bind_param(1, $data, {TYPE => SQL_VARCHAR}));
+           ok ($sth->bind_param(2, $data, {TYPE => SQL_LONGVARCHAR}));
+           eval {$sth->execute;};
+           $ev = $@;
+           ok(!$ev, "inserted into test table with VARCHAR and LONGVARCHAR");
        };
    };
 };
