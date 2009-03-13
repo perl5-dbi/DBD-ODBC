@@ -41,7 +41,7 @@
 #define TRACE2(a,b,c,d) PerlIO_printf(DBIc_LOGPIO(a), (b), (c), (d))
 #define TRACE3(a,b,c,d,e) PerlIO_printf(DBIc_LOGPIO(a), (b), (c), (d), (e))
 
-static SQLSMALLINT default_parameter_type(imp_sth_t *imp_sth);
+static SQLSMALLINT default_parameter_type(imp_sth_t *imp_sth, phs_t *phs);
 static int post_connect(SV *dbh, imp_dbh_t *imp_dbh, SV *attr);
 static int set_odbc_version(SV *dbh, imp_dbh_t *imp_dbh, SV* attr);
 static const char *S_SqlTypeToString (SWORD sqltype);
@@ -90,8 +90,10 @@ int dbd_st_finish(SV *sth, imp_sth_t *imp_sth);
    or failed */
 #ifdef WITH_UNICODE
 # define ODBC_BACKUP_BIND_TYPE_VALUE	SQL_WVARCHAR
+# define ODBC_BACKUP_LONG_BIND_TYPE_VALUE    SQL_WLONGVARCHAR
 #else
 # define ODBC_BACKUP_BIND_TYPE_VALUE	SQL_VARCHAR
+# define ODBC_BACKUP_LONG_BIND_TYPE_VALUE	SQL_LONGVARCHAR
 #endif
 
 SV *dbd_param_err(SQLHANDLE h, int recno);
@@ -2953,7 +2955,7 @@ static void get_param_type(SV *sth, imp_sth_t *imp_sth, phs_t *phs)
           default a SQL type to bind the parameter as. The default is either
           the value set with odbc_default_bind_type or a fallback of
           SQL_VARCHAR. */
-       phs->sql_type = default_parameter_type(imp_sth);
+       phs->sql_type = default_parameter_type(imp_sth, phs);
        if (DBIc_TRACE(imp_sth, 0, 0, 4))
            TRACE1(imp_dbh, "      defaulted param type to %d\n", phs->sql_type);
    } else if (!phs->describe_param_called) {
@@ -2968,7 +2970,7 @@ static void get_param_type(SV *sth, imp_sth_t *imp_sth, phs_t *phs)
        phs->describe_param_called = 1;
        phs->describe_param_status = rc;
        if (!SQL_SUCCEEDED(rc)) {
-           phs->sql_type = default_parameter_type(imp_sth);
+           phs->sql_type = default_parameter_type(imp_sth, phs);
            if (DBIc_TRACE(imp_sth, 0, 0, 3))
                TRACE1(imp_dbh, "      SQLDescribeParam failed reverting to "
                       "default SQL bind type %d\n", phs->sql_type);
@@ -3379,7 +3381,11 @@ static int rebind_param(
     * a varchar(10) column can be desribed as a varchar(n) where n is less
     * than 10 and this leads to data truncation errors - see rt 39841.
     */
-   if ((phs->sql_type == SQL_VARCHAR) && (column_size < buffer_length)) {
+   if (((strcmp(imp_dbh->odbc_driver_name, "SQLSRV32.DLL") == 0) ||
+        (strcmp(imp_dbh->odbc_driver_name, "sqlncli10.dll") == 0) ||
+        (strcmp(imp_dbh->odbc_driver_name, "SQLNCLI.DLL") == 0)) &&
+       (phs->sql_type == SQL_VARCHAR) &&
+       (column_size < buffer_length)) {
        column_size = buffer_length;
    }
    /*
@@ -5383,12 +5389,22 @@ static int post_connect(
 
 
 
-static SQLSMALLINT default_parameter_type(imp_sth_t *imp_sth)
+static SQLSMALLINT default_parameter_type(imp_sth_t *imp_sth, phs_t *phs)
 {
     if (imp_sth->odbc_default_bind_type != 0) {
         return imp_sth->odbc_default_bind_type;
     } else {
-        return ODBC_BACKUP_BIND_TYPE_VALUE;
+        /* MS Access can return an invalid precision error in the 12blob
+           test unless the large valud is bound as an SQL_LONGVARCHAR
+           or SQL_WLONGVARCHAR. Who knows what large is, but for now it is
+           4000 */
+        if (!SvOK(phs->sv)) {
+            return ODBC_BACKUP_BIND_TYPE_VALUE;
+        } else if (SvCUR(phs->sv) > 4000) {
+            return ODBC_BACKUP_LONG_BIND_TYPE_VALUE;
+        } else {
+            return ODBC_BACKUP_BIND_TYPE_VALUE;
+        }
     }
 }
 

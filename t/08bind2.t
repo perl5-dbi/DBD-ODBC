@@ -16,8 +16,8 @@ plan tests => $tests;
 # use_ok('DBI', qw(:sql_types));
 # can't seem to get the imports right this way
 use DBI qw(:sql_types);
-use_ok('ODBCTEST');
-use_ok('Data::Dumper');
+use_ok('ODBCTEST');             # 1
+use_ok('Data::Dumper');         # 2
 
 BEGIN {
    if (!defined $ENV{DBI_DSN}) {
@@ -37,7 +37,7 @@ unless($dbh) {
 
 SKIP:
 {
-   skip "SQLDescribeParam not supported using " . $dbh->get_info(17) . "\n", $tests -2, unless $dbh->func(58, 'GetFunctions');
+   skip "SQLDescribeParam not supported using " . $dbh->get_info(17) . "\n", 3, unless $dbh->func(58, 'GetFunctions');
 
    $dbh->{RaiseError} = 0;
    $dbh->{PrintError} = 0;
@@ -76,11 +76,11 @@ SKIP:
    unless ($rc) {
       diag("These are tests which rely upon the driver to tell what the parameter type is for the column.  This means you need to ensure you tell your driver the type of the column in bind_col().\n");
    }
-   ok($rc, "insert #1 various test data no dates, no long data");
+   ok($rc, "insert #1 various test data no dates, no long data"); # 3
 
    $dbh->{PrintError} = 0;
    $rc = ODBCTEST::tab_insert_bind($dbh, \@data_no_dates_with_long, 0);
-   ok($rc, "insert #2 various test data no dates, with long data");
+   ok($rc, "insert #2 various test data no dates, with long data"); # 4
 
    $rc = ODBCTEST::tab_insert_bind($dbh, \@data_with_dates, 0);
    # warn "\nThis test is known to fail using Oracle's ODBC drivers for
@@ -89,7 +89,7 @@ SKIP:
    {
 
       skip "Known to fail using Oracle's ODBC drivers 8.x and 9.x", 1 if (!$rc && $dbname =~ /Oracle/i);
-      ok($rc, "insert #3 various test data data with dates");
+      ok($rc, "insert #3 various test data data with dates"); # 5
    };
 
    ODBCTEST::tab_delete($dbh);

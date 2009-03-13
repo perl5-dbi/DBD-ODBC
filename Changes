@@ -43,7 +43,7 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
 
 =head1 CHANGES
 
-=head2 Changes in DBD::ODBC 1.18_3 March 12, 2009
+=head2 Changes in DBD::ODBC 1.18_3 March 13, 2009
 
 A mistake in the MANIFEST lead to the rt_43384.t test being omitted.
 
@@ -52,9 +52,24 @@ left behind after testing. I've fixed the former but not the latter
 yet.
 
 Yet another variation on the changes for rt 43384. If the parameter is
-bound specifically as SQL_VARCHAR, you for invalid precision
+bound specifically as SQL_VARCHAR, you got invalid precision
 error. Thanks to Øystein Torget for finding this and helping me verify
 the fix.
+
+If you attempt to insert large amounts of data into MS Access (which
+does not have SQLDescribeParam) you can get an invalid precision error
+which can be worked around by setting the bind type to
+SQL_LONGVARCHAR. This version does that for you.
+
+08bind2.t had a wrong skip count.
+
+12blob.t had strict commented out and GetTypeInfo was not quoted. Also
+introduced a skip if the execute fails as it just leads to more
+obvious failures.
+
+In dbdimp.c/rebind_ph there was a specific workaround for SQL Server
+which was not done after testing if we are using SQL Server - this
+was breaking tests to MS Access.
 
 =head2 Changes in DBD::ODBC 1.18_2 March 9, 2009
 

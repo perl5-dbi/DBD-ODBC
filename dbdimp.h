@@ -152,7 +152,7 @@ struct imp_fbh_st { 	/* field buffer EXPERIMENTAL */
 
 typedef struct phs_st phs_t;    /* scalar placeholder   */
 
-struct phs_st {  	/* scalar placeholder EXPERIMENTAL	*/
+struct phs_st {             /* scalar placeholder */
     SQLUSMALLINT idx;       /* index number of this param 1, 2, ...	*/
     SV *sv;                 /* the scalar holding the value */
     int sv_type;            /* original sv type at time of bind */

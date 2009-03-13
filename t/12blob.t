@@ -5,7 +5,7 @@
 # currently tests you can insert a clob with various odbc_putdata_start settings
 #
 use Test::More;
-#####use strict;
+use strict;
 $| = 1;
 
 my $has_test_nowarnings = 1;
@@ -41,20 +41,21 @@ unless($dbh) {
 my $putdata_start = $dbh->{odbc_putdata_start};
 is($putdata_start, 32768, 'default putdata_start');
 
-my $sth = $dbh->func(SQL_LONGVARCHAR, GetTypeInfo);
+my $sth = $dbh->func(SQL_LONGVARCHAR, 'GetTypeInfo');
 ok($sth, "GetTypeInfo");
 
 my ($type_name, $type);
 
 while (my @row = $sth->fetchrow) {
     if ($row[2] > 60000) {
+        #diag("$row[0] $row[1] $row[2]");
         ($type_name, $type) = ($row[0], $row[1]);
     }
 }
-
 skip_all("ODBC Driver/Database has not got a big enough type", 5)
         if !$type_name;
 
+#diag("Using type $type_name");
 eval { $dbh->do(qq/create table DBD_ODBC_drop_me(a $type_name)/); }; $ev = $@;
 diag($ev) if $ev;
 ok(!$ev, "table DBD_ODBC_drop_me created");
@@ -74,6 +75,7 @@ SKIP: {
 sub test
 {
     my ($dbh, $val, $putdata_start) = @_;
+    my $rc;
 
     if ($putdata_start) {
         $dbh->{odbc_putdata_start} = $putdata_start;
@@ -83,8 +85,13 @@ sub test
 
     $sth = $dbh->prepare(q/insert into DBD_ODBC_drop_me values(?)/);
     ok($sth, "prepare for insert");
-    ok($sth->execute($val), "insert clob");
-    test_value($dbh, $val);
+    $rc  = $sth->execute($val);
+    ok($rc, "insert clob");
+  SKIP: {
+        skip "insert failed - skipping the retrieval test", 2 unless $rc;
+
+        test_value($dbh, $val);
+    };
 
     eval {$dbh->do(q/delete from DBD_ODBC_drop_me/); };
     $ev = $@;
