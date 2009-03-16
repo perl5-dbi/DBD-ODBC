@@ -12,7 +12,7 @@
 
 require 5.006;
 
-$DBD::ODBC::VERSION = '1.18_3';
+$DBD::ODBC::VERSION = '1.18_5';
 
 {
     package DBD::ODBC;
@@ -36,7 +36,6 @@ $DBD::ODBC::VERSION = '1.18_3';
 
     sub parse_trace_flag {
         my ($class, $name) = @_;
-        #return 0x02000000 if name eq 'this_is_spare_use_me';
         return 0x02000000 if $name eq 'odbcunicode';
         return 0x04000000 if $name eq 'odbcconnection';
         return DBI::parse_trace_flag($class, $name);

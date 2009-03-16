@@ -9,7 +9,7 @@ $| = 1;
 my $has_test_nowarnings = 1;
 eval "require Test::NoWarnings";
 $has_test_nowarnings = undef if $@;
-my $tests = 63;
+my $tests = 65;
 $tests += 1 if $has_test_nowarnings;
 plan tests => $tests;
 
@@ -31,18 +31,21 @@ END {
 my $dbms_name;
 my $dbms_version;
 my $m_dbmsversion;
+my $driver_name;
 
 sub getinfo
 {
     my $dbh = shift;
 
-    my $dbms_name = $dbh->get_info(17);
+    $dbms_name = $dbh->get_info(17);
     ok($dbms_name, "got DBMS name: $dbms_name");
-    my $dbms_version = $dbh->get_info(18);
+    $dbms_version = $dbh->get_info(18);
     ok($dbms_version, "got DBMS version: $dbms_version");
     $m_dbmsversion = $dbms_version;
     $m_dbmsversion =~ s/^(\d+).*/$1/;
     ok($m_dbmsversion, "got DBMS major version: $m_dbmsversion");
+    $driver_name =- $dbh->get_info(6);
+    ok($driver_name, "got Driver Name: $driver_name");
 }
 
 sub varmax_test
@@ -87,7 +90,11 @@ sub varmax_test
             };
         };
     };
-    eval {$dbh->do(q/drop table PERL_DBD_TABLE1/);};
+    eval {
+        local $dbh->{PrintError} = 0;
+        local $dbh->{RaiseError} = 0;
+        $dbh->do(q/drop table PERL_DBD_TABLE1/);
+    };
 }
 
 sub _do_proc
@@ -615,7 +622,6 @@ AS
    $dbh->{odbc_async_exec} = 0;
    is($dbh->{odbc_async_exec}, 0, "reset async exec");
 
-   # DBI->trace(9);
    $dbh->{odbc_exec_direct} = 1;
    is($dbh->{odbc_exec_direct}, 1, "test setting odbc_exec_direct");
    $sth2 = $dbh->prepare("print 'START' select count(*) from perl_dbd_table1 print 'END'");
@@ -629,9 +635,6 @@ AS
    is($testpass,2, "ensure 2 error messages from two print statements");
    is($lastmsg, 'END', "validate error messages being retrieved");
 
-   if (DBI->trace > 0) {
-      DBI->trace(0);
-   }
    # need the finish if there are print statements (for now)
    #$sth2->finish;
    $dbh->{odbc_err_handler} = undef;
@@ -639,16 +642,23 @@ AS
    $dbh->do("insert into perl_dbd_table1 (i, j) values (3, 4)");
 
    $dbh->disconnect;
+
    my $dsn = $ENV{DBI_DSN};
    if ($dsn !~ /^dbi:ODBC:DSN=/) {
        my @a = split(q/:/, $ENV{DBI_DSN});
        $dsn = join(q/:/, @a[0..($#a - 1)]) . ":DSN=" . $a[-1];
    }
    my $base_dsn = $dsn;
-   $dsn .= ";MARS_Connection=no;";
+   $dsn .= ";MARS_Connection=no";
    $dbh = DBI->connect($dsn, $ENV{DBI_USER}, $ENV{DBI_PASS}, {PrintError => 0});
-   ok(!&Multiple_concurrent_stmts($dbh, 0), "Multiple concurrent statements should fail");
-   $dbh->disconnect;
+   ok($dbh, "Connected with MARS_Connection");
+   diag("$DBI::errstr\n$dsn\n") if !$dbh;
+ SKIP: {
+       skip "could not connect with MARS_Connection attribute", 1 if !$dbh;
+
+       ok(!&Multiple_concurrent_stmts($dbh, 0), "Multiple concurrent statements should fail");
+       $dbh->disconnect;
+   };
 
    $dbh = DBI->connect($dsn, $ENV{DBI_USER}, $ENV{DBI_PASS}, { odbc_cursortype => 2, PrintError => 0 });
    # $dbh->{odbc_err_handler} = \&err_handler;

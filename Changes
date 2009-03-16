@@ -43,7 +43,21 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
 
 =head1 CHANGES
 
-=head2 Changes in DBD::ODBC 1.18_3 March 13, 2009
+=head2 Changes in DBD::ODBC 1.18_5 March 16, 2009
+
+Some minor diagnostic output during tests when running against freeTDS
+to show we know of issues in freeTDS.
+
+Fixed issue in 20SqlServer.t where the connection string got set with
+two consecutive semi-colons. Most drivers don't mind this but freeTDS
+ignores everything after that point in the connection string.
+
+Quieten some delete table output during tests.
+
+Handle connect failures in 20SqlServer.t in the multiple active
+statement tests.
+
+=head2 Changes in DBD::ODBC 1.18_4 March 13, 2009
 
 A mistake in the MANIFEST lead to the rt_43384.t test being omitted.
 

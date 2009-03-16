@@ -34,12 +34,14 @@ unless($dbh) {
    BAIL_OUT("Unable to connect to the database ($DBI::errstr)\nTests skipped.\n");
    exit 0;
 }
+my $driver_name;
 # Output DBMS which is useful when debugging cpan-testers output
 {
     diag("\n");
     diag("Using DBMS_NAME " . DBI::neat($dbh->get_info(17)) . "\n");
     diag("Using DBMS_VER " . DBI::neat($dbh->get_info(18)) . "\n");
-    diag("Using DRIVER_NAME " . DBI::neat($dbh->get_info(6)) . "\n");
+    $driver_name = DBI::neat($dbh->get_info(6));
+    diag("Using DRIVER_NAME $driver_name\n");
     diag("Using DRIVER_VER " . DBI::neat($dbh->get_info(7)) . "\n");
 }
 
@@ -151,10 +153,17 @@ ok($max_col_len <= 51, 'Truncated column to LongReadLen');
 # now force an error and ensure we get a long truncated event.
 $dbh->{LongTruncOk} = 0;
 is($dbh->{LongTruncOk}, '', "Set Long TruncOk 0");
-ok(!select_long($dbh, \$max_col_len, 0), "Select Long Data failure");
+# Following test fails with FreeTDS 0.63 and 0.64 because FreeTDS does not
+# report a data truncation error and hence no error is raised and there
+# err, errstr and state are not set.
+$rc = select_long($dbh, \$max_col_len, 0);
+ok(!$rc, "Select Long Data failure");
 ok($dbh->err, 'error set on truncated handle');
 ok($dbh->errstr, 'errstr set on truncated handle');
 ok($dbh->state, 'state set on truncated handle');
+if ($rc && ($driver_name =~ /tdsodbc/)) {
+    diag(qq/\nNOTE:\nFreeTDS fails the previous 4 tests because when you select a column greater\nthan 80 characters with LongTruncOk it does not generate a\n01004, "String data, right truncation error\n"/);
+}
 
 my $sth = $dbh->prepare("SELECT * FROM $ODBCTEST::table_name ORDER BY COL_A");
 ok(defined($sth), "prepare select from table");
@@ -198,8 +207,14 @@ is($dbh->{PrintError}, '', "Set PrintError 0");
 #
 $sth = $dbh->prepare("SELECT XXNOTCOLUMN FROM $ODBCTEST::table_name");
 $sth->execute() if $sth;
-cmp_ok(length($DBI::errstr), '>', 0, "Error reported on bad query");
-
+if (!defined($DBI::errstr) || (length($DBI::errstr) == 0)) {
+    fail("Error reported on bad query");
+    if ($driver_name =~ /tdsodbc/) {
+        diag(qq/NOTE:\nfreeTDS 0.63 at least, fails the previous test because no error is returned\nfrom SQLPrepare or SQLExecute when you enter a\n"select non_existent_table_name from table" query.\nVersion 0.82 seems to have fixed this./);
+    }
+} else {
+    pass("Error reported on bad query");
+}
 my @row = ODBCTEST::get_type_for_column($dbh, 'COL_D');
 
 my $dateval;
@@ -356,7 +371,10 @@ sub select_long
     my $rc = 0;
     my $longest = undef;
 
-    $dbh->{RaiseError} = 1;
+    local $dbh->{RaiseError} = 1;
+    local $dbh->{PrintError} = 0;
+    local $dbh->{PrintWarn} = 0;
+
     $sth = $dbh->prepare("SELECT COL_A,COL_C FROM $ODBCTEST::table_name WHERE COL_A=4");
     if ($sth) {
         $sth->execute();
