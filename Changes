@@ -60,6 +60,9 @@ statement tests.
 In 02simple.t cope with ODBC drivers or databases that do not need a
 username or password (MS Access).
 
+In 20SqlServer.t fix skip count and an erroneouse assignement for
+driver_name.
+
 =head2 Changes in DBD::ODBC 1.18_4 March 13, 2009
 
 A mistake in the MANIFEST lead to the rt_43384.t test being omitted.

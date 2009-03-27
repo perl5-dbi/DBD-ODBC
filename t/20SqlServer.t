@@ -44,7 +44,7 @@ sub getinfo
     $m_dbmsversion = $dbms_version;
     $m_dbmsversion =~ s/^(\d+).*/$1/;
     ok($m_dbmsversion, "got DBMS major version: $m_dbmsversion");
-    $driver_name =- $dbh->get_info(6);
+    $driver_name = $dbh->get_info(6);
     ok($driver_name, "got Driver Name: $driver_name");
 }
 
@@ -214,7 +214,7 @@ my $sth;
 
 my $dbname = $dbh->get_info(17); # DBI::SQL_DBMS_NAME
 SKIP: {
-   skip "Microsoft SQL Server tests not supported using $dbname", 61
+   skip "Microsoft SQL Server tests not supported using $dbname", 63
        unless ($dbname =~ /Microsoft SQL Server/i);
 
    getinfo($dbh);
