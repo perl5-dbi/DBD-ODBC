@@ -57,6 +57,9 @@ Quieten some delete table output during tests.
 Handle connect failures in 20SqlServer.t in the multiple active
 statement tests.
 
+In 02simple.t cope with ODBC drivers or databases that do not need a
+username or password (MS Access).
+
 =head2 Changes in DBD::ODBC 1.18_4 March 13, 2009
 
 A mistake in the MANIFEST lead to the rt_43384.t test being omitted.

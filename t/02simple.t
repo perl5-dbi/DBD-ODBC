@@ -291,7 +291,9 @@ SKIP: {
    ok(defined($dbh3), "Connection with DSN=$connstr");
    $dbh3->disconnect if (defined($dbh3));
 
-   my $cs = $connstr . ";UID=$ENV{DBI_USER};PWD=$ENV{DBI_PASS}";
+   my $cs = $connstr;
+   $cs .= ";UID=$ENV{DBI_USER}" if exists($ENV{DBI_USER});
+   $cs .= ";PWD=$ENV{DBI_PASS}" if exists($ENV{DBI_PASS});
    $dbh3 = DBI->connect($cs,undef,undef, {RaiseError=>0, PrintError=>0});
    ok(defined($dbh3),
       "Connection with DSN=$connstr and UID and PWD are set") or diag($cs);
