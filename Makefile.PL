@@ -249,7 +249,7 @@ else {
                         (-f "$odbchome/include/sql.h") &&
                             (-f "$odbchome/include/sqlext.h") &&
                                 (-f "$odbchome/include/sqltypes.h")) {
-                    print "Set ODBC HOME to $odbchome from odbc_config\n";
+                    print "Set ODBCHOME to $odbchome from odbc_config\n";
                 } else {
                     $odbchome = '';
                 }
