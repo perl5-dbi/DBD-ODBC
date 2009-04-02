@@ -133,8 +133,8 @@ if (($ENV{LANG} || '') =~ m/utf-?8/i) {
 
 Your LANG environment variable is set to "$ENV{LANG}"\a
 This is known to cause problems in some perl installations - even stopping
-this Makefile.PL to run without errors. If you have problems please try
-re-running with LANG unset or with the utf part of LANG removed.
+this Makefile.PL from running without errors. If you have problems please
+try re-running with LANG unset or with the utf part of LANG removed.
 
 EOT
     sleep 4;
@@ -142,7 +142,7 @@ EOT
 
 if ($Config{useithreads}) {
     print <<'EOT';
-You are using a Perl configured with threading enabled\a.
+You are using a Perl configured with threading enabled.
 Please read the warnings in DBI about this.
 
 EOT

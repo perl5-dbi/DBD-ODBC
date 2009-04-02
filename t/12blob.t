@@ -41,35 +41,40 @@ unless($dbh) {
 my $putdata_start = $dbh->{odbc_putdata_start};
 is($putdata_start, 32768, 'default putdata_start');
 
-my $sth = $dbh->func(SQL_LONGVARCHAR, 'GetTypeInfo');
+my $sth = $dbh->func(SQL_ALL_TYPES, 'GetTypeInfo');
 ok($sth, "GetTypeInfo");
 
 my ($type_name, $type);
 
 while (my @row = $sth->fetchrow) {
+    #diag("$row[0], $row[1], $row[2]");
+    next if (($row[1] != SQL_WLONGVARCHAR) && ($row[1] != SQL_LONGVARCHAR));
     if ($row[2] > 60000) {
         #diag("$row[0] $row[1] $row[2]");
         ($type_name, $type) = ($row[0], $row[1]);
     }
 }
-skip_all("ODBC Driver/Database has not got a big enough type", 5)
-        if !$type_name;
-
-#diag("Using type $type_name");
-eval { $dbh->do(qq/create table DBD_ODBC_drop_me(a $type_name)/); }; $ev = $@;
-diag($ev) if $ev;
-ok(!$ev, "table DBD_ODBC_drop_me created");
-
 SKIP: {
-    skip "Cannot create test table", 17 if $ev;
+    skip "ODBC Driver/Database has not got a big enough type", 18
+        if (!$type_name);
 
-    my $bigval = "x" x 30000;
-    test($dbh, $bigval);
+    #diag("Using type $type_name");
+    eval { $dbh->do(qq/create table DBD_ODBC_drop_me(a $type_name)/); };
+    $ev = $@;
+    diag($ev) if $ev;
+    ok(!$ev, "table DBD_ODBC_drop_me created");
 
-    test($dbh, $bigval, 500);
+  SKIP: {
+        skip "Cannot create test table", 17 if $ev;
 
-    $bigval = 'x' x 60000;
-    test($dbh, $bigval, 60001);
+        my $bigval = "x" x 30000;
+        test($dbh, $bigval);
+
+        test($dbh, $bigval, 500);
+
+        $bigval = 'x' x 60000;
+        test($dbh, $bigval, 60001);
+    };
 };
 
 sub test
@@ -106,7 +111,10 @@ sub test_value
     my ($dbh, $value) = @_;
 
     local $dbh->{RaiseError} = 1;
-    local $dbh->{LongReadLen} = 60001;
+    my $max = 60001;
+    $max = 120001 if ($type == SQL_WLONGVARCHAR);
+    local $dbh->{LongReadLen} = $max;
+
     my $row = $dbh->selectall_arrayref(q/select a from DBD_ODBC_drop_me/);
     $ev = $@;
     diag($ev) if $ev;
@@ -119,8 +127,8 @@ sub test_value
 
 END {
     if ($dbh) {
+        local $dbh->{PrintError} = 0;
+        local $dbh->{PrintWarn} = 0;
         eval {$dbh->do(q/drop table DBD_ODBC_drop_me/);};
     };
-    warn ("Failed to delete test table DBD_ODBC_drop_me - $@, check this")
-        if $@;
 };

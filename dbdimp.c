@@ -2063,7 +2063,7 @@ int dbd_describe(SV *h, imp_sth_t *imp_sth, int more)
             PerlIO_printf(DBIc_LOGPIO(imp_dbh),
                           "   DescribeCol column = %d, name = %s, "
                           "len = %d, type = %s(%d), "
-                          "precision = %ld, scale = %d, nullable = %d\n",
+                          "column size = %ld, scale = %d, nullable = %d\n",
                           i+1, fbh->ColName,
                           fbh->ColNameLen,
                           S_SqlTypeToString(fbh->ColSqlType),
@@ -2155,6 +2155,17 @@ int dbd_describe(SV *h, imp_sth_t *imp_sth, int more)
             /* MS SQL returns bytes, Oracle returns characters ... */
 
             if (fbh->ColDef == 0) {             /* cope with nvarchar(max) */
+                fbh->ColDisplaySize = DBIc_LongReadLen(imp_sth);
+                fbh->ColLength = DBIc_LongReadLen(imp_sth);
+            } else if (fbh->ColDef > 2147483590) {
+                /*
+                 * The new MS Access driver ACEODBC.DLL cannot cope with the
+                 * 40UnicodeRoundTrip test which contains a
+                 * select ?, LEN(?)
+                 * returning a massive number for the column display size of
+                 * the first column. This leads to a memory allocation error
+                 * unless we trap it as a large column.
+                 */
                 fbh->ColDisplaySize = DBIc_LongReadLen(imp_sth);
                 fbh->ColLength = DBIc_LongReadLen(imp_sth);
             }
@@ -3345,8 +3356,9 @@ static int rebind_param(
     *  SQL_LEN_DATA_AT_EXEC(0) and the buffer_length to 0.
     *
     */
-   if ((strcmp(imp_dbh->odbc_driver_name, "SQLSRV32.DLL") == 0) &&
-       ((phs->sql_type == SQL_LONGVARCHAR) || (phs->sql_type == SQL_LONGVARBINARY)) &&
+   if ((imp_dbh->driver_type == DT_SQL_SERVER) &&
+       ((phs->sql_type == SQL_LONGVARCHAR) ||
+        (phs->sql_type == SQL_LONGVARBINARY)) &&
        (column_size == 2147483647) && (phs->strlen_or_ind < 0) &&
        ((-phs->strlen_or_ind + SQL_LEN_DATA_AT_EXEC_OFFSET) >= 409600)) {
        phs->strlen_or_ind = SQL_LEN_DATA_AT_EXEC(0);
@@ -3364,7 +3376,8 @@ static int rebind_param(
     * only if column_size is not reduced to 0 - which also produces
     * an access error e.g., in the empty string '' case.
     */
-    else if ((strcmp(imp_dbh->odbc_driver_name, "odbcjt32.dll") == 0) &&
+    else if (((imp_dbh->driver_type == DT_MS_ACCESS_JET) ||
+              (imp_dbh->driver_type == DT_MS_ACCESS_ACE)) &&
              (value_type == SQL_C_WCHAR) && (column_size > 1)) {
         column_size = column_size / 2;
         if (DBIc_TRACE(imp_sth, 0, 0, 4))
@@ -3381,9 +3394,8 @@ static int rebind_param(
     * a varchar(10) column can be desribed as a varchar(n) where n is less
     * than 10 and this leads to data truncation errors - see rt 39841.
     */
-   if (((strcmp(imp_dbh->odbc_driver_name, "SQLSRV32.DLL") == 0) ||
-        (strcmp(imp_dbh->odbc_driver_name, "sqlncli10.dll") == 0) ||
-        (strcmp(imp_dbh->odbc_driver_name, "SQLNCLI.DLL") == 0)) &&
+   if (((imp_dbh->driver_type == DT_SQL_SERVER) ||
+        (imp_dbh->driver_type == DT_SQL_SERVER_NATIVE_CLIENT)) &&
        (phs->sql_type == SQL_VARCHAR) &&
        (column_size < buffer_length)) {
        column_size = buffer_length;
@@ -3397,8 +3409,7 @@ static int rebind_param(
     * 2007.100.1600.22 sqlncli10.dll driver version = ?
     * 2005.90.1399.00 SQLNCLI.DLL driver version = 09.00.1399
     */
-   if (((strcmp(imp_dbh->odbc_driver_name, "sqlncli10.dll") == 0) ||
-        ((strcmp(imp_dbh->odbc_driver_name, "SQLNCLI.DLL") == 0))) &&
+   if ((imp_dbh->driver_type == DT_SQL_SERVER_NATIVE_CLIENT) &&
        (phs->strlen_or_ind < 0) &&
        (phs->param_size == 0)) {
        column_size = 0;
@@ -5189,7 +5200,22 @@ static int post_connect(
    if (!SQL_SUCCEEDED(rc)) {
        dbd_error(dbh, rc, "post_connect/SQLGetInfo(DRIVER_NAME)");
        strcpy(imp_dbh->odbc_driver_name, "unknown");
+       imp_dbh->driver_type = DT_DONT_CARE;
+   } else {
+       if (strcmp(imp_dbh->odbc_driver_name, "SQLSRV32.DLL") == 0) {
+           imp_dbh->driver_type = DT_SQL_SERVER;
+       } else if ((strcmp(imp_dbh->odbc_driver_name, "sqlncli10.dll") == 0) ||
+                  (strcmp(imp_dbh->odbc_driver_name, "SQLNCLI.DLL") == 0)) {
+           imp_dbh->driver_type = DT_SQL_SERVER_NATIVE_CLIENT;
+       } else if (strcmp(imp_dbh->odbc_driver_name, "odbcjt32.dll") == 0) {
+           imp_dbh->driver_type = DT_MS_ACCESS_JET;
+       } else if (strcmp(imp_dbh->odbc_driver_name, "ACEODBC.DLL") == 0) {
+           imp_dbh->driver_type = DT_MS_ACCESS_ACE;
+       } else {
+           imp_dbh->driver_type = DT_DONT_CARE;
+       }
    }
+   
    if (DBIc_TRACE(imp_dbh, 0x04000000, 0, 0))
        TRACE1(imp_dbh, "DRIVER_NAME = %s\n", imp_dbh->odbc_driver_name);
 

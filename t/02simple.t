@@ -9,7 +9,7 @@ $| = 1;
 my $has_test_nowarnings = 1;
 eval "require Test::NoWarnings";
 $has_test_nowarnings = undef if $@;
-my $tests = 63;
+my $tests = 65;
 $tests += 1 if $has_test_nowarnings;
 plan tests => $tests;
 
@@ -43,6 +43,7 @@ my $driver_name;
     $driver_name = DBI::neat($dbh->get_info(6));
     diag("Using DRIVER_NAME $driver_name\n");
     diag("Using DRIVER_VER " . DBI::neat($dbh->get_info(7)) . "\n");
+    diag("odbc_has_unicode " . $dbh->{odbc_has_unicode} . "\n");
 }
 
 # ReadOnly
@@ -340,20 +341,17 @@ sub tab_select
     $sth->execute();
     while (@row = $sth->fetchrow()) {
 	if ($row[0] == 4) {
-	    if ($row[1] eq $ODBCTEST::longstr) {
-	       # print "retrieved ", length($ODBCTEST::longstr), " byte string OK\n";
-	    } else {
-	       diag("Basic retrieval of longer rows not working!\nRetrieved value = $row[1] vs $ODBCTEST::longstr\n");
-		return 0;
-	    }
-	} elsif ($row[0] == 5) {
-	    if ($row[1] eq $ODBCTEST::longstr2) {
-	       # print "retrieved ", length($ODBCTEST::longstr2), " byte string OK\n";
-	    } else {
-	       diag(print "Basic retrieval of row longer than 255 chars not working!" .
-						"\nRetrieved ", length($row[1]), " bytes instead of " .
-						length($ODBCTEST::longstr2) . "\nRetrieved value = $row[1]\n");
-		return 0;
+            if (!is($row[1], $ODBCTEST::longstr, "long strings compare")) {
+                diag("Basic retrieval of longer rows not working\n" .
+                    DBI::data_diff($row[1], $ODBCTEST::longstr));
+                return 0;
+            }
+ 	} elsif ($row[0] == 5) {
+	    if (!is($row[1], $ODBCTEST::longstr2, "long strings compare 255")) {
+                diag("Basic retrieval of row longer than 255 chars" .
+                         " not working!\n" .
+                             DBI::data_diff($row[1], $ODBCTEST::longstr2));
+                return 0;
 	    }
 	}
     }

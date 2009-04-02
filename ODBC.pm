@@ -12,7 +12,7 @@
 
 require 5.006;
 
-$DBD::ODBC::VERSION = '1.18_5';
+$DBD::ODBC::VERSION = '1.19';
 
 {
     package DBD::ODBC;

@@ -37,7 +37,7 @@ require 5.004;
    # changed SQL_BIGINT below to -5, as DBI has removed that constant.
    # ODBC's value is -5.
    %TestFieldInfo = (
-		     'COL_A' => [SQL_SMALLINT,-5, SQL_TINYINT, SQL_NUMERIC, SQL_DECIMAL, SQL_FLOAT, SQL_REAL],
+		     'COL_A' => [SQL_SMALLINT,-5, SQL_TINYINT, SQL_NUMERIC, SQL_DECIMAL, SQL_FLOAT, SQL_REAL, SQL_INTEGER],
 		     'COL_B' => [SQL_VARCHAR, SQL_CHAR, SQL_WVARCHAR, SQL_WCHAR],
 		     'COL_C' => [SQL_LONGVARCHAR, -1, SQL_WLONGVARCHAR],
 		     'COL_D' => [SQL_TYPE_TIMESTAMP, SQL_TYPE_DATE, SQL_DATE, SQL_TIMESTAMP ],
