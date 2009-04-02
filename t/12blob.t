@@ -52,6 +52,8 @@ while (my @row = $sth->fetchrow) {
     if ($row[2] > 60000) {
         #diag("$row[0] $row[1] $row[2]");
         ($type_name, $type) = ($row[0], $row[1]);
+        $sth->finish;
+        last;
     }
 }
 SKIP: {
