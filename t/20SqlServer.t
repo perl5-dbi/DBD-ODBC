@@ -13,6 +13,8 @@ my $tests = 65;
 $tests += 1 if $has_test_nowarnings;
 plan tests => $tests;
 
+my $dbh;
+
 # use_ok('DBI', qw(:sql_types));
 # can't seem to get the imports right this way
 use DBI qw(:sql_types);
@@ -24,6 +26,14 @@ BEGIN {
         if (!defined $ENV{DBI_DSN});
 }
 END {
+    if ($dbh) {
+        local $dbh->{PrintError} = 0;
+        local $dbh->{PrintWarn} = 0;
+        eval {
+            $dbh->do(q/drop procedure PERL_DBD_PROC1/);
+            $dbh->do(q/drop procedure PERL_DBD_PROC2/);
+        };
+    }
     Test::NoWarnings::had_no_warnings()
           if ($has_test_nowarnings);
 }
@@ -205,7 +215,7 @@ sub Multiple_concurrent_stmts {
    return 1;
 }
 
-my $dbh = DBI->connect();
+$dbh = DBI->connect();
 unless($dbh) {
    BAIL_OUT("Unable to connect to the database $DBI::errstr\nTests skipped.\n");
    exit 0;
