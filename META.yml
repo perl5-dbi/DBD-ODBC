@@ -1,7 +1,7 @@
 --- #YAML:1.0
 name: DBD-ODBC
 abstract: ODBC DBD for Perl DBI
-version: 1.19
+version: 1.20
 version_from: ODBC.pm
 author:
   - Tim Bunce

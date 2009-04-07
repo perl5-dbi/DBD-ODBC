@@ -43,6 +43,20 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
 
 =head1 CHANGES
 
+=head2 Changes in DBD::ODBC 1.20 April 7, 2009
+
+Fix bug in handling of SQL_WLONGVARCHAR when not built with unicode
+support.  The column was not identified as a long column and hence the
+size of the column was not restricted to LongReadLen. Can cause
+DBD::ODBC to attempt to allocate a huge amount of memory.
+
+Minor changes to Makefile.PL to help diagnose how it decided which
+driver manager to use and where it was found.
+
+In 20SqlServer.t attempt to drop any procedures we created if they
+still exist at the end of the test. Reported by Michael Higgins.
+
+
 =head2 Changes in DBD::ODBC 1.19 April 2, 2009
 
 Some minor diagnostic output during tests when running against freeTDS
@@ -60,10 +74,10 @@ statement tests.
 In 02simple.t cope with ODBC drivers or databases that do not need a
 username or password (MS Access).
 
-In 20SqlServer.t fix skip count and an erroneouse assignement for
+In 20SqlServer.t fix skip count and an erroneous assignment for
 driver_name.
 
-Changes some if tests to Test::More->is tests in 02simple.t.
+Change some if tests to Test::More->is tests in 02simple.t.
 
 Fix "invalid precision" error during tests with the new ACEODBC.DLL MS
 Access driver. Same workaround applied for the old MS Access driver
