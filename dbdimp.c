@@ -2200,9 +2200,11 @@ int dbd_describe(SV *h, imp_sth_t *imp_sth, int more)
             /* MS SQL returns bytes, Oracle returns characters ... */
             fbh->ColLength*=sizeof(SQLWCHAR);
             fbh->ColDisplaySize = DBIc_LongReadLen(imp_sth)+1;
-            break;
+# else
+            fbh->ColDisplaySize = DBIc_LongReadLen(imp_sth) + 1;
 # endif	/* WITH_UNICODE */
-#endif
+            break;
+#endif  /* SQL_WLONGVARCHAR */
           case SQL_VARCHAR:
             if (fbh->ColDef == 0) {
                 fbh->ColDisplaySize = DBIc_LongReadLen(imp_sth)+1;
