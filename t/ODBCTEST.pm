@@ -51,6 +51,7 @@ require 5.004;
       my @row;
       my $sth;
       foreach $type (@{ $TestFieldInfo{$column} }) {
+          #diag("Looking for type $type\n");
 	 $sth = $dbh->func($type, GetTypeInfo);
 	    # may not be correct behavior, but get the first compat type
 	 if ($sth) {
@@ -61,8 +62,14 @@ require 5.004;
 		    # warn "Unable to get type for type $type\n";
 	 }
       }
-      die "Unable to find a suitable test type for field $column"
-	    unless @row;
+      if (scalar(@row) == 0) {
+          my $types = $dbh->type_info_all;
+          foreach my $t (@$types) {
+              next if ref($t) ne 'ARRAY';
+              diag(join(",", map{$_ ? $_ : "undef"} @$t). "\n");
+          }
+          BAIL_OUT("Unable to find a suitable test type for field $column");
+      }
 	# warn join(", ",@row);
       return @row;
    }

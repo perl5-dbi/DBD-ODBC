@@ -53,9 +53,24 @@ DBD::ODBC to attempt to allocate a huge amount of memory.
 Minor changes to Makefile.PL to help diagnose how it decided which
 driver manager to use and where it was found.
 
+Offer suggestion to debian-based systems when some of unixODBC is
+found (the bin part) but the development part is missing.
+
 In 20SqlServer.t attempt to drop any procedures we created if they
 still exist at the end of the test. Reported by Michael Higgins.
 
+In 12blob.t separate code to delete test table into sub and call at
+being and end, handle failures from prepare there were two ENDs.
+
+In ODBCTEST.pm when no acceptable test column type is found output all
+the found types and BAIL_OUT the entire test.
+
+Skip rt_39841.t unless actually using the SQL Server ODBC driver or
+native client.
+
+Handle drivers which return 0 for SQL_MAX_COLUMN_NAME_LEN.
+
+Double the buffer size used for column names if built with unicode.
 
 =head2 Changes in DBD::ODBC 1.19 April 2, 2009
 

@@ -242,33 +242,43 @@ else {
             # exist until 2.2.11 and it was broken wrt --cflags in 2.2.11/2.2.12
             # i.e. --cflags did not include -I/xxx/yyy
             my $odbc_config_v = `odbc_config --version 2>&1`;
+            print "Looking for odbc_config\n";
             if ($odbc_config_v && ($odbc_config_v =~ /^(\d\.)+/)) {
+                print "  Found odbc_config versions $odbc_config_v\n";
                 $odbchome = `odbc_config --prefix 2>&1`;
+                print "  odbc_config reports --prefix=$odbchome\n";
                 chomp $odbchome;
                 if ((-e $odbchome) && (-e "$odbchome/include") &&
                         (-f "$odbchome/include/sql.h") &&
                             (-f "$odbchome/include/sqlext.h") &&
                                 (-f "$odbchome/include/sqltypes.h")) {
-                    print "Set ODBCHOME to $odbchome from odbc_config\n";
+                    print "  Set ODBCHOME to $odbchome from odbc_config\n";
                 } else {
+                    print "  but cannot find header files in that path so ignoring\n";
                     $odbchome = '';
                 }
+            } else {
+                print "  odbc_config not found - ok, there are other things I can do\n";
             }
             if (!$odbchome) {
+                print "Still trying to guess ODBCHOME - looking for headers now\n";
                 if (-f '/usr/include/sql.h' &&
                         -f '/usr/include/sqlext.h' &&
                             -f '/usr/include/sqltypes.h') {
+                    print "  Found sql header files in /use/include\n";
                     $odbchome = '/usr';
                 } elsif (-f '/usr/local/include/sql.h' &&
                              -f '/usr/local/include/sqlext.h' &&
                                  -f '/usr/local/include/sqltypes.h') {
+                    print "  Found sql header files in /use/local/include\n";
                     $odbchome = '/usr/local';
                 } elsif (-d '/usr/local/easysoft/unixODBC') {
+                    print "  Found sql header files in /use/local/easysoft/include\n";
                     $odbchome = '/usr/local/easysoft/unixODBC';
                 }
             }
         }
-        print "Found what looks like a driver manager in $odbchome\n"
+        print "Found what looks like a driver manager files in $odbchome\n"
             if $odbchome;
     }
 
@@ -304,7 +314,7 @@ EOT
             my @lines = <$fh>;
             my @found = grep(/iODBC driver manager/i, @lines);
             if (scalar(@found)) {
-                die "\n\nDBD::ODBC does not support unicode on darwin with iODBC and this looks like iODBC. The iODBC driver manager expects wide characters to be 4 bytes long and DBD::ODBC wants wide characters to be UTF16.\nEither\no) Rerun without the -u switch\no) complain to the producer of your ODBC driver manager\no) get another ODBC driver manager (like unixODBC).\n\n";
+                die "\n\nDBD::ODBC does not support unicode with iODBC and this looks like iODBC. The iODBC driver manager expects wide characters to be 4 bytes long and DBD::ODBC wants wide characters to be UTF16.\nEither\no) Rerun without the -u switch\no) complain to the producer of your ODBC driver manager\no) get another ODBC driver manager (like unixODBC).\n\n";
             }
             close $fh;
         }
@@ -430,14 +440,18 @@ I cannot find an ODBC driver manager that I recognize.
     elsif ($myodbc eq 'unixodbc') {
         # if we find odbcinst, output useful info about this version of unixODBC
         # and store unixODBC version
+        print "Look for odbcinst\n";
         if (-x "$odbchome/bin/odbcinst") {
             my $j = `$odbchome/bin/odbcinst -j 2>&1`;
-            print "odbcinst -j reports:\n\n$j\n" if $j;
+            print "  odbcinst -j reports:\n\n$j\n" if $j;
             if ($j =~ /^unixODBC ([\d\.]+).*/ ) {
                 $myodbc_version = $1;
             }
+        } else {
+            print "  odbcinst not found - ok, I can deal with that.\n";
         }
         # if we find odbc_config add --cflags output to CC line
+        print "Looking for odbc_config\n";
         if (-x "$odbchome/bin/odbc_config") {
             my @args = qw(--prefix --include-prefix --lib-prefix --version --odbcversion);
             for my $oca (@args) {
@@ -455,10 +469,17 @@ I cannot find an ODBC driver manager that I recognize.
                 print qq/Adding odbc_config --cflags "$cf" to CC line\n/;
                 $opts{DEFINE} .= " $cf";
             }
+        } else {
+            print "  odbc_config not found - ok\n";
         }
-	my @ilibs = glob "$odbchome/lib/libodbc.*";
-	@ilibs = grep { /\.($Config{so}|$Config{dlext}|a)$/ } @ilibs;
-	die "That's odd, I can't see any unixodbc libs in $odbchome" unless @ilibs;
+	my @libs = glob "$odbchome/lib/libodbc.*";
+	my @ilibs = grep { /\.($Config{so}|$Config{dlext}|a)$/ } @libs;
+        if (scalar(@ilibs) == 0) {
+            die "That's odd, I can't see any unixodbc libs in $odbchome." .
+                "This is all I found:\n" . join(",", @libs) . "\n" .
+                "Perhaps you need to install the unixODBC development " .
+                "package, often called unixodbc-dev.";
+        }
 	print << "EOT";
 
 We expect to find the sql.h, sqlext.h, sqltypes.h and sqlucode.h (which were

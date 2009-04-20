@@ -53,11 +53,17 @@ ok($dbms_name, "got DBMS name: $dbms_name");
 my $dbms_version = $dbh->get_info(18);
 #3
 ok($dbms_version, "got DBMS version: $dbms_version");
+my $driver_name = DBI::neat($dbh->get_info(6));
 
 my ($ev, $sth);
 
 SKIP: {
     skip "not SQL Server", 25 if $dbms_name !~ /Microsoft SQL Server/;
+    skip "not SQL Server ODBC or native client driver", 25
+        if ($driver_name !~ /SQLSRV32.DLL/oi) &&
+            ($driver_name !~ /sqlncli10.dll/oi) &&
+                ($driver_name !~ /SQLNCLI>DLL/oi);
+
     my $major_version = $dbms_version;
 
     eval {
