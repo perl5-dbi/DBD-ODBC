@@ -43,7 +43,22 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
 
 =head1 CHANGES
 
-=head2 Changes in DBD::ODBC 1.20 April 7, 2009
+=head2 Changes in DBD::ODBC 1.21 April 27, 2009
+
+Change 02simple test to output Perl, DBI and DBD::ODBC versions.
+
+Fixed bug where if ODBC driver supports SQLDescribeParam and it
+succeeds for a parameterised query but you override the parameter
+type, DBD::ODBC was still using the size returned by
+SQLDescribeParam. Thanks to Brian Becker for finding, diagnosing and
+fixing this issue.
+
+Added FAQ entry about SQL Server and calling procedures with named
+parameters out of order.
+
+Added test_results.txt containing some supplied make test results.
+
+=head2 Changes in DBD::ODBC 1.20 April 20, 2009
 
 Fix bug in handling of SQL_WLONGVARCHAR when not built with unicode
 support.  The column was not identified as a long column and hence the

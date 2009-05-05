@@ -3,6 +3,7 @@
 
 use Test::More;
 use strict;
+use Config;
 
 $| = 1;
 
@@ -38,6 +39,10 @@ my $driver_name;
 # Output DBMS which is useful when debugging cpan-testers output
 {
     diag("\n");
+    diag("Perl $Config{PERL_REVISION}.$Config{PERL_SUBVERSION}.$Config{PERL_VERSION}\n");
+    diag("osname=$Config{osname}, osvers=$Config{osvers}, archname=$Config{archname}\n");
+    diag("Using DBI $DBI::VERSION\n");
+    diag("Using DBD::ODBC $DBD::ODBC::VERSION\n");
     diag("Using DBMS_NAME " . DBI::neat($dbh->get_info(17)) . "\n");
     diag("Using DBMS_VER " . DBI::neat($dbh->get_info(18)) . "\n");
     $driver_name = DBI::neat($dbh->get_info(6));

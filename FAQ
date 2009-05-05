@@ -524,6 +524,36 @@ which cannot be converted to the native column type you will get this
 error e.g., if you attempt to bind a non-datetime string to a datetime
 column or a non-numeric string to a numeric column.
 
+=head2 Why do I get strange results with SQL Server and named parameters?
+
+If you are using a MS SQL Server driver and named parameters to
+procedures be very careful to use then in the sasme order they are
+defined in the procedure. i.e., if you have a procedure like this:
+
+  create procedure test
+        @param1 varchar(50),
+        @param2 smallint
+  as
+  begin
+  ..
+  end
+
+then ensure if you call it using named parameters you specify them in
+the same order they are declared:
+
+  exec test @param1=?,@param2=?
+
+and not
+
+  exec test @param2=?,@param1=?
+
+The reason for this is that all SQL Server drivers we have seen
+describe procedures parameters in the order they are declared and
+ignore the order they are used in the SQL. If you specify them out of
+order DBD::ODBC will get details on p1 which are really for p2
+etc. This can lead to data truncation errors and all sort of other
+problems it is impossible for DBD::ODBC spot or workaround.
+
 =head1 AUTHOR
 
 Parts of this document were written by Tim Bunce,

@@ -2290,7 +2290,7 @@ int dbd_describe(SV *h, imp_sth_t *imp_sth, int more)
         /* Bind output column variables */
         if (DBIc_TRACE(imp_sth, 0, 0, 4))
             PerlIO_printf(DBIc_LOGPIO(imp_dbh),
-                          "Bind %d: type = %s(%d), buf=%p, buflen=%ld\n",
+                          "    Bind %d: type = %s(%d), buf=%p, buflen=%ld\n",
                           i+1, S_SqlTypeToString(fbh->ftype), fbh->ftype,
                           fbh->data, fbh->ColDisplaySize);
         rc = SQLBindCol(imp_sth->hstmt,
@@ -3209,7 +3209,8 @@ static int rebind_param(
    }
 
    if ((phs->describe_param_called == 1) &&
-       (SQL_SUCCEEDED(phs->describe_param_status))) {
+       (SQL_SUCCEEDED(phs->describe_param_status)) &&
+       (phs->requested_type == 0)) {            /* type not overriden */
        default_column_size = phs->param_size;
    } else {
        if ((phs->sql_type == SQL_VARCHAR) && !phs->is_inout) {

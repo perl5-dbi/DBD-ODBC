@@ -11,7 +11,7 @@ $| = 1;
 my $has_test_nowarnings = 1;
 eval "require Test::NoWarnings";
 $has_test_nowarnings = undef if $@;
-my $tests = 21;
+my $tests = 24;
 $tests += 1 if $has_test_nowarnings;
 plan tests => $tests;
 
@@ -141,7 +141,12 @@ sub test_value
     diag($ev) if $ev;
     ok(!$ev, 'select test data back');
 
-    is($row->[0]->[0], $value, 'data read back compares');
+    my $rc = is(length($row->[0]->[0]), length($value),
+                       "sizes of insert/select compare");
+  SKIP: {
+        skip "sizes do not match", 1 unless $rc;
+        is($row->[0]->[0], $value, 'data read back compares');
+    };
 
     return;
 }
