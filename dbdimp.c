@@ -3423,7 +3423,7 @@ static int rebind_param(
        (phs->strlen_or_ind < 0) &&
        (phs->param_size == 0)) {
        column_size = 0;
-   } 
+   }
    if (DBIc_TRACE(imp_sth, 0, 0, 5)) {
       PerlIO_printf(
           DBIc_LOGPIO(imp_dbh),
@@ -3489,9 +3489,11 @@ int dbd_bind_ph(
    if (DBIc_TRACE(imp_sth, 0, 0, 4)) {
        PerlIO_printf(
            DBIc_LOGPIO(imp_dbh),
-           "+dbd_bind_ph(%p, %s, value='%.200s', attribs=%s, sql_type=%ld, is_inout=%d, maxlen=%ld\n",
+           "+dbd_bind_ph(%p, name=%s, value='%.200s', attribs=%s, "
+           "sql_type=%ld(%s), is_inout=%d, maxlen=%ld\n",
            sth, name, SvOK(newvalue) ? SvPV_nolen(newvalue) : "undef",
-           attribs ? SvPV_nolen(attribs) : "", sql_type, is_inout, maxlen);
+           attribs ? SvPV_nolen(attribs) : "", sql_type,
+           S_SqlTypeToString(sql_type), is_inout, maxlen);
    }
 
    /* the problem with the code below is we are getting SVt_PVLV when
@@ -3517,10 +3519,9 @@ int dbd_bind_ph(
       croak("Can't bind unknown placeholder '%s'", name);
    phs = (phs_t*)SvPVX(*phs_svp);	/* placeholder struct	*/
 
-   phs->requested_type = sql_type;           /* save type requested */
-
    if (phs->sv == &sv_undef) { /* first bind for this placeholder */
       phs->value_type = SQL_C_CHAR;             /* default */
+      phs->requested_type = sql_type;           /* save type requested */
 
       phs->maxlen = maxlen;                     /* 0 if not inout */
       phs->is_inout = is_inout;
@@ -3532,7 +3533,14 @@ int dbd_bind_ph(
 	    imp_sth->out_params_av = newAV();
 	 av_push(imp_sth->out_params_av, SvREFCNT_inc(*phs_svp));
       }
+   } else if (sql_type) {
+       /* parameter attributes are supposed to be sticky until overriden
+          so only replace requested_type if sql_type specified.
+          See https://rt.cpan.org/Ticket/Display.html?id=46597 */
+      phs->requested_type = sql_type;           /* save type requested */
    }
+
+
    /* check later rebinds for any changes */
    /*
     * else if (is_inout || phs->is_inout) {
@@ -5227,7 +5235,7 @@ static int post_connect(
            imp_dbh->driver_type = DT_DONT_CARE;
        }
    }
-   
+
    if (DBIc_TRACE(imp_dbh, 0x04000000, 0, 0))
        TRACE1(imp_dbh, "DRIVER_NAME = %s\n", imp_dbh->odbc_driver_name);
 
@@ -5302,6 +5310,8 @@ static int post_connect(
        /* can't find stricmp on my Linux, nor strcmpi. must be a
         * portable way to do this*/
       if (!strcmp(imp_dbh->odbc_dbname, "Microsoft SQL Server")) {
+          if (DBIc_TRACE(imp_dbh, 0x04000000, 0, 0))
+              TRACE0(imp_dbh, "Deferring Binding\n");
 	 imp_dbh->odbc_defer_binding = 1;
       }
    } else {
@@ -5331,6 +5341,8 @@ static int post_connect(
    /* check to see if SQLDescribeParam is supported */
    rc = SQLGetFunctions(imp_dbh->hdbc, SQL_API_SQLDESCRIBEPARAM, &supported);
    if (SQL_SUCCEEDED(rc)) {
+       if (DBIc_TRACE(imp_dbh, 0x04000000, 0, 0))
+           TRACE1(imp_dbh, "SQLDescribeParam supported: %d\n", supported);
        imp_dbh->odbc_sqldescribeparam_supported = supported ? 1 : 0;
    } else {
       imp_dbh->odbc_sqldescribeparam_supported = 0;

@@ -554,6 +554,74 @@ order DBD::ODBC will get details on p1 which are really for p2
 etc. This can lead to data truncation errors and all sort of other
 problems it is impossible for DBD::ODBC spot or workaround.
 
+=head2 Why do I get "Numeric value out of range" when binding dates in Oracle?
+
+Also see "Why do I get "Datetime field overflow" when attempting to insert a
+date into Oracle?".
+
+Here is some example code binding dates; some work, some don't, see comments.
+
+  use DBI;
+  use strict;
+
+  # table is "create table martin (a date, b int)"
+
+  my $h = DBI->connect;
+
+  $h->do(q{alter session set nls_date_format='DD-MON-YY'});
+
+  my $s = $h->prepare(q{select * from v$nls_parameters where parameter = 'NLS_DATE_FORMAT'});
+  $s->execute;
+  print DBI::dump_results($s);
+
+  my $date = '30-DEC-99';
+  my $dateodbc = qq/{ d '1999-12-30'}/;
+
+  # the following works ok - resulting in 2099-12-30 being inserted
+  $h->do(qq{insert into martin values ('$date', 1)});
+
+  # the following works resulting in 1999-12-30 being inserted
+  $h->do(qq{insert into martin values ($dateodbc, 2)});
+
+  # fails
+  eval {
+      my $s = $h->prepare(q{insert into martin values(?,3)});
+      $s->bind_param(1, $date);
+      # fails
+      # Numeric value out of range: invalid character in date/time string (SQL-22003)
+      $s->execute;
+  };
+
+  # works resulting in 2099-12-30 being inserted
+  eval {
+      my $s = $h->prepare(q{insert into martin values(?,4)});
+      $s->bind_param(1, $date, DBI::SQL_VARCHAR);
+      $s->execute;
+  };
+
+  # works resulting in 1999-12-30 being inserted
+  eval {
+      my $s = $h->prepare(q{insert into martin values(?,5)});
+      $s->bind_param(1, $dateodbc);
+      $s->execute;
+  };
+
+In general, when using an ODBC driver you should use the ODBC syntax
+for dates, times and timestamps as those are the only formats an ODBC
+has to support.
+
+In the above case with Oracle, the date parameter is described as a
+SQL_TYPE_DATE SQL type so by default DBD::ODBC binds your parameter as
+a SQL_TYPE_DATE. If you use '30-DEC-99' then that means the C type is
+SQL_CHAR and the SQL type is SQL_TYPE_DATE so the driver is forced to
+parse the date before sending it to Oracle (that would mean knowing
+what your NLS_DATE_FORMAT is and it would also mean knowing all the
+magic special characters Oracle can use to define date formats).
+
+If you override the bind type to SQL_VARCHAR then the driver sees
+SQL_CHAR => SQL_VARCHAR, nothing to do and hence Oracle itself does
+the translation - that is why the SQL_VARCHAR works.
+
 =head1 AUTHOR
 
 Parts of this document were written by Tim Bunce,

@@ -40,8 +40,29 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
     http://groups.google.com/group/perl.dbd.pg.changes/browse_thread/thread/8205bf83b5a48f63/cf43d87fe644798f?hl=en&q=easysoft&pli=1
     http://www.nntp.perl.org/group/perl.dbi.users/2008/10/msg33322.html
   Add a perlcritic test - see DBD::Pg
+  Why doesn't http://www.presicient.com/dbidocs/ display DBD::ODBC docs
+    properly.
 
 =head1 CHANGES
+
+=head2 Changes in DBD::ODBC 1.21_1 June 2, 2009
+
+Fixed bug referred to in rt 46597 reported by taioba and identified by
+Tim Bunce. In Calls to bind_param for a given statement handle if you
+specify a SQL type to bind as this should be "sticky" for that
+parameter.  That means if you do:
+
+$sth->bind_param(1, $param, DBI::SQL_LONGVARCHAR)
+
+and follow it up with execute calls that also specify the parameter:
+
+$sth->execute("a param");
+
+then the parameter should stick with the SQL_LONGVARCHAR type and not
+revert to the default parameter type. The DBI docs (in subversion now)
+make it clear the parameter type is sticky for the duration of the
+statement but some DBDs allow the parameter to be rebound with a
+different type - DBD::ODBC is one of those drivers.
 
 =head2 Changes in DBD::ODBC 1.21 April 27, 2009
 
