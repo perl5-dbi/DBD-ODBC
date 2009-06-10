@@ -10,7 +10,7 @@
 typedef enum { do_new=1, do_cat, do_set } new_cat_set_t;
 
 /* static prototypes */
-static unsigned short utf16_len(UTF16 *wp);
+static long utf16_len(UTF16 *wp);
 static void utf16_copy(UTF16 *d, UTF16 *s);
 
 static SV * _dosvwv(SV * sv, UTF16 * wp, STRLEN len, new_cat_set_t mode);
@@ -180,7 +180,7 @@ UTF16 * WValloc(char * s)
         if (widechars!=0) {
             MultiByteToWideChar(CP_UTF8,0,s,-1,buf,widechars);
         }
-#else
+#else  /* !WIN32 */
         unsigned int widechrs, bytes;
         size_t slen;
         ConversionResult ret;
@@ -188,10 +188,12 @@ UTF16 * WValloc(char * s)
         UTF16 *target_start, *target_end;
 
         slen = strlen(s);
-        /*printf("utf8 string \\%s\\ is %ld bytes long\n", s, strlen(s));*/
+        /*printf("utf8 string \\%.20s\\ is %ld bytes long\n", s, strlen(s));*/
 
         source_start = s;
-        source_end = s + slen + 1;              /* include NUL terminator */
+        /* source_end needs to include NUL and be 1 past as ConvertUTF8toUTF17
+           loops while < source_end */
+        source_end = s + slen + 1;
 
         ret = ConvertUTF8toUTF16(
             (const UTF8 **)&source_start, source_end,
@@ -207,18 +209,21 @@ UTF16 * WValloc(char * s)
                 croak("WValloc: unknown ConvertUTF16toUTF8 error");
             }
         }
-        /*fprintf(stderr,"utf8 -> utf16 requires %d bytes\n", bytes);*/
+        /*printf("utf8 -> utf16 requires %d bytes\n", bytes);*/
 
         widechrs = bytes / sizeof(UTF16);
-        /*fprintf(stderr, "Allocating %d wide chrs\n", widechrs);*/
+        /*printf("Allocating %d wide chrs\n", widechrs);*/
 
-        Newz(0,buf,widechrs+1,UTF16);
+        Newz(0,buf,widechrs + 1,UTF16);
         if (widechrs != 0) {
             source_start = s;
+            /* 1 after NUL because ConvertUTF8toUTF16 does while < end */
             source_end = s + slen + 1;
             target_start = buf;
-            target_end = buf + widechrs + 1;
-            /*fprintf(stderr, "%p %p %p %p\n", source_start, source_end, target_start, target_end);*/
+            /* in ConvertUTF8toUTF16 once target_end hit buf is exhausted */
+            target_end = buf + widechrs;
+            /*printf("ss=%p se=%p ts=%p te=%p\n",
+              source_start, source_end, target_start, target_end);*/
 
             ret = ConvertUTF8toUTF16(
                 (const UTF8 **)&source_start, source_end,
@@ -226,10 +231,9 @@ UTF16 * WValloc(char * s)
             if (ret != conversionOK) {
                 croak("WValloc: second call to ConvertUTF8toUTF16 failed (%d)", ret);
             }
-            /*fprintf(stderr, "Second returned %d bytes\n", bytes);*/
-
+            /*printf("Second returned %d bytes\n", bytes);*/
         }
-#endif
+#endif  /* WIN32 */
     }
     return buf;
 }
@@ -288,7 +292,7 @@ char * PVallocW(UTF16 * wp)
         unsigned int bytes;
         UTF8 *target_start;
         UTF8 *target_end;
-        unsigned int len;
+        long len;
 
         if (wp != NULL) {
             len = utf16_len(wp);
@@ -351,8 +355,10 @@ void SV_toWCHAR(SV * sv)
         /* warn("SV_toWCHAR called for undef"); */
         return;
     }
-    p=SvPVutf8_force(sv,len);
     /* _force makes sure SV is only a string */
+    p=SvPVutf8_force(sv,len);
+    /*printf("p=%p, strlen(p) = %d\n", p, strlen(p));*/
+
     wp=WValloc(p); /* allocate wp containing utf16 copy of utf8 p */
     len=utf16_len(wp);
     p=SvGROW(sv,sizeof(UTF16)*(1+len));
@@ -362,9 +368,9 @@ void SV_toWCHAR(SV * sv)
     SvPOK_only(sv); /* sv is nothing but a non-UTF8 string -- for Perl ;-) */
 }
 
-static unsigned short utf16_len(UTF16 *wp)
+static long utf16_len(UTF16 *wp)
 {
-    unsigned short len = 0;
+    long len = 0;
 
     if (!wp) return 0;
 

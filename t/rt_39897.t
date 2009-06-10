@@ -5,7 +5,7 @@
 # LongReadLen to SQL_VARCHAR columns. 1.16 and earlier only use LongTruncOk
 # and LongReadLen on long columns e.g. SQL_LONGVARCHAR. As a result, if you
 # had a table with a varchar(N) where N > 80 (80 being the default for
-# LongReadLen) and moved from 1.16 to 1.17 then yopu'd suddenly get data
+# LongReadLen) and moved from 1.16 to 1.17 then you'd suddenly get data
 # truncated errors for rows where the SQL_VARCHAR was > 80 chrs.
 #
 use Test::More;

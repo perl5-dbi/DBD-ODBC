@@ -99,5 +99,6 @@ t/rt_39841.t
 t/rt_39897.t
 t/rt_43384.t
 t/rt_46597.t
+t/rt_null_nvarchar.t
 unicode_helper.c
 unicode_helper.h

@@ -23,6 +23,9 @@
  *        and some internal information from the DBI.
  *    4 - As above, adding more detailed information from the driver.
  *    5 to 15 - As above but with more and more obscure information.
+ *
+ * SV Manipulation Functions
+ *   http://perl.active-venture.com/pod/perlapi-svfunctions.html
  */
 
 #include "ODBC.h"
@@ -3146,9 +3149,18 @@ static int rebind_param(
                   "      Need to modify phs->sv in place: old length = %i\n",
                   value_len);
        }
-       SV_toWCHAR(phs->sv);        /* may modify SvPV(phs->sv), ... */
-       /* ... so phs->sv_buf must be updated */
-       phs->sv_buf=SvPV(phs->sv,value_len);
+       /* Convert the sv in place to UTF-16 encoded characters
+          NOTE: the SV_toWCHAR may modify SvPV(phs->sv */
+       if (SvOK(phs->sv)) {
+           SV_toWCHAR(phs->sv);
+           /* get new buffer and length */
+           phs->sv_buf = SvPV(phs->sv, value_len);
+       } else {                                 /* it is undef */
+           /* need a valid buffer at least */
+           phs->sv_buf = SvPVX(phs->sv);
+           value_len = 0;
+       }
+
        if (DBIc_TRACE(imp_sth, 0, 0, 8)) {
            TRACE1(imp_dbh,
                   "      Need to modify phs->sv in place: new length = %i\n",
