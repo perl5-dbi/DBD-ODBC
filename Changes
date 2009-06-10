@@ -67,7 +67,7 @@ unicode strings larger than 64K you should definitely upgrade now.
 
 Fixed bug referred to in rt 46597 reported by taioba and identified by
 Tim Bunce. In Calls to bind_param for a given statement handle if you
-specify a SQL type to bind as this should be "sticky" for that
+specify a SQL type to bind as, this should be "sticky" for that
 parameter.  That means if you do:
 
 $sth->bind_param(1, $param, DBI::SQL_LONGVARCHAR)
@@ -77,7 +77,7 @@ and follow it up with execute calls that also specify the parameter:
 $sth->execute("a param");
 
 then the parameter should stick with the SQL_LONGVARCHAR type and not
-revert to the default parameter type. The DBI docs (in subversion now)
+revert to the default parameter type. The DBI docs (from 1.609)
 make it clear the parameter type is sticky for the duration of the
 statement but some DBDs allow the parameter to be rebound with a
 different type - DBD::ODBC is one of those drivers.
