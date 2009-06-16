@@ -242,6 +242,7 @@ else {
             # exist until 2.2.11 and it was broken wrt --cflags in 2.2.11/2.2.12
             # i.e. --cflags did not include -I/xxx/yyy
             my $odbc_config_v = `odbc_config --version 2>&1`;
+            my $iodbc_config_v = `iodbc-config --version 2>&1`;
             print "Looking for odbc_config\n";
             if ($odbc_config_v && ($odbc_config_v =~ /^(\d\.)+/)) {
                 print "  Found odbc_config versions $odbc_config_v\n";
@@ -257,6 +258,20 @@ else {
                     print "  but cannot find header files in that path so ignoring\n";
                     $odbchome = '';
                 }
+            } elsif ($iodbc_config_v && ($iodbc_config_v =~ /^(\d\.)+/)) {
+                print "  Found iodbc-config versions $iodbc_config_v\n";
+                $odbchome = `iodbc-config --prefix 2>&1`;
+                print "  iodbc-config reports --prefix=$odbchome\n";
+                chomp $odbchome;
+                if ((-e $odbchome) && (-e "$odbchome/include") &&
+                        (-f "$odbchome/include/sql.h") &&
+                            (-f "$odbchome/include/sqlext.h") &&
+                                (-f "$odbchome/include/sqltypes.h")) {
+                    print "  Set ODBCHOME to $odbchome from iodbc-config\n";
+                } else {
+                    print "  but cannot find header files in that path so ignoring\n";
+                    $odbchome = '';
+                }
             } else {
                 print "  odbc_config not found - ok, there are other things I can do\n";
             }
@@ -265,13 +280,18 @@ else {
                 if (-f '/usr/include/sql.h' &&
                         -f '/usr/include/sqlext.h' &&
                             -f '/usr/include/sqltypes.h') {
-                    print "  Found sql header files in /use/include\n";
+                    print "  Found sql header files in /usr/include\n";
                     $odbchome = '/usr';
                 } elsif (-f '/usr/local/include/sql.h' &&
                              -f '/usr/local/include/sqlext.h' &&
                                  -f '/usr/local/include/sqltypes.h') {
                     print "  Found sql header files in /use/local/include\n";
                     $odbchome = '/usr/local';
+                } elsif (-f '/usr/pkg/include/sql.h' &&
+                             -f '/usr/pkg/include/sqlext.h' &&
+                                 -f '/usr/pkg/include/sqltypes.h') {
+                    print "  Found sql header files in /use/pkg/include\n";
+                    $odbchome = '/usr/pkg';
                 } elsif (-d '/usr/local/easysoft/unixODBC') {
                     print "  Found sql header files in /use/local/easysoft/include\n";
                     $odbchome = '/usr/local/easysoft/unixODBC';
