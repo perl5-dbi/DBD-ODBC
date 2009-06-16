@@ -366,12 +366,16 @@ EOT
     # fix to avoid foo..ext on many systems.
     $arext =~ s/^\.//;
 
-    $myodbc = 'unixodbc'
-		if !$myodbc && glob "$odbchome/lib/libodbc.*";
-
+    # NOTE: we look for iodbc first because both it and unixODBC supply a
+    # libodbc.xx but only iodbc supplies a libiodbc.xx. As a result the only
+    # reliable way of telling one from the other is to look for libiodbc.xx
+    # first.
     $myodbc = 'iodbc'
 		if !$myodbc && ((glob "$odbchome/*iodbc*") ||
                                     (glob "$odbchome/lib/*iodbc*"));
+
+    $myodbc = 'unixodbc'
+		if !$myodbc && glob "$odbchome/lib/libodbc.*";
 
     $myodbc = 'empress'
 		if !$myodbc && glob "$odbchome/lib/libempodbc.*";
