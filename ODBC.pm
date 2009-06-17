@@ -60,7 +60,7 @@ $DBD::ODBC::VERSION = '1.22_1';
 	    'Err'    => \$DBD::ODBC::err,
 	    'Errstr' => \$DBD::ODBC::errstr,
 	    'State' => \$DBD::ODBC::sqlstate,
-	    'Attribution' => 'ODBC DBD by Jeff Urlwin',
+	    'Attribution' => 'DBD::ODBC by Jeff Urlwin, Tim Bunce and Martin J. Evans',
 	    });
 
 	$drh;
@@ -89,8 +89,12 @@ $DBD::ODBC::VERSION = '1.22_1';
 	    'CURRENT_USER' => $user,
 	    });
 
-	# Call ODBC logon func in ODBC.xs file
+	# Call ODBC _login func in Driver.xst file => dbd_db_login6
 	# and populate internal handle data.
+	# There are 3 versions (currently) if you have a recent DBI:
+	# dbd_db_login (oldest)
+	# dbd_db_login6 (with attribs hash & char * args) and
+	# dbd_db_login6_sv (as dbd_db_login6 with perl scalar args
 
 	DBD::ODBC::db::_login($this, $dbname, $user, $auth, $attr) or return;
 
@@ -133,7 +137,7 @@ $DBD::ODBC::VERSION = '1.22_1';
     sub prepare {
 	my($dbh, $statement, @attribs)= @_;
 
-	# create a 'blank' dbh
+	# create a 'blank' sth
 	my $sth = DBI::_new_sth($dbh, {
 	    'Statement' => $statement,
 	    });
@@ -312,8 +316,8 @@ $DBD::ODBC::VERSION = '1.22_1';
 	return 0;
     }
 
-    # New support for the next DBI which will have a get_info command.
-    # leaving support for ->func(xxx, GetInfo) (above) for a period of time
+    # New support for DBI which has the get_info command.
+    # leaving support for ->func(xxx, GetInfo) (below) for a period of time
     # to support older applications which used this.
     sub get_info {
 	my ($dbh, $item) = @_;
@@ -338,7 +342,7 @@ $DBD::ODBC::VERSION = '1.22_1';
           $rows = ExecDirect( $dbh, $statement );
           if( 0 == $rows )
           {
-            $rows = "0E0";
+            $rows = "0E0";	# 0 but true
           }
           elsif( $rows < -1 )
           {
@@ -381,7 +385,8 @@ $DBD::ODBC::VERSION = '1.22_1';
         my ($dbh, $Catalog, $Schema, $Table, $Unique) = @_;
         # create a "blank" statement handle
         my $sth = DBI::_new_sth($dbh, { 'Statement' => "SQLStatistics" });
-        _GetStatistics($dbh, $sth, $Catalog, $Schema, $Table, $Unique) or return;
+        _GetStatistics($dbh, $sth, $Catalog, $Schema,
+		       $Table, $Unique) or return;
         $sth;
     }
 
@@ -393,7 +398,8 @@ $DBD::ODBC::VERSION = '1.22_1';
         my ($dbh, $PK_Catalog, $PK_Schema, $PK_Table, $FK_Catalog, $FK_Schema, $FK_Table) = @_;
         # create a "blank" statement handle
         my $sth = DBI::_new_sth($dbh, { 'Statement' => "SQLForeignKeys" });
-        _GetForeignKeys($dbh, $sth, $PK_Catalog, $PK_Schema, $PK_Table, $FK_Catalog, $FK_Schema, $FK_Table) or return;
+        _GetForeignKeys($dbh, $sth, $PK_Catalog, $PK_Schema, $PK_Table,
+			$FK_Catalog, $FK_Schema, $FK_Table) or return;
         $sth;
     }
 
@@ -417,7 +423,8 @@ $DBD::ODBC::VERSION = '1.22_1';
 	my ($dbh, $Identifier, $Catalog, $Schema, $Table, $Scope, $Nullable) = @_;
 	# create a "blank" statement handle
 	my $sth = DBI::_new_sth($dbh, { 'Statement' => "SQLSpecialColumns" });
-	_GetSpecialColumns($dbh, $sth, $Identifier, $Catalog, $Schema, $Table, $Scope, $Nullable) or return;
+	_GetSpecialColumns($dbh, $sth, $Identifier, $Catalog, $Schema,
+			   $Table, $Scope, $Nullable) or return;
 	$sth;
     }
 
@@ -441,7 +448,6 @@ $DBD::ODBC::VERSION = '1.22_1';
 	};
 	return $info;
     }
-
 }
 
 
@@ -465,9 +471,7 @@ $DBD::ODBC::VERSION = '1.22_1';
 
     sub ColAttributes { # maps to SQLColAttributes
 	my ($sth, $colno, $desctype) = @_;
-	# print "before ColAttributes $colno\n";
 	my $tmp = _ColAttributes($sth, $colno, $desctype);
-	# print "After ColAttributes\n";
 	$tmp;
     }
 

@@ -20,6 +20,7 @@ char * PVallocW(UTF16 * wp);
 void PVfreeW(char * s);
 
 void SV_toWCHAR(SV * sv);
+void utf8sv_to_wcharsv(SV *sv);
 
 #endif /* defined unicode_helper_h */
 #endif /* WITH_UNICODE */

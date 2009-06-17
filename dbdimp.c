@@ -511,14 +511,22 @@ int dsnHasUIDorPWD(char *dsn) {
 
 
 
-/*------------------------------------------------------------
-connecting to a data source.
-Allocates henv and hdbc.
-NOTE: This is the old 5 argument version
-------------------------------------------------------------*/
-int
-   dbd_db_login(dbh, imp_dbh, dbname, uid, pwd)
-   SV *dbh; imp_dbh_t *imp_dbh; char *dbname; char *uid; char *pwd;
+/************************************************************************/
+/*                                                                      */
+/*  dbd_db_login                                                        */
+/*  ============                                                        */
+/*                                                                      */
+/* Connect to a data source.                                            */
+/* Allocates henv and hdbc.                                             */
+/* NOTE: This is the old 5 argument version with no attribs             */
+/*                                                                      */
+/************************************************************************/
+int dbd_db_login(
+    SV *dbh,
+    imp_dbh_t *imp_dbh,
+    char *dbname,
+    char *uid,
+    char *pwd)
 {
    return dbd_db_login6(dbh, imp_dbh, dbname, uid, pwd, Nullsv);
 }
@@ -530,7 +538,7 @@ int
 /*  dbd_db_login6_sv                                                    */
 /*  ================                                                    */
 /*                                                                      */
-/*  This API was introduced to DBI after 1.607 (subversion revision     */
+/*  This API was introduced in DBI after 1.607 (subversion revision     */
 /*  11723) and is the same as dbd_db_login6 except the connection       */
 /*  strings are SVs so we can detect unicode strings and call           */
 /*  SQLDriverConnectW.                                                  */
@@ -553,22 +561,24 @@ int dbd_db_login6_sv(
 
    D_imp_drh_from_dbh;
    dTHR;
-   RETCODE rc;
-   SV *wconstr;
+   SQLRETURN rc;
+   SV *wconstr;			/* copy of connection string in wide chrs */
+   /* decoded connection string in wide characters and its length to work
+      around an issue in older unixODBCs */
    SQLWCHAR dc_constr[512];
    STRLEN dc_constr_len;
 
    if (DBIc_TRACE(imp_dbh, 0x04000000, 0, 0)) {
-       TRACE0(imp_dbh, "Unicode login6 \n");
+       TRACE0(imp_dbh, "Unicode login6\n");
        TRACE2(imp_dbh, "dbname=%s, uid=%s, pwd=xxxxx\n",
               SvPV_nolen(dbname), SvPV_nolen(uid));
    }
 
-   imp_dbh->out_connect_string = NULL;
+   imp_dbh->out_connect_string = Nullsv;
 
    if (!imp_drh->connects) {
       rc = SQLAllocHandle(SQL_HANDLE_ENV, SQL_NULL_HANDLE, &imp_drh->henv);
-      dbd_error(dbh, rc, "db_login/SQLAllocHandle(env)");
+      dbd_error(dbh, rc, "db_login6_sv/SQLAllocHandle(env)");
       if (!SQL_SUCCEEDED(rc)) return 0;
 
       if (set_odbc_version(dbh, imp_dbh, attr) != 1) return 0;
@@ -578,7 +588,7 @@ int dbd_db_login6_sv(
 
    rc = SQLAllocHandle(SQL_HANDLE_DBC, imp_drh->henv, &imp_dbh->hdbc);
    if (!SQL_SUCCEEDED(rc)) {
-      dbd_error(dbh, rc, "db_login/SQLAllocHandle(dbc)");
+      dbd_error(dbh, rc, "db_login6_sv/SQLAllocHandle(dbc)");
       if (imp_drh->connects == 0) {
           SQLFreeHandle(SQL_HANDLE_ENV, imp_drh->henv);
           imp_drh->henv = SQL_NULL_HENV;
@@ -595,8 +605,13 @@ int dbd_db_login6_sv(
    if ((SvCUR(dbname) > SQL_MAX_DSN_LENGTH ||
         dsnHasDriverOrDSN(SvPV_nolen(dbname))) &&
        !dsnHasUIDorPWD(SvPV_nolen(dbname))) {
-       sv_catpvf(dbname, ";UID=%s;PWD=%s;",
-                 SvPV_nolen(uid), SvPV_nolen(pwd));
+       sv_catpv(dbname, ";UID=");
+       sv_catsv(dbname, uid);
+       sv_catpv(dbname, ";PWD=");
+       sv_catsv(dbname, pwd);
+       sv_catpv(dbname, ";");
+       /*sv_catpvf(dbname, ";UID=%s;PWD=%s;",
+	 SvPV_nolen(uid), SvPV_nolen(pwd));*/
        if (DBIc_TRACE(imp_dbh, 0x04000000, 0, 0))
            TRACE1(imp_dbh, "Now using dbname = %s\n", SvPV_nolen(dbname));
    }
@@ -606,17 +621,12 @@ int dbd_db_login6_sv(
              SvPV_nolen(dbname), SvPV_nolen(uid));
 
    wconstr = sv_mortalcopy(dbname);
-#ifdef sv_utf8_decode
-   sv_utf8_decode(wconstr);
-#else
-   SvUTF8_on(wconstr);
-#endif
-   SV_toWCHAR(wconstr);
+   utf8sv_to_wcharsv(wconstr);
 
    /* The following is to work around a bug in SQLDriverConnectW in unixODBC
       which in at least 2.2.11 (and probably up to 2.2.13 official release
       [not pre-release]) core dumps if the wide connection string does not end
-      in a 0. */
+      in a 0 (even though it should not matter as we pass the length. */
    {
        char *p;
 
@@ -650,7 +660,7 @@ int dbd_db_login6_sv(
    if (!SQL_SUCCEEDED(rc)) {
        SV *wuid, *wpwd;
        if (DBIc_TRACE(imp_dbh, 0x04000000, 0, 0))
-           TRACE0(imp_dbh, "    SQLDriverConnect failed:\n");
+           TRACE0(imp_dbh, "    SQLDriverConnectW failed:\n");
        /*
         * Added code for DBD::ODBC 0.39 to help return a better
         * error code in the case where the user is using a
@@ -667,7 +677,7 @@ int dbd_db_login6_sv(
             * error code because the SQLConnect call could hide the
             * real problem.
             */
-           dbd_error(dbh, rc, "db_login/SQLConnect");
+           dbd_error(dbh, rc, "db_login6sv/SQLDriverConnectW");
            SQLFreeHandle(SQL_HANDLE_DBC, imp_dbh->hdbc);
            if (imp_drh->connects == 0) {
                SQLFreeHandle(SQL_HANDLE_ENV, imp_drh->henv);
@@ -686,28 +696,11 @@ int dbd_db_login6_sv(
                   neatsvpv(dbname, 0), neatsvpv(uid, 0));
 
        wconstr = sv_mortalcopy(dbname);
-#ifdef sv_utf8_decode
-       sv_utf8_decode(wconstr);
-#else
-       SvUTF8_on(wconstr);
-#endif
-       SV_toWCHAR(wconstr);
-
+       utf8sv_to_wcharsv(wconstr);
        wuid = sv_mortalcopy(uid);
-#ifdef sv_utf8_decode
-       sv_utf8_decode(wuid);
-#else
-       SvUTF8_on(wuid);
-#endif
-       SV_toWCHAR(wuid);
-
+       utf8sv_to_wcharsv(wuid);
        wpwd = sv_mortalcopy(pwd);
-#ifdef sv_utf8_decode
-       sv_utf8_decode(wpwd);
-#else
-       SvUTF8_on(wpwd);
-#endif
-       SV_toWCHAR(wpwd);
+       utf8sv_to_wcharsv(wpwd);
 
        rc = SQLConnectW(imp_dbh->hdbc,
                         (SQLWCHAR *)SvPV_nolen(wconstr),
@@ -718,8 +711,9 @@ int dbd_db_login6_sv(
                         (SQLSMALLINT)(SvCUR(wpwd) / sizeof(SQLWCHAR)));
    }
    if (!SQL_SUCCEEDED(rc)) {
-      dbd_error(dbh, rc, "db_login/SQLConnect");
-      SQLFreeHandle(SQL_HANDLE_DBC, imp_dbh->hdbc);/* TBD: 3.0 update */
+      dbd_error(dbh, rc, "db_login6sv/SQLConnectW");
+      SQLFreeHandle(SQL_HANDLE_DBC, imp_dbh->hdbc);
+      imp_dbh->hdbc = SQL_NULL_HDBC;
       if (imp_drh->connects == 0) {
           SQLFreeHandle(SQL_HANDLE_ENV, imp_drh->henv);
           imp_drh->henv = SQL_NULL_HENV;
@@ -727,11 +721,10 @@ int dbd_db_login6_sv(
       }
       return 0;
    } else if (rc == SQL_SUCCESS_WITH_INFO) {
-       dbd_error(dbh, rc, "db_login/SQLConnect");
+       dbd_error(dbh, rc, "db_login6sv/SQLConnectW");
    }
 
    if (post_connect(dbh, imp_dbh, attr) != 1) return 0;
-
 
    imp_drh->connects++;
    DBIc_IMPSET_on(imp_dbh);	/* imp_dbh set up now			*/

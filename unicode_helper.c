@@ -368,6 +368,17 @@ void SV_toWCHAR(SV * sv)
     SvPOK_only(sv); /* sv is nothing but a non-UTF8 string -- for Perl ;-) */
 }
 
+/* change a UTF8 encoded SV to a wide chr string in place - see SV_toWCHAR */
+void utf8sv_to_wcharsv(SV *sv)
+{
+#ifdef sv_utf8_decode
+    sv_utf8_decode(sv);
+#else
+    SvUTF8_on(sv);
+#endif
+    SV_toWCHAR(sv);
+}
+
 static long utf16_len(UTF16 *wp)
 {
     long len = 0;
@@ -380,6 +391,7 @@ static long utf16_len(UTF16 *wp)
     }
     return len;
 }
+
 static void utf16_copy(UTF16 *d, UTF16 *s)
 {
     while(*s) {
