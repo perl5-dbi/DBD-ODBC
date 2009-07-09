@@ -8,13 +8,15 @@
 # You may distribute under the terms of either the GNU General Public
 # License or the Artistic License, as specified in the Perl README file.
 
-## no critic (ProhibitManyArgs)
+## no critic (ProhibitManyArgs ProhibitMultiplePackages)
 
 require 5.006;
 
-$DBD::ODBC::VERSION = '1.22_1';
+$DBD::ODBC::VERSION = '1.22_2';
 
 {
+    ## no critic (ProhibitMagicNumbers ProhibitExplicitISA)
+    ## no critic (ProhibitPackageVars)
     package DBD::ODBC;
 
     use DBI ();
@@ -30,14 +32,14 @@ $DBD::ODBC::VERSION = '1.22_1';
     bootstrap DBD::ODBC $VERSION;
 
     $err = 0;           # holds error code   for DBI::err
-    $errstr = "";       # holds error string for DBI::errstr
+    $errstr = q{};              # holds error string for DBI::errstr
     $sqlstate = "00000";
     $drh = undef;       # holds driver handle once initialised
 
     sub parse_trace_flag {
         my ($class, $name) = @_;
-        return 0x02000000 if $name eq 'odbcunicode';
-        return 0x04000000 if $name eq 'odbcconnection';
+        return 0x02_00_00_00 if $name eq 'odbcunicode';
+        return 0x04_00_00_00 if $name eq 'odbcconnection';
         return DBI::parse_trace_flag($class, $name);
     }
 
@@ -63,7 +65,7 @@ $DBD::ODBC::VERSION = '1.22_1';
 	    'Attribution' => 'DBD::ODBC by Jeff Urlwin, Tim Bunce and Martin J. Evans',
 	    });
 
-	$drh;
+	return $drh;
     }
 
     sub CLONE { undef $drh }
@@ -77,10 +79,9 @@ $DBD::ODBC::VERSION = '1.22_1';
 
     ## no critic (ProhibitBuiltinHomonyms)
     sub connect {
-	my $drh = shift;
-	my($dbname, $user, $auth, $attr)= @_;
-	$user = '' unless defined $user;
-	$auth = '' unless defined $auth;
+	my($drh, $dbname, $user, $auth, $attr)= @_;
+	$user = q{} unless defined $user;
+	$auth = q{} unless defined $auth;
 
 	# create a 'blank' dbh
 	my $this = DBI::_new_dbh($drh, {
@@ -98,7 +99,7 @@ $DBD::ODBC::VERSION = '1.22_1';
 
 	DBD::ODBC::db::_login($this, $dbname, $user, $auth, $attr) or return;
 
-	$this;
+	return $this;
     }
     ## use critic
 
@@ -108,6 +109,11 @@ $DBD::ODBC::VERSION = '1.22_1';
 {   package DBD::ODBC::db; # ====== DATABASE ======
     use strict;
     use warnings;
+
+    use constant SQL_DRIVER_HSTMT => 5;
+    use constant SQL_DRIVER_HLIB => 76;
+    use constant SQL_DRIVER_HDESC => 135;
+
 
     sub parse_trace_flag {
         my ($h, $name) = @_;
@@ -149,44 +155,44 @@ $DBD::ODBC::VERSION = '1.22_1';
 	DBD::ODBC::st::_prepare($sth, $statement, @attribs)
 	    or return;
 
-	$sth;
+	return $sth;
     }
 
     sub column_info {
 	my ($dbh, $catalog, $schema, $table, $column) = @_;
 
-	$catalog = "" if (!$catalog);
-	$schema = "" if (!$schema);
-	$table = "" if (!$table);
-	$column = "" if (!$column);
+	$catalog = q{} if (!$catalog);
+	$schema = q{} if (!$schema);
+	$table = q{} if (!$table);
+	$column = q{} if (!$column);
 	# create a "blank" statement handle
 	my $sth = DBI::_new_sth($dbh, { 'Statement' => "SQLColumns" });
 
 	_columns($dbh,$sth, $catalog, $schema, $table, $column)
 	    or return;
 
-	$sth;
+	return $sth;
     }
 
     sub columns {
 	my ($dbh, $catalog, $schema, $table, $column) = @_;
 
-	$catalog = "" if (!$catalog);
-	$schema = "" if (!$schema);
-	$table = "" if (!$table);
-	$column = "" if (!$column);
+	$catalog = q{} if (!$catalog);
+	$schema = q{} if (!$schema);
+	$table = q{} if (!$table);
+	$column = q{} if (!$column);
 	# create a "blank" statement handle
 	my $sth = DBI::_new_sth($dbh, { 'Statement' => "SQLColumns" });
 
 	_columns($dbh,$sth, $catalog, $schema, $table, $column)
 	    or return;
 
-	$sth;
+	return $sth;
     }
 
 
     sub table_info {
- 	my($dbh, $catalog, $schema, $table, $type) = @_;
+ 	my ($dbh, $catalog, $schema, $table, $type) = @_;
 
 	if ($#_ == 1) {
 	   my $attrs = $_[1];
@@ -196,17 +202,17 @@ $DBD::ODBC::VERSION = '1.22_1';
 	   $type = $attrs->{TABLE_TYPE};
  	}
 
-	$catalog = "" if (!$catalog);
-	$schema = "" if (!$schema);
-	$table = "" if (!$table);
-	$type = "" if (!$type);
+	$catalog = q{} if (!$catalog);
+	$schema = q{} if (!$schema);
+	$table = q{} if (!$table);
+	$type = q{} if (!$type);
 
 	# create a "blank" statement handle
 	my $sth = DBI::_new_sth($dbh, { 'Statement' => "SQLTables" });
 
 	DBD::ODBC::st::_tables($dbh,$sth, $catalog, $schema, $table, $type)
 	      or return;
-	$sth;
+	return $sth;
     }
 
     sub primary_key_info {
@@ -215,12 +221,12 @@ $DBD::ODBC::VERSION = '1.22_1';
        # create a "blank" statement handle
        my $sth = DBI::_new_sth($dbh, { 'Statement' => "SQLPrimaryKeys" });
 
-       $catalog = "" if (!$catalog);
-       $schema = "" if (!$schema);
-       $table = "" if (!$table);
+       $catalog = q{} if (!$catalog);
+       $schema = q{} if (!$schema);
+       $table = q{} if (!$table);
        DBD::ODBC::st::_primary_keys($dbh,$sth, $catalog, $schema, $table )
 	     or return;
-       $sth;
+       return $sth;
     }
     sub statistics_info {
        my ($dbh, $catalog, $schema, $table, $unique, $quick ) = @_;
@@ -228,16 +234,16 @@ $DBD::ODBC::VERSION = '1.22_1';
        # create a "blank" statement handle
        my $sth = DBI::_new_sth($dbh, { 'Statement' => "SQLStatistics" });
 
-       $catalog = "" if (!$catalog);
-       $schema = "" if (!$schema);
-       $table = "" if (!$table);
+       $catalog = q{} if (!$catalog);
+       $schema = q{} if (!$schema);
+       $table = q{} if (!$table);
        $unique = 1 if (!$unique);
        $quick = 1 if (!$quick);
 
        DBD::ODBC::st::_statistics($dbh, $sth, $catalog, $schema, $table,
                                  $unique, $quick)
 	     or return;
-       $sth;
+       return $sth;
     }
 
     sub foreign_key_info {
@@ -246,14 +252,14 @@ $DBD::ODBC::VERSION = '1.22_1';
        # create a "blank" statement handle
        my $sth = DBI::_new_sth($dbh, { 'Statement' => "SQLForeignKeys" });
 
-       $pkcatalog = "" if (!$pkcatalog);
-       $pkschema = "" if (!$pkschema);
-       $pktable = "" if (!$pktable);
-       $fkcatalog = "" if (!$fkcatalog);
-       $fkschema = "" if (!$fkschema);
-       $fktable = "" if (!$fktable);
+       $pkcatalog = q{} if (!$pkcatalog);
+       $pkschema = q{} if (!$pkschema);
+       $pktable = q{} if (!$pktable);
+       $fkcatalog = q{} if (!$fkcatalog);
+       $fkschema = q{} if (!$fkschema);
+       $fktable = q{} if (!$fktable);
        _GetForeignKeys($dbh, $sth, $pkcatalog, $pkschema, $pktable, $fkcatalog, $fkschema, $fktable) or return;
-       $sth;
+       return $sth;
     }
 
     sub ping {
@@ -262,10 +268,10 @@ $DBD::ODBC::VERSION = '1.22_1';
 
  	my ($catalog, $schema, $table, $type);
 
-	$catalog = "";
-	$schema = "";
-	$table = "NOXXTABLE";
-	$type = "";
+	$catalog = q{};
+	$schema = q{};
+	$table = 'NOXXTABLE';
+	$type = q{};
 
 	# create a "blank" statement handle
 	my $sth = DBI::_new_sth($dbh, { 'Statement' => "SQLTables_PING" });
@@ -277,53 +283,54 @@ $DBD::ODBC::VERSION = '1.22_1';
 
     }
 
-    # saved, just for posterity.
-    sub oldping  {
-	my $dbh = shift;
-	my $state = undef;
-
-	# should never 'work' but if it does, that's okay!
-	# JLU incorporated patches from Jon Smirl 5/4/99
-	{
-	    local $dbh->{RaiseError} = 0 if $dbh->{RaiseError};
-	    # JLU added local PrintError handling for completeness.
-	    # it shouldn't print, I think.
-	    local $dbh->{PrintError} = 0 if $dbh->{PrintError};
-	    my $sql = "select sysdate from dual1__NOT_FOUND__CANNOT";
-	    my $sth = $dbh->prepare($sql);
-	    # fixed "my" $state = below.  Was causing problem with
-	    # ping!  Also, fetching fields as some drivers (Oracle 8)
-	    # may not actually check the database for activity until
-	    # the query is "described".
-	    # Right now, Oracle8 is the only known version which
-	    # does not actually check the server during prepare.
-	    my $ok = $sth && $sth->execute();
-
-	    $state = $dbh->state;
-	    $DBD::ODBC::err = 0;
-	    $DBD::ODBC::errstr = "";
-	    $DBD::ODBC::sqlstate = "00000";
-	    return 1 if $ok;
-	}
-        return 1 if $state eq 'S0002';  # Base table not found
- 	return 1 if $state eq '42S02';  # Base table not found.Solid EE v3.51
-        return 1 if $state eq 'S0022';  # Column not found
-	return 1 if $state eq '37000';  # statement could not be prepared (19991011, JLU)
-	# return 1 if $state eq 'S1000';  # General Error? ? 5/30/02, JLU.  This is what Openlink is returning
-	# We assume that any other error means the database
-	# is no longer connected.
-	# Some special cases may need to be added to the code above.
-	return 0;
-    }
+#####    # saved, just for posterity.
+#####    sub oldping  {
+#####	my $dbh = shift;
+#####	my $state = undef;
+#####
+#####	# should never 'work' but if it does, that's okay!
+#####	# JLU incorporated patches from Jon Smirl 5/4/99
+#####	{
+#####	    local $dbh->{RaiseError} = 0 if $dbh->{RaiseError};
+#####	    # JLU added local PrintError handling for completeness.
+#####	    # it shouldn't print, I think.
+#####	    local $dbh->{PrintError} = 0 if $dbh->{PrintError};
+#####	    my $sql = "select sysdate from dual1__NOT_FOUND__CANNOT";
+#####	    my $sth = $dbh->prepare($sql);
+#####	    # fixed "my" $state = below.  Was causing problem with
+#####	    # ping!  Also, fetching fields as some drivers (Oracle 8)
+#####	    # may not actually check the database for activity until
+#####	    # the query is "described".
+#####	    # Right now, Oracle8 is the only known version which
+#####	    # does not actually check the server during prepare.
+#####	    my $ok = $sth && $sth->execute();
+#####
+#####	    $state = $dbh->state;
+#####	    $DBD::ODBC::err = 0;
+#####	    $DBD::ODBC::errstr = "";
+#####	    $DBD::ODBC::sqlstate = "00000";
+#####	    return 1 if $ok;
+#####	}
+#####        return 1 if $state eq 'S0002';  # Base table not found
+##### 	return 1 if $state eq '42S02';  # Base table not found.Solid EE v3.51
+#####        return 1 if $state eq 'S0022';  # Column not found
+#####	return 1 if $state eq '37000';  # statement could not be prepared (19991011, JLU)
+#####	# return 1 if $state eq 'S1000';  # General Error? ? 5/30/02, JLU.  This is what Openlink is returning
+#####	# We assume that any other error means the database
+#####	# is no longer connected.
+#####	# Some special cases may need to be added to the code above.
+#####	return 0;
+#####    }
 
     # New support for DBI which has the get_info command.
     # leaving support for ->func(xxx, GetInfo) (below) for a period of time
     # to support older applications which used this.
     sub get_info {
 	my ($dbh, $item) = @_;
-	# handle SQL_DRIVER_HSTMT, SQL_DRIVER_HLIB and
-	# SQL_DRIVER_HDESC specially
-	if ($item == 5 || $item == 135 || $item == 76) {
+	# Ignore some we cannot do
+	if ($item == SQL_DRIVER_HSTMT ||
+                $item == SQL_DRIVER_HLIB ||
+                    $item == SQL_DRIVER_HDESC) {
 	   return;
 	}
 	return _GetInfo($dbh, $item);
@@ -336,17 +343,18 @@ $DBD::ODBC::VERSION = '1.22_1';
     sub do {
         my($dbh, $statement, $attr, @params) = @_;
         my $rows = 0;
+        ## no critic (ProhibitMagicNumbers)
         if( -1 == $#params )
         {
           # No parameters, use execute immediate
           $rows = ExecDirect( $dbh, $statement );
           if( 0 == $rows )
           {
-            $rows = "0E0";	# 0 but true
+              $rows = "0E0";    # 0 but true
           }
           elsif( $rows < -1 )
           {
-            undef $rows;
+              undef $rows;
           }
         }
         else
@@ -363,7 +371,7 @@ $DBD::ODBC::VERSION = '1.22_1';
     #
     sub ExecDirect {
        my ($dbh, $sql) = @_;
-       _ExecDirect($dbh, $sql);
+       return _ExecDirect($dbh, $sql);
     }
 
     # Call the ODBC function SQLGetInfo
@@ -374,7 +382,7 @@ $DBD::ODBC::VERSION = '1.22_1';
     #
     sub GetInfo {
 	my ($dbh, $item) = @_;
-	get_info($dbh, $item);
+	return get_info($dbh, $item);
     }
 
     # Call the ODBC function SQLStatistics
@@ -382,12 +390,12 @@ $DBD::ODBC::VERSION = '1.22_1';
     # See the ODBC documentation for more information about this call.
     #
     sub GetStatistics {
-        my ($dbh, $Catalog, $Schema, $Table, $Unique) = @_;
+        my ($dbh, $catalog, $schema, $table, $unique) = @_;
         # create a "blank" statement handle
         my $sth = DBI::_new_sth($dbh, { 'Statement' => "SQLStatistics" });
-        _GetStatistics($dbh, $sth, $Catalog, $Schema,
-		       $Table, $Unique) or return;
-        $sth;
+        _GetStatistics($dbh, $sth, $catalog, $schema,
+		       $table, $unique) or return;
+        return $sth;
     }
 
     # Call the ODBC function SQLForeignKeys
@@ -395,12 +403,13 @@ $DBD::ODBC::VERSION = '1.22_1';
     # See the ODBC documentation for more information about this call.
     #
     sub GetForeignKeys {
-        my ($dbh, $PK_Catalog, $PK_Schema, $PK_Table, $FK_Catalog, $FK_Schema, $FK_Table) = @_;
+        my ($dbh, $pk_catalog, $pk_schema, $pk_table,
+            $fk_catalog, $fk_schema, $fk_table) = @_;
         # create a "blank" statement handle
         my $sth = DBI::_new_sth($dbh, { 'Statement' => "SQLForeignKeys" });
-        _GetForeignKeys($dbh, $sth, $PK_Catalog, $PK_Schema, $PK_Table,
-			$FK_Catalog, $FK_Schema, $FK_Table) or return;
-        $sth;
+        _GetForeignKeys($dbh, $sth, $pk_catalog, $pk_schema, $pk_table,
+			$fk_catalog, $fk_schema, $fk_table) or return;
+        return $sth;
     }
 
     # Call the ODBC function SQLPrimaryKeys
@@ -408,11 +417,11 @@ $DBD::ODBC::VERSION = '1.22_1';
     # See the ODBC documentation for more information about this call.
     #
     sub GetPrimaryKeys {
-        my ($dbh, $Catalog, $Schema, $Table) = @_;
+        my ($dbh, $catalog, $schema, $table) = @_;
         # create a "blank" statement handle
         my $sth = DBI::_new_sth($dbh, { 'Statement' => "SQLPrimaryKeys" });
-        _GetPrimaryKeys($dbh, $sth, $Catalog, $Schema, $Table) or return;
-        $sth;
+        _GetPrimaryKeys($dbh, $sth, $catalog, $schema, $table) or return;
+        return $sth;
     }
 
     # Call the ODBC function SQLSpecialColumns
@@ -420,12 +429,12 @@ $DBD::ODBC::VERSION = '1.22_1';
     # See the ODBC documentation for more information about this call.
     #
     sub GetSpecialColumns {
-	my ($dbh, $Identifier, $Catalog, $Schema, $Table, $Scope, $Nullable) = @_;
+	my ($dbh, $identifier, $catalog, $schema, $table, $scope, $nullable) = @_;
 	# create a "blank" statement handle
 	my $sth = DBI::_new_sth($dbh, { 'Statement' => "SQLSpecialColumns" });
-	_GetSpecialColumns($dbh, $sth, $Identifier, $Catalog, $Schema,
-			   $Table, $Scope, $Nullable) or return;
-	$sth;
+	_GetSpecialColumns($dbh, $sth, $identifier, $catalog, $schema,
+			   $table, $scope, $nullable) or return;
+	return $sth;
     }
 
     sub GetTypeInfo {
@@ -434,7 +443,7 @@ $DBD::ODBC::VERSION = '1.22_1';
 	my $sth = DBI::_new_sth($dbh, { 'Statement' => "SQLGetTypeInfo" });
 	# print "SQL Type is $sqltype\n";
 	_GetTypeInfo($dbh, $sth, $sqltype) or return;
-	$sth;
+	return $sth;
     }
 
     sub type_info_all {
@@ -443,7 +452,7 @@ $DBD::ODBC::VERSION = '1.22_1';
 	my $sth = DBI::_new_sth($dbh, { 'Statement' => "SQLGetTypeInfo" });
 	_GetTypeInfo($dbh, $sth, $sqltype) or return;
 	my $info = $sth->fetchall_arrayref;
-	unshift @$info, {
+	unshift @{$info}, {
 	    map { ($sth->{NAME}->[$_] => $_) } 0..$sth->{NUM_OF_FIELDS}-1
 	};
 	return $info;
@@ -472,13 +481,13 @@ $DBD::ODBC::VERSION = '1.22_1';
     sub ColAttributes { # maps to SQLColAttributes
 	my ($sth, $colno, $desctype) = @_;
 	my $tmp = _ColAttributes($sth, $colno, $desctype);
-	$tmp;
+	return $tmp;
     }
 
     sub cancel {
 	my $sth = shift;
 	my $tmp = _Cancel($sth);
-	$tmp;
+	return $tmp;
     }
 }
 
@@ -488,6 +497,10 @@ __END__
 =head1 NAME
 
 DBD::ODBC - ODBC Driver for DBI
+
+=head1 VERSION
+
+This documentation refers to DBD::ODBC version 1.22_2.
 
 =head1 SYNOPSIS
 
@@ -1613,7 +1626,20 @@ L<http://www.easysoft.com/developer/languages/perl/tutorial_data_web.html>
 Frequently asked questions are now in L<DBD::ODBC::FAQ>. Run
 C<perldoc DBD::ODBC::FAQ> to view them.
 
-=head1 BUGS
+=head1 CONFIGURATION AND ENVIRONMENT
+
+You should consult the documentation for the ODBC Driver Manager
+you are using.
+
+=head1 DEPENDENCIES
+
+L<DBI>
+
+L<Test::Simple>
+
+=head1 INCOMPATIBILITIES
+
+=head1 BUGS AND LIMITATIONS
 
 None known other than the deviations from the DBI specification mentioned
 above in L</Deviations from the DBI specification>.
@@ -1631,12 +1657,16 @@ Thomas K. Wenrich
 
 Martin J. Evans
 
-=head1 LICENSE
+=head1 LICENSE AND COPYRIGHT
 
 This program is free software; you can redistribute it and/or modify
-it under the same terms as Perl itself.
+it under the same terms as Perl itself. See L<perlartistic>. This
+program is distributed in the hope that it will be useful, but WITHOUT
+ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+FITNESS FOR A PARTICULAR PURPOSE.
 
-See L<http://www.perl.com/perl/misc/Artistic.html>
+Portions of this software are Copyright Tim Bunce, Thomas K. Wenrich,
+Jeff Urlwin and Martin J. Evans - see the source.
 
 =head1 SEE ALSO
 
