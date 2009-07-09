@@ -45,15 +45,34 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
 
 =head1 CHANGES
 
+=head2 Changes in DBD::ODBC 1.22_2 July 9, 2009
+
+Fix skip count in rt_null_nvarchar.t test for non SQL Server drivers.
+
+Fix test in 02simple.t which reported a fail if you have no ODBC
+datasources.
+
 =head2 Changes in DBD::ODBC 1.22_1 June 16, 2009
 
 Applied a slightly modified version of patch from Jens Rehsack to
 improve support for finding the iODBC driver manager.
 
-A UNICODE enabled DBD::ODBC (the default on Windows) did not handle UNICODE
-usernames and passwords in the connect call properly.
+A UNICODE enabled DBD::ODBC (the default on Windows) did not handle
+UNICODE usernames and passwords in the connect call properly.
 
 Updated "Attribution" in ODBC.pm.
+
+Unicode support is no longer experimental hence warning and prompt
+removed from the Makefile.PL.
+
+old_ping method removed.
+
+Fixed bug in 02simple.t test which is supposed to check you have at
+least one data source defined. Unfortunately, it was checking you had
+more than 1 data source defined.
+
+rt_null_varchar had wrong skip count meaning non-sql-server drivers or
+sql server drivers too old skipped 2 tests more than were planned.
 
 =head2 Changes in DBD::ODBC 1.22 June 10, 2009
 
