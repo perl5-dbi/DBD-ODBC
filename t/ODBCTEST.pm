@@ -1,6 +1,6 @@
 #
 # Package ODBCTEST
-# 
+#
 # This package is a common set of routines for the DBD::ODBC tests.
 # This is a set of routines to create, drop and test for existance of
 # a table for a given DBI database handle (dbh).
@@ -22,7 +22,7 @@ require 5.004;
 
    use DBI qw(:sql_types);
    use Test::More;
-   
+
    $VERSION = '0.01';
    $table_name = "PERL_DBD_TEST";
 
@@ -129,7 +129,7 @@ require 5.004;
 	    # (mine returns "dbo" for the owner on ALL my tables.  This is obviously something
 	    # significant for SQL Server...one of these days I'll dig...
 	 if (($table_name eq uc($row->{TABLE_NAME}))) {
-		# and (uc($user) eq uc($row[1]))) 
+		# and (uc($user) eq uc($row[1])))
 		# qeDBF driver returns null for TABLE_OWNER
 	    my $owner = $row->{TABLE_OWNER} || '(unknown owner)';
 	    # diag("$owner.$row->{TABLE_NAME}\n");
@@ -147,26 +147,26 @@ require 5.004;
    # show this...
    #
 
-   @tab_insert_values = ( 
+   @tab_insert_values = (
 			 [1, 'foo', 'foo varchar', "{d '1998-05-11'}", "{ts '1998-05-11 00:00:00'}"],
 			 [2, 'bar', 'bar varchar', "{d '1998-05-12'}", "{ts '1998-05-12 00:00:00'}"],
 			 [3, "bletch", "bletch varchar", "{d '1998-05-10'}", "{ts '1998-05-10 00:00:00'}"],
 			 [4, "80char", $longstr, "{d '1998-05-13'}", "{ts '1998-05-13 12:00:00'}"],
 			 [5, "gt250char", $longstr2, "{d '1998-05-14'}", "{ts '1998-05-14 00:00:00'}"],
 			);
-			   
+
    sub tab_insert {
       my $dbh = shift;
 
        # qeDBF needs a space after the table name!
       foreach (@tab_insert_values) {
-      
+
 	 @row = ODBCTEST::get_type_for_column($dbh, 'COL_D');
 	 # print "TYPE FOUND = $row[1]\n";
 	 if (!$dbh->do("INSERT INTO $table_name (COL_A, COL_B, COL_C, COL_D) VALUES ("
 		 . join(", ", $_->[0],
 			$dbh->quote($_->[1]),
-			$dbh->quote($_->[2]), 
+			$dbh->quote($_->[2]),
 			$_->[isDateType($row[1]) ? 3 : 4]). ")")) {
 	    return 0;
 	 }
@@ -216,7 +216,7 @@ require 5.004;
 	 } else {
 	    $sth->bind_param(3, $_->[2]);
 	 }
-	 
+
 	 # print "SQL_DATE = ", SQL_DATE, " SQL_TIMESTAMP = ", SQL_TIMESTAMP, "\n";
 	 @row = ODBCTEST::get_type_for_column($dbh, 'COL_D');
 	 # diag("TYPE FOUND = $row[1]\n");
