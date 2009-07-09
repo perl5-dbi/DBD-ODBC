@@ -52,6 +52,9 @@ Fix skip count in rt_null_nvarchar.t test for non SQL Server drivers.
 Fix test in 02simple.t which reported a fail if you have no ODBC
 datasources.
 
+In 99_yaml.t pick up the yaml spec version from the meta file instead
+of specifying it.
+
 =head2 Changes in DBD::ODBC 1.22_1 June 16, 2009
 
 Applied a slightly modified version of patch from Jens Rehsack to
