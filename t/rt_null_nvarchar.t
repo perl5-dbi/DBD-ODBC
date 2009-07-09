@@ -47,23 +47,23 @@ unless($dbh) {
 $dbh->{RaiseError} = 1;
 
 my $dbms_name = $dbh->get_info(17);
-ok($dbms_name, "got DBMS name: $dbms_name");
+ok($dbms_name, "got DBMS name: $dbms_name"); # 1
 my $dbms_version = $dbh->get_info(18);
-ok($dbms_version, "got DBMS version: $dbms_version");
+ok($dbms_version, "got DBMS version: $dbms_version"); # 2
 my $driver_name = $dbh->get_info(6);
-ok($driver_name, "got DRIVER name: $driver_name");
+ok($driver_name, "got DRIVER name: $driver_name"); # 3
 my $driver_version = $dbh->get_info(7);
-ok($driver_version, "got DRIVER version $driver_version");
+ok($driver_version, "got DRIVER version $driver_version"); # 4
 
 my ($ev, $sth);
 
 SKIP: {
-    skip "not SQL Server", 6 if $dbms_name !~ /Microsoft SQL Server/;
-    skip "Easysoft OOB", 6 if $driver_name =~ /esoobclient/;
+    skip "not SQL Server", 4 if $dbms_name !~ /Microsoft SQL Server/;
+    skip "Easysoft OOB", 4 if $driver_name =~ /esoobclient/;
     my $major_version = $dbms_version;
     $major_version =~ s/^(\d+)\..*$/$1/;
     #diag("Major Version: $major_version\n");
-    skip "SQL Server version too old", 6 if $major_version < 9;
+    skip "SQL Server version too old", 4 if $major_version < 9;
 
     eval {
         local $dbh->{PrintWarn} = 0;
@@ -75,7 +75,7 @@ SKIP: {
         $dbh->do('create table PERL_DBD_rt_NLVC (a NVARCHAR(MAX) NULL)');
     };
     $ev = $@;
-    ok(!$ev, 'create test table with nvarchar(max)');
+    ok(!$ev, 'create test table with nvarchar(max)'); # 5
 
   SKIP: {
         skip "Failed to create test table", 2 if ($ev);
@@ -83,7 +83,7 @@ SKIP: {
             $sth = $dbh->prepare('INSERT into PERL_DBD_rt_NLVC VALUES (?)');
         };
         $ev = $@;
-        ok($sth && !$@, "prepare insert");
+        ok($sth && !$@, "prepare insert"); # 6
       SKIP: {
             skip "Failed to prepare", 2 if ($ev);
             my $x = 'x' x 500000;
@@ -91,7 +91,7 @@ SKIP: {
                 $sth->execute($x);
             };
             $ev = $@;
-            ok(!$ev, "execute insert");
+            ok(!$ev, "execute insert"); # 7
             if ($ev) {
                 diag("Execute for insert into varchar(max) failed with $ev");
                 diag(q/Some SQL Server drivers such as the native client 09.00.1399 / .
@@ -105,7 +105,7 @@ SKIP: {
                 $sth->execute(undef);
             };
             ok(!$ev, 'insert NULL into VARCHAR(MAX)') ||
-                diag($ev);
+                diag($ev);      # 8
         };
     };
     eval {
