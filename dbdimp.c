@@ -1764,16 +1764,14 @@ int odbc_st_prepare_sv(
            if (DBIc_TRACE(imp_dbh, 0x02000000, 0, 0))
                TRACE0(imp_dbh, "    Processing non-utf8 sql in unicode mode\n");
 
-           rc = SQLPrepare(imp_sth->hstmt, imp_sth->statement,
-                           strlen(imp_sth->statement));
+           rc = SQLPrepare(imp_sth->hstmt, imp_sth->statement, SQL_NTS);
        }
 
 #else
        if (DBIc_TRACE(imp_dbh, 0x02000000, 0, 0))
            TRACE0(imp_dbh, "    Processing sql in non-unicode mode\n");
 
-       rc = SQLPrepare(imp_sth->hstmt, imp_sth->statement,
-                       strlen(imp_sth->statement));
+       rc = SQLPrepare(imp_sth->hstmt, imp_sth->statement, SQL_NTS);
 #endif
        if (DBIc_TRACE(imp_dbh, 0, 0, 3))
            TRACE1(imp_dbh, "    SQLPrepare = %d\n", rc);
@@ -4865,7 +4863,7 @@ SV *odbc_col_attributes(SV *sth, int colno, int desctype)
    D_imp_sth(sth);
    RETCODE rc;
    SV *retsv = NULL;
-   char str_attr[256];
+   unsigned char str_attr[256];
    SWORD str_attr_len = 0;
    SQLLEN num_attr = 0;
 
@@ -4898,7 +4896,6 @@ SV *odbc_col_attributes(SV *sth, int colno, int desctype)
    } else if (SQL_SUCCESS_WITH_INFO == rc) {
        warn("SQLColAttributes has truncated returned data");
    }
-
 
    if (DBIc_TRACE(imp_sth, 0, 0, 3)) {
       PerlIO_printf(

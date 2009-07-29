@@ -42,6 +42,7 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
   Add a perlcritic test - see DBD::Pg
   Why doesn't http://www.presicient.com/dbidocs/ display DBD::ODBC docs
     properly.
+  ParamTypes attribute not visible until after execute
 
 =head1 CHANGES
 
@@ -54,6 +55,23 @@ datasources.
 
 In 99_yaml.t pick up the yaml spec version from the meta file instead
 of specifying it.
+
+Change calls to SQLPrepare which passed in the string lenth of the SQL
+to use SQL_NTS because a) they are null terminated and more
+importantly b) unixODBC contains a bug in versions up to 2.2.16 which
+can overwrite the stack by 1 byte if the string length is specified
+and not built with iconv support and converting the SQL from ASCII to
+Unicode.
+
+Fixed bug in ping method reported by Lee Anne Lester where it dies if
+used after the connection is closed.
+
+A great deal of changes to Makefile.PL to improve the automatic
+detection and configuration for ODBC driver managers - especially on
+64bit platforms. See rt47650 from Marten Lehmann which started it all
+off.
+
+Add changes from Chris Clark for detecting IngresCLI.
 
 =head2 Changes in DBD::ODBC 1.22_1 June 16, 2009
 

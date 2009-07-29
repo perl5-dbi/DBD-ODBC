@@ -57,7 +57,7 @@ my ($ev, $sth);
 eval {
     local $dbh->{PrintWarn} = 0;
     local $dbh->{PrintError} = 0;
-    $dbh->do('drop table PERL_DBD_39897');
+    $dbh->do('drop table PERL_DBD_rt_39897');
 };
 
 eval {
