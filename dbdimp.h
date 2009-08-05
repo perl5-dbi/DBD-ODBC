@@ -88,6 +88,8 @@ struct imp_dbh_st {
     } driver_type;
     char odbc_driver_name[80];
     char odbc_driver_version[20];
+    char odbc_dbms_name[80];
+    char odbc_dbms_version[80];
 };
 
 /* Define sth implementor data structure */

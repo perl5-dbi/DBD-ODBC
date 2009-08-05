@@ -73,6 +73,11 @@ off.
 
 Add changes from Chris Clark for detecting IngresCLI.
 
+Fix for rt 48304. If you are using a Microsoft SQL Server database and
+nvarchar(max) you could not insert values between 4001 and 8000
+(inclusive) in size. A test was added to the existing rt_38977.t test.
+Thanks to Michael Thomas for spotting this.
+
 =head2 Changes in DBD::ODBC 1.22_1 June 16, 2009
 
 Applied a slightly modified version of patch from Jens Rehsack to

@@ -12,7 +12,7 @@
 
 require 5.006;
 
-$DBD::ODBC::VERSION = '1.22_2';
+$DBD::ODBC::VERSION = '1.22_3';
 
 {
     ## no critic (ProhibitMagicNumbers ProhibitExplicitISA)
@@ -264,23 +264,38 @@ $DBD::ODBC::VERSION = '1.22_2';
 
     sub ping {
 	my $dbh = shift;
-	my $state = undef;
 
- 	my ($catalog, $schema, $table, $type);
+        # DBD::Gofer does the following (with a 0 instead of "0") but it I
+        # cannot make it set a warning.
+        #return $dbh->SUPER::set_err("0", "can't ping while not connected") # warning
+        #    unless $dbh->SUPER::FETCH('Active');
 
-	$catalog = q{};
-	$schema = q{};
-	$table = 'NOXXTABLE';
-	$type = q{};
+        #my $pe = $dbh->FETCH('PrintError');
+        #$dbh->STORE('PrintError', 0);
+        my $evalret = eval {
+           # create a "blank" statement handle
+            my $sth = DBI::_new_sth($dbh, { 'Statement' => "SQLTables_PING" })
+                or return 1;
 
-	# create a "blank" statement handle
-	my $sth = DBI::_new_sth($dbh, { 'Statement' => "SQLTables_PING" });
+            my ($catalog, $schema, $table, $type);
 
-	DBD::ODBC::st::_tables($dbh,$sth, $catalog, $schema, $table, $type)
-	      or return 0;
-	$sth->finish;
-	return 1;
+            $catalog = q{};
+            $schema = q{};
+            $table = 'NOXXTABLE';
+            $type = q{};
 
+            DBD::ODBC::st::_tables($dbh,$sth, $catalog, $schema, $table, $type)
+                  or return 1;
+            $sth->finish;
+            return 0;
+        };
+        #$dbh->STORE('PrintError', $pe);
+        $dbh->set_err(undef,'',''); # clear any stored error from eval above
+        if ($evalret == 0) {
+            return 1;
+        } else {
+            return 0;
+        }
     }
 
 #####    # saved, just for posterity.

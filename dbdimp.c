@@ -3415,18 +3415,30 @@ static int rebind_param(
    }
    /*
     * Yet another workaround for SQL Server native client.
-    * If you have a varbinary(max) or varchar(max) you have to pass 0
-    * for the column_size or you get HY104 "Invalid precision value".
+    * If you have a varbinary(max), varchar(max) or nvarchar(max) you have to
+    * pass 0 for the column_size or you get HY104 "Invalid precision value".
     * See rt_38977.t which causes this.
     * The versions of native client I've seen this with are:
     * 2007.100.1600.22 sqlncli10.dll driver version = ?
     * 2005.90.1399.00 SQLNCLI.DLL driver version = 09.00.1399
+    *
+    * Update, for nvarchar(max) it does not seem to simply be a driver issue
+    * as with the Easysoft SQL Server ODBC Driver going to Microsoft SQL Server
+    * 09.00.1399 we got the following error for all sizes between 4001 and 8000
+    * (inclusive).
+    * [SQL Server]The size (4001) given to the parameter '@P1' exceeds the
+    *   maximum allowed (4000)
     */
-   if ((imp_dbh->driver_type == DT_SQL_SERVER_NATIVE_CLIENT) &&
-       (phs->strlen_or_ind < 0) &&
-       (phs->param_size == 0)) {
-       column_size = 0;
+   if (phs->param_size == 0) {
+       if ((imp_dbh->driver_type == DT_SQL_SERVER_NATIVE_CLIENT) ||
+           (strcmp(imp_dbh->odbc_dbms_name, "Microsoft SQL Server") == 0)) {
+           column_size = 0;
+       }
    }
+
+   /*printf("sloi = %d ps=%d\n", phs->strlen_or_ind, phs->param_size);*/
+
+
    if (DBIc_TRACE(imp_sth, 0, 0, 5)) {
       PerlIO_printf(
           DBIc_LOGPIO(imp_dbh),
@@ -5250,6 +5262,20 @@ static int post_connect(
    }
    if (DBIc_TRACE(imp_dbh, 0x04000000, 0, 0))
        TRACE1(imp_dbh, "DRIVER_VERSION = %s\n", imp_dbh->odbc_driver_version);
+
+   rc = SQLGetInfo(imp_dbh->hdbc, SQL_DBMS_NAME, &imp_dbh->odbc_dbms_name,
+                   (SQLSMALLINT)sizeof(imp_dbh->odbc_dbms_name), &dbvlen);
+   if (!SQL_SUCCEEDED(rc)) {
+       dbd_error(dbh, rc, "post_connect/SQLGetInfo(SQL_DBMS_NAME)");
+       strcpy(imp_dbh->odbc_dbms_name, "unknown");
+   }
+
+   rc = SQLGetInfo(imp_dbh->hdbc, SQL_DBMS_VER, &imp_dbh->odbc_dbms_version,
+                   (SQLSMALLINT)sizeof(imp_dbh->odbc_dbms_version), &dbvlen);
+   if (!SQL_SUCCEEDED(rc)) {
+       dbd_error(dbh, rc, "post_connect/SQLGetInfo(SQL_DBMS_VER)");
+       strcpy(imp_dbh->odbc_dbms_version, "unknown");
+   }
 
    /* find maximum column name length */
    rc = SQLGetInfo(imp_dbh->hdbc, SQL_MAX_COLUMN_NAME_LEN,

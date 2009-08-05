@@ -1,7 +1,9 @@
 #!/usr/bin/perl -w -I./t
 # $Id$
 #
-# test varbinary(MAX) and varchar(MAX) types in SQL Server
+# rt 38977 and 48304
+#
+# test varbinary(MAX), varchar(MAX) and nvarchar(MAX) types in SQL Server
 #
 use Test::More;
 use strict;
@@ -10,7 +12,7 @@ $| = 1;
 my $has_test_nowarnings = 1;
 eval "require Test::NoWarnings";
 $has_test_nowarnings = undef if $@;
-my $tests = 11;
+my $tests = 14;
 $tests += 1 if $has_test_nowarnings;
 plan tests => $tests;
 
@@ -127,6 +129,33 @@ SKIP: {
             ok($sth->execute($x), "execute insert");
         };
     };
+
+    eval {
+        local $dbh->{PrintWarn} = 0;
+        local $dbh->{PrintError} = 0;
+        $dbh->do('drop table PERL_DBD_38977');
+    };
+
+    eval {
+        $dbh->do('create table PERL_DBD_38977 (a NVARCHAR(MAX))');
+    };
+    $ev = $@;
+    ok(!$ev, 'create test table with varchar(max)');
+
+  SKIP: {
+        skip "Failed to create test table", 2 if ($ev);
+        eval {
+            $sth = $dbh->prepare('INSERT into PERL_DBD_38977 VALUES (?)');
+        };
+        $ev = $@;
+        ok($sth && !$@, "prepare insert");
+      SKIP: {
+            skip "Failed to prepare", 1 if ($ev);
+            my $x = 'x' x 4001;
+            ok($sth->execute($x), "execute insert");
+        };
+    };
+
 };
 
 #my $ev;
