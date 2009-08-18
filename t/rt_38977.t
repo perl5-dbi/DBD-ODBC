@@ -59,7 +59,7 @@ ok($driver_version, "got DRIVER version $driver_version");
 my ($ev, $sth);
 
 SKIP: {
-    skip "not SQL Server", 6 if $dbms_name !~ /Microsoft SQL Server/;
+    skip "not SQL Server", 9 if $dbms_name !~ /Microsoft SQL Server/;
     skip "Easysoft OOB", 6 if $driver_name =~ /esoobclient/;
     my $major_version = $dbms_version;
     $major_version =~ s/^(\d+)\..*$/$1/;
@@ -140,7 +140,7 @@ SKIP: {
         $dbh->do('create table PERL_DBD_38977 (a NVARCHAR(MAX))');
     };
     $ev = $@;
-    ok(!$ev, 'create test table with varchar(max)');
+    ok(!$ev, 'create test table with nvarchar(max)');
 
   SKIP: {
         skip "Failed to create test table", 2 if ($ev);
