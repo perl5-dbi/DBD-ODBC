@@ -80,8 +80,8 @@ $DBD::ODBC::VERSION = '1.22_3';
     ## no critic (ProhibitBuiltinHomonyms)
     sub connect {
 	my($drh, $dbname, $user, $auth, $attr)= @_;
-	$user = q{} unless defined $user;
-	$auth = q{} unless defined $auth;
+	#$user = q{} unless defined $user;
+	#$auth = q{} unless defined $auth;
 
 	# create a 'blank' dbh
 	my $this = DBI::_new_dbh($drh, {

@@ -46,7 +46,12 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
 
 =head1 CHANGES
 
-=head2 Changes in DBD::ODBC 1.22_2 July 9, 2009
+=head2 Changes in DBD::ODBC 1.22_3 August 19, 2009
+
+Fix skip count in rt_38977.t and typo in ok call.
+
+Workaround a bug in unixODBC 2.2.11 which can write off the end of the
+string buffer passed to SQLColAttributes.
 
 Fix skip count in rt_null_nvarchar.t test for non SQL Server drivers.
 
@@ -77,6 +82,14 @@ Fix for rt 48304. If you are using a Microsoft SQL Server database and
 nvarchar(max) you could not insert values between 4001 and 8000
 (inclusive) in size. A test was added to the existing rt_38977.t test.
 Thanks to Michael Thomas for spotting this.
+
+Added FAQ on UTF-8 encoding and IBM iSeries ODBC driver.
+
+Add support for not passing usernames and passwords in call to
+connect.  Previously DBD::ODBC would set an unspecified
+username/password to '' in ODBC.pm before calling one of the login_xxx
+functions.  This allows the driver to pull the username/password from
+elsewhere e.g., like the odbc.ini file.
 
 =head2 Changes in DBD::ODBC 1.22_1 June 16, 2009
 
