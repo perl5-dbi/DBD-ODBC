@@ -622,6 +622,49 @@ If you override the bind type to SQL_VARCHAR then the driver sees
 SQL_CHAR => SQL_VARCHAR, nothing to do and hence Oracle itself does
 the translation - that is why the SQL_VARCHAR works.
 
+=head2 CWB0111 error with System i Access ODBC Driver
+
+The full error this relates to is:
+
+[unixODBC][IBM][System i Access ODBC Driver]Column 1: CWB0111 - A buffer passed to a system call is too small to hold return data (SQL-22018)
+
+The iSeries ODBC driver looks at your environment and decides that if
+you have UTF-8 set it will encode data returned from the database in
+UTF-8.
+
+e.g., LC_CTYPE=fr_FR.UTF-8
+
+If you then select data from your database containing non-ASCII
+characters e.g., accented characters the iSeries ODBC driver will
+encode the data in UTF-8. UTF-8 encoding increases the size of strings
+containing characters with codes > 127.
+
+DBD::ODBC uses SQLDescribeCol and SQLColAttribute ODBC calls to work
+out the size of the columns you are retrieving and allocate space for
+them. As the ODBC API specifies the sizes returned are on bytes when
+the driver says a string column is N is size DBD::ODBC allocates N+1
+(for NULL) bytes. If the driver then encodes N characters in UTF-8 the
+size will be too big to fit into DBD::ODBC's buffer and you will get
+the error above. This is most often seen with char(N) columns as the
+trailing spaces are returned by the driver so you are bound to
+overflow the buffer as soon as a non-ASCII characters is found.
+
+What are your possible solutions?
+
+You can attempt to trim the data to leave room for the encoding.
+e.g., RTRIM(column_name) in your select on char(N) columns but this is
+a poor choice and only going to work in a few circumstances.
+
+You can increase the sizes of your columns in the database but this is
+another hack.
+
+You can rearrange your SQL to cast the columns in question to larger
+types.
+
+Remove UTF-8 from your locale. This is the best solution as it is
+guaranteed to stop this error but if you have data which cannot be
+represented in 8 bit characters this won't help.
+
 =head1 AUTHOR
 
 Parts of this document were written by Tim Bunce,
