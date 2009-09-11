@@ -46,6 +46,11 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
 
 =head1 CHANGES
 
+=head2 Changes in DBD::ODBC 1.23 September 11, 2009
+
+Only a readme change and version bumped to 1.23. This is a full
+release of all the 1.22_x development releases.
+
 =head2 Changes in DBD::ODBC 1.22_3 August 19, 2009
 
 Fix skip count in rt_38977.t and typo in ok call.
