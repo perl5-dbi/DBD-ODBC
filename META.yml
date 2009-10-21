@@ -10,7 +10,7 @@ author:
 license: perl
 distribution_type: module
 requires:
-    DBI: 1.21
+    DBI: 1.23_1
     perl: 5.006
 #
 # Added build_requires/configure_requires DBI as DBD::ODBC needs DBI::DBD to

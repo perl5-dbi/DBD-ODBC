@@ -65,7 +65,7 @@ SKIP: {
 
 
        my $sth = $dbh->prepare(
-           q{INSERT INTO TestTable values (?)}) || die ($DBI::errstr);
+           q{INSERT INTO PERL_DBD_rt_46597 values (?)}) || die ($DBI::errstr);
        ok($sth, 'insert prepared'); # 5
 
      SKIP: {

@@ -354,7 +354,8 @@ o adding path to odbc_config/iodbc_config to PATH
 
 If you do not have an ODBC Driver Manager you should try to get hold of
 the unixODBC packages for your system or build it from source (see
-http://www.unixodbc.org).
+http://www.unixodbc.org). If you install driver manager packages you
+need to include the "XXX-dev" package which includes the C header files.
 EOT
         # stop cpan testers from reporting a failure when a driver manager
         # library is not installed. Do not know if Devel::CheckLib (when
@@ -364,7 +365,7 @@ EOT
     }
     die "odbc home ($odbchome) does not refer to a directory.\n"
 	unless -d $odbchome;
-    warn "Using ODBC HOME $odbchome\n";
+    warn "Using ODBCHOME $odbchome\n";
 
     # $odbcincdir and $odbclibdir will only be set at this point if we
     # found odbc_config/iodbc_config - otherwise we only have a $odbchome
@@ -484,7 +485,7 @@ EOT
 	my @libs = glob "$odbclibdir/*iodbc*.*";
 	my @ilibs = grep { /\.($dlext|$soext|$arext)$/ } @libs;
         if (scalar(@ilibs) == 0) {
-            die "That's odd, I can't see any iodbc libs in $odbclibdir." .
+            die "That's odd, I can't see any iodbc libs in $odbclibdir. " .
                 "This is all I found:\n" . join(q{,}, @libs) . "\n" .
                 "Perhaps you need to install the iODBC development " .
                 "package, often called libiodbc-dev.";
@@ -555,12 +556,12 @@ EOT
             print "  odbc_config not found - ok\n";
         }
 	my @libs = glob "$odbclibdir/libodbc.*";
-	my @ilibs = grep { /\.($soext|$dlext|a)$/ } @libs;
+	my @ilibs = grep /\.($soext|$dlext|$arext)/, @libs;
         if (scalar(@ilibs) == 0) {
-            die "That's odd, I can't see any unixodbc libs in $odbchome." .
+            die "That's odd, I can't see any unixodbc libs in $odbchome.\n" .
                 "This is all I found:\n" . join(q{,}, @libs) . "\n" .
                 "Perhaps you need to install the unixODBC development " .
-                "package, often called unixodbc-dev.";
+                "package, often called unixodbc-dev.\n";
         }
 	my $ilibpath = $ilibs[0]; # if both .so and .a, pick based on LINKTYPE?
 	my $ilibname = basename($ilibpath);
@@ -571,7 +572,7 @@ EOT
 	}
 	else {
 	    # remove lib prefix and .so suffix so "-l" style link can be used
-	    $ilibname =~ s/^lib(odbc.*?)\.\w+$/$1/;
+	    $ilibname =~ s/^lib(odbc.*)\.\w+$/$1/;
 	    $opts{LIBS} = "-L$odbclibdir -l$ilibname";
 	    warn "Warning: LD_LIBRARY_PATH doesn't include $odbchome\n"
 		unless (exists($ENV{LD_LIBRARY_PATH}) &&
@@ -681,18 +682,24 @@ if ($OSNAME eq 'darwin') {
 my $rv = WriteMakefile(%opts);
 
 local($WARNING)=0;
-print <<"EOT";
-The DBD::ODBC tests will use these values for the database connection:
-    DBI_DSN=$ENV{DBI_DSN}     e.g. dbi:ODBC:demo
-    DBI_USER=$ENV{DBI_USER}
-    DBI_PASS=$ENV{DBI_PASS}
-EOT
-
 print "Warning: not all required environment variables are set.\n"
 	unless ($ENV{DBI_DSN} && $ENV{DBI_USER} && $ENV{DBI_PASS});
 print "Warning: DBI_DSN ($ENV{DBI_DSN}) doesn't start with 'dbi:ODBC:'\n"
 	if ($ENV{DBI_DSN} && $ENV{DBI_DSN} !~ m/^dbi:ODBC:/);
 print "\n";
+if (!exists($ENV{DBI_DSN}) ||
+                 !exists($ENV{DBI_USER}) ||
+                     !exists($ENV{DBI_PASS})) {
+    print "Warning: Will not be able to run tests as you have not defined\n",
+        "all of DBI_DSN, DBI_USER and DBI_PASS environment variables.\n";
+} else {
+    print <<"EOT";
+The DBD::ODBC tests will use these values for the database connection:
+    DBI_DSN=$ENV{DBI_DSN}     e.g. dbi:ODBC:demo
+    DBI_USER=$ENV{DBI_USER}
+    DBI_PASS=$ENV{DBI_PASS}
+EOT
+}
 
 #
 # find the files in @files in $path returning 1 if they all exist, 0 otherwise
@@ -732,7 +739,7 @@ sub unixodbc_config
     if (!defined($odbc_config_v) || ($odbc_config_v !~ /^(\d\.)+/)) {
         print "Looking for odbc_config on PATH\n";
         $configbin = 'odbc_config';
-        $odbc_config_v = `$configbin --version 2>&1`;
+        $odbc_config_v = `$configbin --version 2>/dev/null`;
         if (!defined($odbc_config_v) || ($odbc_config_v !~ /^(\d\.)+/)) {
             print "  odbc_config not found\n";
             return;
@@ -825,7 +832,7 @@ sub iodbc_config
     if (!defined($iodbc_config_v) || ($iodbc_config_v !~ /^(\d\.)+/)) {
         print "Looking for iodbc-config on PATH\n";
         $configbin = 'iodbc-config';
-        $iodbc_config_v = `$configbin --version 2>&1`;
+        $iodbc_config_v = `$configbin --version 2>/dev/null`;
         if (!defined($iodbc_config_v) || ($iodbc_config_v !~ /^(\d\.)+/)) {
             print "  iodbc_config not found\n";
             return;
@@ -866,7 +873,7 @@ sub iodbc_config
     } else {
         print "  but cannot find header files " . join(',', @hdrstofind) .
             " in that path so ignoring\n";
-        print "NOTE: Have you installed the libiodbc-dev package\n";
+        print "NOTE: Have you installed the libiodbc-dev package.\n";
         return;
     }
 
@@ -890,7 +897,7 @@ sub find_dm_hdr_files
     my @hdrstofind = ('sql.h', 'sqlext.h', 'sqltypes.h');
     push @hdrstofind, 'sqlucode.h' if $opt_u;
 
-    my @paths = ('/usr', 'usr/local', '/usr/pkg',
+    my @paths = ('/usr', '/usr/local', '/usr/pkg',
                  '/usr/local/easysoft/unixODBC');
     unshift @paths, $opt_o if $opt_o;
     unshift @paths, $ENV{ODBCHOME} if $ENV{ODBCHOME};
@@ -904,6 +911,12 @@ sub find_dm_hdr_files
             return $home;
         }
     }
+    print <<'EOT';
+
+I cannot find driver manager header files. Perhaps you need to install the
+unixodbc-dev package or the iodbc-dev package
+
+EOT
     return;
 }
 

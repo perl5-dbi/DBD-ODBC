@@ -42,9 +42,25 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
   Add a perlcritic test - see DBD::Pg
   Why doesn't http://www.presicient.com/dbidocs/ display DBD::ODBC docs
     properly.
-  ParamTypes attribute not visible until after execute
+
 
 =head1 CHANGES
+
+=head2 Changes in DBD::ODBC  1.23_1 October 21, 2009
+
+makefile.PL changes:
+  some formatting changes to output
+  warn if unixodbc headers are not found that the unixodbc-dev package is not
+    installed
+  use $arext instead of "a"
+  pattern match for pulling libodbc.* changed
+  warn if DBI_DSN etc not defined
+  change odbc_config output for stderr to /dev/null
+  missing / on /usr/local wheb finding find_dm_hdr_files()
+  add warning that unixodbc-dev package not installed
+  bump to 1.23_1
+
+rt_46597.rt - update on wrong table
 
 =head2 Changes in DBD::ODBC 1.23 September 11, 2009
 
