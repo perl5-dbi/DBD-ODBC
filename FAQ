@@ -665,6 +665,43 @@ Remove UTF-8 from your locale. This is the best solution as it is
 guaranteed to stop this error but if you have data which cannot be
 represented in 8 bit characters this won't help.
 
+=head2 "ConnectionWrite (send())" error and bind parameters
+
+The following error can happen when using more than 2097 bind
+parameters in a single query with SQL Server 2000:
+
+ [Microsoft][ODBC SQL Server Driver][DBNETLIB]ConnectionWrite (send()).
+ (SQL-01000) [state was 01000 now 08S01]
+ [Microsoft][ODBC SQL Server Driver][DBNETLIB]General network error.
+ Check your network documentation. (SQL-08S01)
+
+This error is most likely due to a bug in the Microsoft SQL Server
+ODBC driver as it fails for some versions of the driver and not
+others. It is known to fail for version 2000.85.1132.00
+
+See bug report https://rt.cpan.org/Public/Bug/Display.html?id=49061
+for more details.
+
+=head2 SQL query length limited to about 65500 characters in SQL Server 2000
+
+When using bind parameters and a query longer than about 65500
+characters the query will fail with some versions of the SQL Server
+2000 ODBC driver. The error message from the server can vary. Below is
+an example:
+
+ [Microsoft][ODBC SQL Server Driver][SQL Server]Invalid column name
+ 'TES[...]P1I'. (SQL-42S22) [state was 42S22 now 42000]
+ [Microsoft][ODBC SQL Server Driver][SQL Server]Statement(s) could not
+ be prepared. (SQL-42000)
+
+Removing the use of binding will allow queries that are longer than
+65500 characters.
+
+This bug is known to affect Microsoft SQL Server ODBC driver version
+2000.85.1132.00.
+
+See bug report https://rt.cpan.org/Public/Bug/Display.html?id=49065
+
 =head1 AUTHOR
 
 Parts of this document were written by Tim Bunce,

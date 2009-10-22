@@ -57,8 +57,8 @@ makefile.PL changes:
   warn if DBI_DSN etc not defined
   change odbc_config output for stderr to /dev/null
   missing / on /usr/local wheb finding find_dm_hdr_files()
-  add warning that unixodbc-dev package not installed
-  bump to 1.23_1
+
+New FAQ entries from Oystein Torget for bind parameter bugs in SQL Server.
 
 rt_46597.rt - update on wrong table
 
