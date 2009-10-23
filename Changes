@@ -62,6 +62,8 @@ New FAQ entries from Oystein Torget for bind parameter bugs in SQL Server.
 
 rt_46597.rt - update on wrong table
 
+Copied dbivport.h from the latest DBI distribution into DBD::ODBC.
+
 =head2 Changes in DBD::ODBC 1.23 September 11, 2009
 
 Only a readme change and version bumped to 1.23. This is a full
