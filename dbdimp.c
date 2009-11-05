@@ -27,6 +27,8 @@
  * SV Manipulation Functions
  *   http://perl.active-venture.com/pod/perlapi-svfunctions.html
  */
+#define NEED_newRV_noinc
+#define NEED_sv_2pv_flags
 
 #include "ODBC.h"
 #if defined(WITH_UNICODE)
@@ -271,7 +273,7 @@ static void odbc_handle_outparams(imp_sth_t *imp_sth, int debug)
                           DBIc_LOGPIO(imp_sth),
                           "    outparam %s = '%s'\t(len %ld), is numeric end"
                           " of buffer = %d\n",
-                          phs->name, SvPV(sv,na), (long)phs->strlen_or_ind,
+                          phs->name, SvPV(sv,PL_na), (long)phs->strlen_or_ind,
                           phs->sql_type, p - pstart);
                   }
                   SvCUR_set(sv, p - pstart);
@@ -351,7 +353,7 @@ int odbc_discon_all(SV *drh, imp_drh_t *imp_drh)
 {
    dTHR;
    /* The disconnect_all concept is flawed and needs more work */
-   if (!dirty && !SvTRUE(perl_get_sv("DBI::PERL_ENDING",0))) {
+   if (!PL_dirty && !SvTRUE(get_sv("DBI::PERL_ENDING",0))) {
        DBIh_SET_ERR_CHAR(drh, (imp_xxh_t*)imp_drh, Nullch, 1,
                          "disconnect_all not implemented", Nullch, Nullch);
       return FALSE;
@@ -1224,7 +1226,7 @@ void dbd_error2(
 	    XPUSHs(sv_2mortal(newSViv(NativeError)));
 
 	    PUTBACK;
-	    if((count = perl_call_sv(imp_dbh->odbc_err_handler, G_SCALAR)) != 1)
+	    if((count = call_sv(imp_dbh->odbc_err_handler, G_SCALAR)) != 1)
 	       croak("An error handler can't return a LIST.");
 	    SPAGAIN;
 	    retval = POPi;
@@ -1338,7 +1340,7 @@ void dbd_caution(SV *h, char *what)
 
    if (DBIc_TRACE(imp_xxh, 0, 0, 3))
       PerlIO_printf(DBIc_LOGPIO(imp_xxh), "    !!%s error %d recorded: %s\n",
-		    what, -1, SvPV(errstr,na));
+		    what, -1, SvPV(errstr,PL_na));
 }
 
 
@@ -1375,7 +1377,7 @@ void dbd_preparse(imp_sth_t *imp_sth, char *statement)
    /* initialize phs ready to be cloned per placeholder	*/
    memset(&phs_tpl, 0, sizeof(phs_tpl));
    phs_tpl.value_type = SQL_C_CHAR;
-   phs_tpl.sv = &sv_undef;
+   phs_tpl.sv = &PL_sv_undef;
 
    src  = statement;
    dest = imp_sth->statement;
@@ -2403,7 +2405,7 @@ int dbd_st_execute(
 	 I32 retlen;
 	 hv_iterinit(hv);
 	 while( (sv = hv_iternextsv(hv, &key, &retlen)) != NULL ) {
-	    if (sv != &sv_undef) {
+	    if (sv != &PL_sv_undef) {
 	       phs_t *phs = (phs_t*)(void*)SvPVX(sv);
 	       if (!rebind_param(sth, imp_sth, phs)) return -2;
 	       if (DBIc_TRACE(imp_sth, 0, 0, 8)) {
@@ -2951,7 +2953,7 @@ void dbd_st_destroy(SV *sth, imp_sth_t *imp_sth)
     * when the db was disconnected before perl ending.  Hence,
     * checking for the dirty flag.
     */
-   if (imp_dbh->hdbc != SQL_NULL_HDBC && !dirty) {
+   if (imp_dbh->hdbc != SQL_NULL_HDBC && !PL_dirty) {
 
       rc = SQLFreeHandle(SQL_HANDLE_STMT,imp_sth->hstmt);
       /* rc = SQLFreeStmt(imp_sth->hstmt, SQL_DROP);*/ /* TBD: 3.0 update */
@@ -3149,7 +3151,7 @@ static int rebind_param(
         * just copy the value & length over and not rebind.
         */
        if (SvREADONLY(phs->sv))
-           croak(no_modify);
+           croak(PL_no_modify);
        /* phs->sv _is_ the real live variable, it may 'mutate' later   */
        /* pre-upgrade high to reduce risk of SvPVX realloc/move        */
        (void)SvUPGRADE(phs->sv, SVt_PVNV);
@@ -3599,7 +3601,7 @@ int dbd_bind_ph(
       croak("Can't bind unknown placeholder '%s'", name);
    phs = (phs_t*)SvPVX(*phs_svp);	/* placeholder struct	*/
 
-   if (phs->sv == &sv_undef) { /* first bind for this placeholder */
+   if (phs->sv == &PL_sv_undef) { /* first bind for this placeholder */
       phs->value_type = SQL_C_CHAR;             /* default */
       phs->requested_type = sql_type;           /* save type requested */
 
@@ -3641,7 +3643,7 @@ int dbd_bind_ph(
    }
 
    if (!is_inout) {    /* normal bind to take a (new) copy of current value */
-      if (phs->sv == &sv_undef)       /* (first time bind) */
+      if (phs->sv == &PL_sv_undef)             /* (first time bind) */
 	 phs->sv = newSV(0);
       sv_setsv(phs->sv, newvalue);
    } else if (newvalue != phs->sv) {
@@ -4176,7 +4178,7 @@ SV *dbd_db_FETCH_attrib(SV *dbh, imp_dbh_t *imp_dbh, SV *keysv)
 	 if(imp_dbh->odbc_err_handler) {
 	    retsv = newSVsv(imp_dbh->odbc_err_handler);
 	 } else {
-	    retsv = &sv_undef;
+	    retsv = &PL_sv_undef;
 	 }
 	 break;
 
@@ -4326,9 +4328,9 @@ SV *dbd_st_FETCH_attrib(SV *sth, imp_sth_t *imp_sth, SV *keysv)
       }
       if (DBIc_WARN(imp_sth)) {
 	 warn("Describe failed during %s->FETCH(%s,%d)",
-              SvPV(sth,na), key,imp_sth->done_desc);
+              SvPV(sth,PL_na), key,imp_sth->done_desc);
       }
-      return &sv_undef;
+      return &PL_sv_undef;
    }
 
    i = DBIc_NUM_FIELDS(imp_sth);
@@ -4348,7 +4350,7 @@ SV *dbd_st_FETCH_attrib(SV *sth, imp_sth_t *imp_sth, SV *keysv)
         break;
       case 2: 			/* NAME */
 	 av = newAV();
-	 retsv = newRV(sv_2mortal((SV*)av));
+	 retsv = newRV_inc(sv_2mortal((SV*)av));
 	 if (DBIc_TRACE(imp_sth, 0, 0, 9)) {
 	    int j;
 	    TRACE1(imp_sth, "    dbd_st_FETCH_attrib NAMES %d\n", i);
@@ -4372,39 +4374,39 @@ SV *dbd_st_FETCH_attrib(SV *sth, imp_sth_t *imp_sth, SV *keysv)
 	 break;
       case 3:			/* NULLABLE */
 	 av = newAV();
-	 retsv = newRV(sv_2mortal((SV*)av));
+	 retsv = newRV_inc(sv_2mortal((SV*)av));
 	 while(--i >= 0)
 	    av_store(av, i,
 		     (imp_sth->fbh[i].ColNullable == SQL_NO_NULLS)
-		     ? &sv_no : &sv_yes);
+		     ? &PL_sv_no : &PL_sv_yes);
 	 break;
       case 4:			/* TYPE */
 	 av = newAV();
-	 retsv = newRV(sv_2mortal((SV*)av));
+	 retsv = newRV_inc(sv_2mortal((SV*)av));
 	 while(--i >= 0)
 	    av_store(av, i, newSViv(imp_sth->fbh[i].ColSqlType));
 	 break;
       case 5:			/* PRECISION */
 	 av = newAV();
-	 retsv = newRV(sv_2mortal((SV*)av));
+	 retsv = newRV_inc(sv_2mortal((SV*)av));
 	 while(--i >= 0)
 	    av_store(av, i, newSViv(imp_sth->fbh[i].ColDef));
 	 break;
       case 6:			/* SCALE */
 	 av = newAV();
-	 retsv = newRV(sv_2mortal((SV*)av));
+	 retsv = newRV_inc(sv_2mortal((SV*)av));
 	 while(--i >= 0)
 	    av_store(av, i, newSViv(imp_sth->fbh[i].ColScale));
 	 break;
       case 7:			/* sol_type */
 	 av = newAV();
-	 retsv = newRV(sv_2mortal((SV*)av));
+	 retsv = newRV_inc(sv_2mortal((SV*)av));
 	 while(--i >= 0)
 	    av_store(av, i, newSViv(imp_sth->fbh[i].ColSqlType));
 	 break;
       case 8:			/* sol_length */
 	 av = newAV();
-	 retsv = newRV(sv_2mortal((SV*)av));
+	 retsv = newRV_inc(sv_2mortal((SV*)av));
 	 while(--i >= 0)
 	    av_store(av, i, newSViv(imp_sth->fbh[i].ColLength));
 	 break;
@@ -4444,7 +4446,7 @@ SV *dbd_st_FETCH_attrib(SV *sth, imp_sth_t *imp_sth, SV *keysv)
 	    I32 retlen;
 	    hv_iterinit(hv);
 	    while( (sv = hv_iternextsv(hv, &key, &retlen)) != NULL ) {
-	       if (sv != &sv_undef) {
+	       if (sv != &PL_sv_undef) {
 		  phs_t *phs = (phs_t*)(void*)SvPVX(sv);
 		  hv_store(paramvalues, phs->name, (I32)strlen(phs->name),
                            newSVsv(phs->sv), 0);
@@ -4492,7 +4494,7 @@ SV *dbd_st_FETCH_attrib(SV *sth, imp_sth_t *imp_sth, SV *keysv)
 	    I32 retlen;
 	    hv_iterinit(hv);
 	    while( (sv = hv_iternextsv(hv, &key, &retlen)) != NULL ) {
-	       if (sv != &sv_undef) {
+	       if (sv != &PL_sv_undef) {
                    HV *subh = newHV();
 
                    phs_t *phs = (phs_t*)(void*)SvPVX(sv);
@@ -4607,7 +4609,7 @@ int ftype;
       dbd_error(dbh, rc, "odbc_get_info/SQLGetInfo");
       Safefree(rgbInfoValue);
       /* patched 2/12/02, thanks to Steffen Goldner */
-      return &sv_undef;
+      return &PL_sv_undef;
       /* return Nullsv; */
    }
 

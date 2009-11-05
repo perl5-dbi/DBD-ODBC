@@ -29,6 +29,24 @@ use warnings;
 
 $OUTPUT_AUTOFLUSH = 1;
 
+print <<"EOT";
+
+**********
+\tRemember to actually *READ* the README file!
+\tAnd re-read it if you have any problems.\n
+**********
+
+EOT
+
+{
+    # some useful info when debugging problems
+    print "OSNAME: $OSNAME\n";
+    my @envs = qw(LANG ODBCHOME LD_LIBRARY_PATH DBROOT WINDIR II_SYSTEM);
+    foreach (@envs) {
+        print "$_: ", ($ENV{$_} ? $ENV{$_} : ''), "\n";
+    }
+}
+
 # the following now redundant since we found constants (see end) which allows
 # us to override the constants.
 ######
@@ -133,10 +151,10 @@ if ($eumm >= 5.43) {
     };
 }
 
-my $opt_g = 0;
-my $opt_o = q{};
-my $opt_u = undef;
-my $opt_e = undef;
+my $opt_g = 0;                  # build debug
+my $opt_o = q{};                # odbc home overrides ODBCHOME
+my $opt_u = undef;              # build unicode version
+my $opt_e = undef;              # easysoft
 
 Getopt::Long::GetOptions("g!" => \$opt_g,
                          "o=s" => \$opt_o,
@@ -185,15 +203,6 @@ if (defined($opt_u) && $opt_u) {
     $opts{DEFINE} .= ' -DWITH_UNICODE';
     require 5.008001;
 }
-
-print <<"EOT";
-
-**********
-\tRemember to actually *READ* the README file!
-\tAnd re-read it if you have any problems.\n
-**********
-
-EOT
 
 my (@known_drivers) = sort { $a cmp $b } (
 	'Microsoft ODBC',
@@ -301,8 +310,22 @@ if ($OSNAME eq 'MSWin32') {
             $odbchome = '/opt/sapdb/interfaces/odbc/';
         }
     }
-
-    if ($OSNAME !~ /MSWin/) {
+    if($OSNAME eq 'cygwin'){#Trade cygwin as MSWin.
+        my $extrainc = q{};
+        $extrainc = ";$Config{incpath}\\mfc" if $Config{cc} eq 'bcc32';
+        $opts{SKIP} = ['processPL'];
+        if (!defined($opt_u) || $opt_u) {
+            $opts{DEFINE}  .= " -DWITH_UNICODE";
+            require 5.008001;
+        }
+        $opts{INC}  = "$extrainc";
+        $opts{LIBS} = ["ODBC32.LIB"];
+        $opts{macro}->{EXTRALIB} = 'ODBC32.LIB';
+        print {$sqlhfh} "#include <windows.h>\n";
+        print {$sqlhfh}
+            "#include <sql.h>\n#include <sqltypes.h>\n#include <sqlext.h>\n";
+    
+    } elsif ($OSNAME !~ /MSWin/  ) {
         # look for Ingres' driver manager first on the basis of if you
         # have ingres you probably want to use it. Also Ingres ships with
         # libs that look like unixODBC/iODBC

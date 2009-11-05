@@ -20,8 +20,6 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
  Change SQLColAttributes calls (now deprecated) to SQLColAttribute
  Change SQLTransact calls to SQLEndTran calls.
  Add support for $sth->more_results based on DBD::ODBC-specific attribute
- Use odbcinst (if it exists to point people at the ini files they need to use)
- Use odbc_config (if it exists to find out about unixODBC).
  There is a Columns private ODBC method which is not documented.
  Add support for sending lobs in chunks instead of all in one go. Although
    DBD::ODBC uses SQLParamData and SQLPutData internally they are not exposed
@@ -63,6 +61,17 @@ New FAQ entries from Oystein Torget for bind parameter bugs in SQL Server.
 rt_46597.rt - update on wrong table
 
 Copied dbivport.h from the latest DBI distribution into DBD::ODBC.
+
+Added if_you_are_taking_over_this_code.txt.
+
+Add latest Devel::PPPort ppport.h to DBD::ODBC and followed all
+recommendations for changes to dbdimp.c.
+
+Added change to Makefile.PL provided by Shawn Zong to make
+Windows/Cygwin work again.
+
+Minor change to Makefile.PL to output env vars to help in debugging
+peoples build failures.
 
 =head2 Changes in DBD::ODBC 1.23 September 11, 2009
 
