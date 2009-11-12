@@ -90,6 +90,7 @@ t/20SqlServer.t
 t/30Oracle.t
 t/40UnicodeRoundTrip.t
 t/41Unicode.t
+t/50_odbc_utf8_on.t
 t/ODBCTEST.pm
 t/UChelp.pm
 t/pod.t

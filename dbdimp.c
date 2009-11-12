@@ -89,6 +89,7 @@ int dbd_st_finish(SV *sth, imp_sth_t *imp_sth);
 #define ODBC_PUTDATA_START             0x833E
 #define ODBC_OUTCON_STR                0x833F
 #define ODBC_COLUMN_DISPLAY_SIZE       0x8340
+#define ODBC_UTF8_ON                   0x8341
 
 /* This is the bind type for parameters we fall back to if the bind_param
    method was not given a parameter type and SQLDescribeParam is not supported
@@ -308,6 +309,7 @@ static int build_results(SV *sth, SV *dbh, RETCODE orc)
    imp_sth->eod = -1;
 
    imp_sth->odbc_column_display_size = imp_dbh->odbc_column_display_size;
+   imp_sth->odbc_utf8_on = imp_dbh->odbc_utf8_on;
 
    if (!dbd_describe(sth, imp_sth, 0)) {
       /* SQLFreeStmt(imp_sth->hstmt, SQL_DROP); */ /* TBD: 3.0 update */
@@ -1744,6 +1746,8 @@ int odbc_st_prepare_sv(
    imp_sth->odbc_query_timeout = imp_dbh->odbc_query_timeout;
    imp_sth->odbc_putdata_start = imp_dbh->odbc_putdata_start;
    imp_sth->odbc_column_display_size = imp_dbh->odbc_column_display_size;
+   imp_sth->odbc_utf8_on = imp_dbh->odbc_utf8_on;
+
    if (DBIc_TRACE(imp_dbh, 0, 0, 5))
        TRACE1(imp_dbh, "    initializing sth query timeout to %d\n",
               (int)imp_dbh->odbc_query_timeout);
@@ -2869,6 +2873,13 @@ AV *dbd_st_fetch(SV *sth, imp_sth_t *imp_sth)
                    --fbh->datalen;
            }
            sv_setpvn(sv, (char*)fbh->data, fbh->datalen);
+	   if (imp_sth->odbc_utf8_on && fbh->ftype != SQL_C_BINARY ) {
+#ifdef sv_utf8_decode
+           sv_utf8_decode(sv);
+#else
+           SvUTF8_on(sv);
+#endif
+	   }
       }
    }
    return av;
@@ -3773,6 +3784,7 @@ static db_params S_db_storeOptions[] =  {
    { "odbc_query_timeout", ODBC_QUERY_TIMEOUT },
    { "odbc_putdata_start", ODBC_PUTDATA_START },
    { "odbc_column_display_size", ODBC_COLUMN_DISPLAY_SIZE },
+   { "odbc_utf8_on", ODBC_UTF8_ON },
    { NULL },
 };
 
@@ -3791,6 +3803,7 @@ static db_params S_db_fetchOptions[] =  {
    { "odbc_query_timeout", ODBC_QUERY_TIMEOUT},
    { "odbc_putdata_start", ODBC_PUTDATA_START},
    { "odbc_column_display_size", ODBC_COLUMN_DISPLAY_SIZE},
+   { "odbc_utf8_on", ODBC_UTF8_ON},
    { "odbc_has_unicode", ODBC_HAS_UNICODE},
    { "odbc_out_connect_string", ODBC_OUTCON_STR},
    { NULL }
@@ -3912,6 +3925,11 @@ int dbd_db_STORE_attrib(SV *dbh, imp_dbh_t *imp_dbh, SV *keysv, SV *valuesv)
       case ODBC_COLUMN_DISPLAY_SIZE:
 	 bSetSQLConnectionOption = FALSE;
 	 imp_dbh->odbc_column_display_size = SvIV(valuesv);
+	 break;
+
+      case ODBC_UTF8_ON:
+	 bSetSQLConnectionOption = FALSE;
+	 imp_dbh->odbc_utf8_on = SvIV(valuesv);
 	 break;
 
       case ODBC_EXEC_DIRECT:
@@ -4148,6 +4166,11 @@ SV *dbd_db_FETCH_attrib(SV *dbh, imp_dbh_t *imp_dbh, SV *keysv)
       case ODBC_COLUMN_DISPLAY_SIZE:
         retsv = newSViv(imp_dbh->odbc_column_display_size);
         break;
+
+      case ODBC_UTF8_ON:
+        retsv = newSViv(imp_dbh->odbc_utf8_on);
+        break;
+
 
       case ODBC_HAS_UNICODE:
         retsv = newSViv(imp_dbh->odbc_has_unicode);
@@ -5399,6 +5422,7 @@ static int post_connect(
    imp_dbh->odbc_query_timeout = -1;
    imp_dbh->odbc_putdata_start = 32768;
    imp_dbh->odbc_column_display_size = 2001;
+   imp_dbh->odbc_utf8_on = 0;
    imp_dbh->odbc_exec_direct = 0; /* default to not having SQLExecDirect used */
    imp_dbh->RowCacheSize = 1;	/* default value for now */
 
@@ -5538,6 +5562,28 @@ static int post_connect(
                      strlen("odbc_column_display_size"), G_DISCARD);
        }
    }
+
+   /* odbc_utf8_on */
+   {
+       SV **svp;
+       IV column_display_size_value;
+
+       DBD_ATTRIB_GET_IV(
+           attr, "odbc_utf8_on",
+	   strlen("odbc_utf8_on"),
+           svp, column_display_size_value);
+       if (svp) {
+           imp_dbh->odbc_utf8_on = 0;
+           if (DBIc_TRACE(imp_dbh, 0x04000000, 0, 0))
+               TRACE1(imp_dbh,
+		      "    Setting UTF8_ON to %d\n",
+                      (int)column_display_size_value);
+           /* delete odbc_utf8_on so we don't see it again via STORE */
+           hv_delete((HV*)SvRV(attr), "odbc_utf8_on",
+                     strlen("odbc_utf8_on"), G_DISCARD);
+       }
+   }
+
 
    return 1;
 

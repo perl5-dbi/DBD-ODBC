@@ -136,7 +136,8 @@ $DBD::ODBC::VERSION = '1.23_1';
                 odbc_version => undef,
                 odbc_err_handler => undef,
                 odbc_putdata_start => undef, # sth and dbh
-                odbc_column_display_size => undef # sth and dbh
+                odbc_column_display_size => undef, # sth and dbh
+                odbc_utf8_on => undef # sth and dbh
                };
     }
 
@@ -489,7 +490,8 @@ $DBD::ODBC::VERSION = '1.23_1';
                 odbc_async_exec => undef, # sth and dbh
                 odbc_query_timeout => undef, # sth and dbh
                 odbc_putdata_start => undef, # sth and dbh
-                odbc_column_display_size => undef # sth and dbh
+                odbc_column_display_size => undef, # sth and dbh
+                odbc_utf8_on => undef # sth and dbh
                };
     }
 
@@ -515,7 +517,7 @@ DBD::ODBC - ODBC Driver for DBI
 
 =head1 VERSION
 
-This documentation refers to DBD::ODBC version 1.22_2.
+This documentation refers to DBD::ODBC version 1.23_1.
 
 =head1 SYNOPSIS
 
@@ -759,6 +761,19 @@ where the size cannot be determined.
 
 The default for odbc_column_display_size is 2001 because this value was
 hard-coded in DBD::ODBC until 1.17_3.
+
+=head3 odbc_utf8_on
+
+Set this flag to treat all strings returned from the ODBC driver
+(except columns described as SQL_BINARY or SQL_TIMESTAMP and its
+variations) as UTF-8 encoded.  Some ODBC drivers (like Aster and maybe
+PostgreSQL) return UTF-8 encoded data but do not support the SQLxxxW
+unicode API. Enabling this flag will cause DBD::ODBC to treat driver
+returned data as UTF-8 encoded and it will be marked as such in Perl.
+
+Do not confuse this with DBD::ODBC's unicode support. The
+C<odbc_utf8_on> attribute only applies to non-unicode enabled builds
+of DBD::ODBC.
 
 =head2 Private connection attributes
 
@@ -1480,6 +1495,8 @@ Unless you need to use ODBC, if you want Unicode support with Oracle
 you are better off using L<DBD::Oracle>.
 
 =head3 Unicode and PostgreSQL
+
+See the odbc_utf8_on parameter to treat all strings as utf8.
 
 Some tests from the original DBD::ODBC 1.13 fail with PostgreSQL
 8.0.3, so you may not want to use DBD::ODBC to connect to PostgreSQL
