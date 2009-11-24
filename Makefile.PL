@@ -805,20 +805,23 @@ EOT
     chomp $lib;
     print "  odbc_config reports --lib-prefix=$lib\n";
 
+    my $found_hdrs = 0;
     # try with --include-prefix
     if (defined($inc) && (-e $inc) && files_exist($inc, @hdrstofind)) {
         print "  ODBC INC dir set to $inc from odbc_config\n";
+        $found_hdrs++;
     } elsif (-e "$home") {
         # try with --prefix + include
         $inc = File::Spec->catdir($home, 'include');
         if ((-e "$inc") && files_exist($inc, @hdrstofind)) {
             print "  ODBC INC dir set to $inc from odbc_config\n";
+            $found_hdrs++;
         }
-    } else {
+    }
+    if (!$found_hdrs) {
         print "  but cannot find header files " . join(',', @hdrstofind) .
             " in that path so ignoring\n";
         print "NOTE: Have you installed the unixodbc-dev package\n";
-
         return;
     }
 
@@ -885,15 +888,19 @@ sub iodbc_config
     $inc = File::Spec->catdir($home, 'include');
     $lib = File::Spec->catdir($home, 'lib');
 
+    my $found_hdrs = 0;
     if ((defined($inc)) && (-e $inc) && files_exist($inc, @hdrstofind)) {
         print "  ODBC INC dir set to $inc from iodbc-config\n";
+        $found_hdrs++;
     } elsif (-e $home) {
         # try with --prefix + include
         $inc = File::Spec->catdir($home, 'include');
         if (defined($inc) && (-e $inc) && files_exist($inc, @hdrstofind)) {
             print "  ODBC INC dir set to $inc from iodbc_config\n";
+            $found_hdrs++;
         }
-    } else {
+    }
+    if (!$found_hdrs) {
         print "  but cannot find header files " . join(',', @hdrstofind) .
             " in that path so ignoring\n";
         print "NOTE: Have you installed the libiodbc-dev package.\n";
