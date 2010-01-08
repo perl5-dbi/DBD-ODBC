@@ -50,6 +50,9 @@ Fixed bug in Makefile.PL which could fail to find unixODBC/iODBC
 header files but not report it as a problem. Thanks to Thomas
 J. Dillman and his smoker for finding this.
 
+Fixed some compiler warnings in dbdimp.c output by latest gcc wrt to
+format specifiers in calls to PerlIO_printf.
+
 =head2 Changes in DBD::ODBC  1.23_1 October 21, 2009
 
 makefile.PL changes:

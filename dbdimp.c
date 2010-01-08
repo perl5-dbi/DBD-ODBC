@@ -26,6 +26,8 @@
  *
  * SV Manipulation Functions
  *   http://perl.active-venture.com/pod/perlapi-svfunctions.html
+ * Formatted Printing of IVs, UVs, and NVs
+ *   http://perldoc.perl.org/perlguts.html#Formatted-Printing-of-IVs,-UVs,-and-NVs
  */
 #define NEED_newRV_noinc
 #define NEED_sv_2pv_flags
@@ -121,16 +123,17 @@ static RETCODE odbc_set_query_timeout(SV *h, HSTMT hstmt, UV odbc_timeout)
    RETCODE rc;
    D_imp_xxh(h);
    if (DBIc_TRACE(imp_xxh, 0, 0, 3)) {
-      TRACE1(imp_xxh, "   Set timeout to: %d\n", odbc_timeout);
+      TRACE1(imp_xxh, "   Set timeout to: %"UVuf"\n", odbc_timeout);
    }
    rc = SQLSetStmtAttr(hstmt,(SQLINTEGER)SQL_ATTR_QUERY_TIMEOUT,
                        (SQLPOINTER)odbc_timeout,(SQLINTEGER)SQL_IS_INTEGER);
    if (!SQL_SUCCEEDED(rc)) {
       /* raise warnings if setting fails, but don't die? */
        if (DBIc_TRACE(imp_xxh, 0, 0, 3))
-           TRACE1(imp_xxh,
-                  "    !!Failed to set Statement ATTR Query Timeout to %d\n",
-                  (int)odbc_timeout);
+           TRACE1(
+               imp_xxh,
+               "    !!Failed to set Statement ATTR Query Timeout to %"UVuf"\n",
+               odbc_timeout);
    }
    return rc;
 }
@@ -209,8 +212,8 @@ static void odbc_handle_outparams(imp_sth_t *imp_sth, int debug)
       phs_t *phs = (phs_t*)(void*)SvPVX(AvARRAY(imp_sth->out_params_av)[i]);
       SV *sv = phs->sv;
       if (debug >= 8) {
-	 TRACE2(imp_sth, "    outparam %s, length:%d\n",
-                phs->name, phs->strlen_or_ind);
+	 TRACE2(imp_sth, "    outparam %s, length:%ld\n",
+                phs->name, (long)phs->strlen_or_ind);
       }
 
       /* phs->strlen_or_ind has been updated by ODBC to hold the length
@@ -298,7 +301,7 @@ static int build_results(SV *sth, SV *dbh, RETCODE orc)
    dTHR;
 
    if (DBIc_TRACE(imp_sth, 0, 0, 3))
-       TRACE2(imp_sth, "    build_results sql f%d\n\t%s\n",
+       TRACE2(imp_sth, "    build_results sql %p\n\t%s\n",
               imp_sth->hstmt, imp_sth->statement);
 
    /* init sth pointers */
@@ -1154,9 +1157,10 @@ void dbd_error2(
    struct imp_sth_st *imp_sth = NULL;
 
    if (DBIc_TRACE(imp_xxh, 0, 0, 4)) {
-       PerlIO_printf(DBIc_LOGPIO(imp_xxh),
-                     "    !!dbd_error2(err_rc=%d, what=%s, handles=(%p,%p,%p)\n",
-                     err_rc, (what ? what : "null"), henv, hdbc, hstmt);
+       PerlIO_printf(
+           DBIc_LOGPIO(imp_xxh),
+           "    !!dbd_error2(err_rc=%d, what=%s, handles=(%p,%p,%p)\n",
+           err_rc, (what ? what : "null"), henv, hdbc, hstmt);
    }
 
    switch(DBIc_TYPE(imp_xxh)) {
@@ -1749,8 +1753,8 @@ int odbc_st_prepare_sv(
    imp_sth->odbc_utf8_on = imp_dbh->odbc_utf8_on;
 
    if (DBIc_TRACE(imp_dbh, 0, 0, 5))
-       TRACE1(imp_dbh, "    initializing sth query timeout to %d\n",
-              (int)imp_dbh->odbc_query_timeout);
+       TRACE1(imp_dbh, "    initializing sth query timeout to %ld\n",
+              (long)imp_dbh->odbc_query_timeout);
 
    if ((dbh_active = check_connection_active(sth)) == 0) return 0;
 
@@ -2030,7 +2034,8 @@ int dbd_describe(SV *h, imp_sth_t *imp_sth, int more)
                 dbd_error(h, rc, "dbd_describe/SQLNumResultCols");
                 return 0;
             } else if (DBIc_TRACE(imp_sth, 0, 0, 8)) {
-                TRACE1(imp_dbh, "    num fields after MoreResults = %d\n",
+                TRACE1(imp_dbh,
+                       "    num fields after MoreResults = %d\n",
                        num_fields);
             }
         } /* end of SQLMoreResults */
@@ -2143,7 +2148,8 @@ int dbd_describe(SV *h, imp_sth_t *imp_sth, int more)
              fbh->ColDisplaySize = 0;
              rc = SQL_SUCCESS;
         } else if (DBIc_TRACE(imp_sth, 0, 0, 8)) {
-            TRACE1(imp_sth, "     display size = %ld\n", fbh->ColDisplaySize);
+            TRACE1(imp_sth, "     display size = %ld\n",
+                   (long)fbh->ColDisplaySize);
         }
 
         /* TBD: should we only add a terminator if it's a char??? */
@@ -2162,11 +2168,12 @@ int dbd_describe(SV *h, imp_sth_t *imp_sth, int more)
 	    if( DBIc_TRACE(imp_sth, 0, 0, 8) ) {
 	      TRACE1(imp_sth,
 		     "     describe/SQLColAttributes/SQL_COLUMN_LENGTH not "
-		     "supported, fallback on %d\n", fbh->ColLength);
+		     "supported, fallback on %ld\n", (long)fbh->ColLength);
 	    }
 	    rc = SQL_SUCCESS;
         } else if (DBIc_TRACE(imp_sth, 0, 0, 8)) {
-            TRACE1(imp_sth, "     column length = %ld\n", fbh->ColLength);
+            TRACE1(imp_sth, "     column length = %ld\n",
+                   (long)fbh->ColLength);
         }
 # if defined(WITH_UNICODE)
         fbh->ColLength += 1; /* add extra byte for double nul terminator */
@@ -2287,12 +2294,12 @@ int dbd_describe(SV *h, imp_sth_t *imp_sth, int more)
 
         if (DBIc_TRACE(imp_sth, 0, 0, 4))
             PerlIO_printf(DBIc_LOGPIO(imp_dbh),
-                          "     now using col %d: type = %s (%d), len = %d, "
-                          "display size = %d, prec = %d, scale = %d\n",
+                          "     now using col %d: type = %s (%d), len = %ld, "
+                          "display size = %ld, prec = %ld, scale = %lu\n",
                           i+1, S_SqlTypeToString(fbh->ColSqlType),
                           fbh->ColSqlType,
-                          fbh->ColLength, fbh->ColDisplaySize,
-                          fbh->ColDef, fbh->ColScale);
+                          (long)fbh->ColLength, (long)fbh->ColDisplaySize,
+                          (long)fbh->ColDef, (unsigned long)fbh->ColScale);
     }
     if (!SQL_SUCCEEDED(rc)) {
         /* dbd_error called above */
@@ -2539,8 +2546,9 @@ int dbd_st_execute(
       RETCODE rc2;
       rc2 = SQLRowCount(imp_sth->hstmt, &imp_sth->RowCount);
       if (DBIc_TRACE(imp_sth, 0, 0, 7))
-          TRACE2(imp_dbh, "    SQLRowCount=%d (rows=%d)\n",
-                 rc2, (SQL_SUCCEEDED(rc2) ? imp_sth->RowCount : -1));
+          TRACE2(imp_dbh, "    SQLRowCount=%d (rows=%ld)\n",
+                 rc2,
+                 (long)(SQL_SUCCEEDED(rc2) ? imp_sth->RowCount : (SQLLEN)-1));
       if (!SQL_SUCCEEDED(rc2)) {
 	 dbd_error(sth, rc2, "st_execute/SQLRowCount");	/* XXX ? */
 	 imp_sth->RowCount = -1;
@@ -2805,8 +2813,10 @@ AV *dbd_st_fetch(SV *sth, imp_sth_t *imp_sth)
 
       if (DBIc_TRACE(imp_sth, 0, 0, 4))
 	 PerlIO_printf(
-             DBIc_LOGPIO(imp_dbh), "    fetch col#%d %s datalen=%d displ=%d\n",
-             i+1, fbh->ColName, fbh->datalen, fbh->ColDisplaySize);
+             DBIc_LOGPIO(imp_dbh),
+             "    fetch col#%d %s datalen=%ld displ=%lu\n",
+             i+1, fbh->ColName, (long)fbh->datalen,
+             (unsigned long)fbh->ColDisplaySize);
 
       if (fbh->datalen == SQL_NULL_DATA) {	/* NULL value		*/
 	 SvOK_off(sv);
@@ -3058,11 +3068,12 @@ static void get_param_type(SV *sth, imp_sth_t *imp_sth, phs_t *phs)
            if (DBIc_TRACE(imp_sth, 0, 0, 5))
                PerlIO_printf(DBIc_LOGPIO(imp_dbh),
                              "      SQLDescribeParam %s: SqlType=%s(%d) "
-                             "param_size=%d Scale=%d Nullable=%d\n",
+                             "param_size=%ld Scale=%d Nullable=%d\n",
                              phs->name,
                              S_SqlTypeToString(phs->described_sql_type),
                              phs->described_sql_type,
-                             phs->param_size, ibScale, fNullable);
+                             (unsigned long)phs->param_size, ibScale,
+                             fNullable);
 
            /*
             * for non-integral numeric types, let the driver/database handle
@@ -3077,10 +3088,10 @@ static void get_param_type(SV *sth, imp_sth_t *imp_sth, phs_t *phs)
                if (DBIc_TRACE(imp_sth, 0, 0, 5))
                    TRACE3(imp_dbh,
                           "      Param %s is numeric SQL type %s "
-                          "(param size:%d) changed to SQL_VARCHAR",
+                          "(param size:%lu) changed to SQL_VARCHAR",
                           phs->name,
                           S_SqlTypeToString(phs->described_sql_type),
-                          phs->param_size);
+                          (unsigned long)phs->param_size);
                phs->sql_type = SQL_VARCHAR;
                break;
              default:
@@ -3149,7 +3160,7 @@ static int rebind_param(
       PerlIO_printf(
           DBIc_LOGPIO(imp_dbh),
           "    +rebind_param %s '%.100s' (size svCUR=%d/SvLEN=%d/max=%ld) "
-          "svtype %ld, value type:%d sql type:%d\n",
+          "svtype %u, value type:%d sql type:%d\n",
           phs->name, text, SvOK(phs->sv) ? SvCUR(phs->sv) : -1,
           SvOK(phs->sv) ? SvLEN(phs->sv) : -1 ,phs->maxlen,
           SvTYPE(phs->sv), phs->value_type, phs->sql_type);
@@ -3372,9 +3383,9 @@ static int rebind_param(
    }
    if (DBIc_TRACE(imp_sth, 0, 0, 4)) {
       PerlIO_printf(DBIc_LOGPIO(imp_dbh),
-		    "      bind %s value_type:%d %s cs=%d dd=%d bl=%ld\n",
+		    "      bind %s value_type:%d %s cs=%lu dd=%d bl=%ld\n",
 		    phs->name, value_type, S_SqlTypeToString(phs->sql_type),
-		    column_size, d_digits, buffer_length);
+		    (unsigned long)column_size, d_digits, buffer_length);
    }
 
    if (value_len < imp_sth->odbc_putdata_start) {
@@ -3521,11 +3532,12 @@ static int rebind_param(
       PerlIO_printf(
           DBIc_LOGPIO(imp_dbh),
           "    SQLBindParameter: idx=%d: param_type=%d, name=%s, "
-          "value_type=%d, SQL_Type=%d, column_size=%d, d_digits=%d, "
-          "value_ptr=%p, buffer_length=%d, cbValue=%d, param_size=%d\n",
+          "value_type=%d, SQL_Type=%d, column_size=%lu, d_digits=%d, "
+          "value_ptr=%p, buffer_length=%ld, cbValue=%ld, param_size=%lu\n",
           phs->idx, param_type, phs->name, value_type, phs->sql_type,
-          column_size, d_digits, value_ptr, buffer_length, phs->strlen_or_ind,
-          phs->param_size);
+          (unsigned long)column_size, d_digits, value_ptr,
+          (long)buffer_length, (long)phs->strlen_or_ind,
+          (unsigned long)phs->param_size);
       /* avoid tracing data_at_exec as value_ptr will point to phs */
       if ((value_type == SQL_C_CHAR) && (phs->strlen_or_ind > 0)) {
           TRACE1(imp_sth, "      Param value = %s\n", value_ptr);
@@ -3709,9 +3721,10 @@ long destoffset;
 		   ((UCHAR *)SvPVX(bufsv)) + destoffset, len, &retl
 		  );
    if (DBIc_TRACE(imp_sth, 0, 0, 4))
-      PerlIO_printf(DBIc_LOGPIO(imp_sth),
-		    "SQLGetData(...,off=%d, len=%d)->rc=%d,len=%d SvCUR=%d\n",
-		    destoffset, len, rc, retl, SvCUR(bufsv));
+      PerlIO_printf(
+          DBIc_LOGPIO(imp_sth),
+          "SQLGetData(...,off=%ld, len=%ld)->rc=%d,len=%ld SvCUR=%d\n",
+          destoffset, len, rc, (long)retl, SvCUR(bufsv));
 
    if (!SQL_SUCCEEDED(rc)) {
       dbd_error(sth, rc, "dbd_st_blob_read/SQLGetData");
@@ -5490,7 +5503,7 @@ static int post_connect(
        if (svp && odbc_cursortype) {
            if (DBIc_TRACE(imp_dbh, 0x04000000, 0, 0))
                TRACE1(imp_dbh,
-                      "    Setting cursor type to: %d", odbc_cursortype);
+                      "    Setting cursor type to: %"UVuf"\n", odbc_cursortype);
            /* delete odbc_cursortype so we don't see it again via STORE */
            hv_delete((HV*)SvRV(attr), "odbc_cursortype",
                      strlen("odbc_cursortype"), G_DISCARD);
