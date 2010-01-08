@@ -321,7 +321,7 @@ L<http://technet.microsoft.com/en-US/library/ms131667.aspx> which
 basically says I<Prepared statements cannot be used to create
 temporary objects on SQL Server 2000 or later...>. The proper way to
 avoid this is to use the C<do> method but if you cannot do that then
-you need to add the L</odbc_exec_direct> attribute to your prepare as
+you need to add the L</DBD/ODBC/odbc_exec_direct> attribute to your prepare as
 follows:
 
   my $s = $h->prepare('select * into #tmp from mytable',
@@ -701,6 +701,14 @@ This bug is known to affect Microsoft SQL Server ODBC driver version
 2000.85.1132.00.
 
 See bug report https://rt.cpan.org/Public/Bug/Display.html?id=49065
+
+=head2 HY009, "invalid length or pointer" from SQLite
+
+See rt 52651 at http://rt.cpan.org/Public/Bug/Display.html?id=52651.
+
+During connection if you get a HY009 "invalid length or pointer" error
+it is a bug in SQLSetConnectAttr in SQLite and you will need a version
+at least 0.85pre1.
 
 =head1 AUTHOR
 
