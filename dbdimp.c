@@ -3,7 +3,7 @@
  * portions Copyright (c) 1994,1995,1996,1997  Tim Bunce
  * portions Copyright (c) 1997 Thomas K. Wenrich
  * portions Copyright (c) 1997-2001 Jeff Urlwin
- * portions Copyright (c) 2007-2009 Martin J. Evans
+ * portions Copyright (c) 2007-2010 Martin J. Evans
  *
  * You may distribute under the terms of either the GNU General Public
  * License or the Artistic License, as specified in the Perl README file.
@@ -92,6 +92,7 @@ int dbd_st_finish(SV *sth, imp_sth_t *imp_sth);
 #define ODBC_OUTCON_STR                0x833F
 #define ODBC_COLUMN_DISPLAY_SIZE       0x8340
 #define ODBC_UTF8_ON                   0x8341
+#define ODBC_FORCE_BIND_TYPE           0x8342
 
 /* This is the bind type for parameters we fall back to if the bind_param
    method was not given a parameter type and SQLDescribeParam is not supported
@@ -1746,6 +1747,7 @@ int odbc_st_prepare_sv(
    imp_sth->odbc_ignore_named_placeholders =
        imp_dbh->odbc_ignore_named_placeholders;
    imp_sth->odbc_default_bind_type = imp_dbh->odbc_default_bind_type;
+   imp_sth->odbc_force_bind_type = imp_dbh->odbc_force_bind_type;
    imp_sth->odbc_force_rebind = imp_dbh->odbc_force_rebind;
    imp_sth->odbc_query_timeout = imp_dbh->odbc_query_timeout;
    imp_sth->odbc_putdata_start = imp_dbh->odbc_putdata_start;
@@ -3036,7 +3038,11 @@ static void get_param_type(SV *sth, imp_sth_t *imp_sth, phs_t *phs)
    if (DBIc_TRACE(imp_sth, 0, 0, 4))
        TRACE2(imp_sth, "    +get_param_type(%p,%s)\n", sth, phs->name);
 
-   if (imp_dbh->odbc_sqldescribeparam_supported != 1) {
+   if (imp_sth->odbc_force_bind_type != 0) {
+       phs->sql_type = imp_sth->odbc_force_bind_type;
+       if (DBIc_TRACE(imp_sth, 0, 0, 4))
+           TRACE1(imp_dbh, "      forced param type to %d\n", phs->sql_type);
+   } else if (imp_dbh->odbc_sqldescribeparam_supported != 1) {
        /* As SQLDescribeParam is not supported by the ODBC driver we need to
           default a SQL type to bind the parameter as. The default is either
           the value set with odbc_default_bind_type or a fallback of
@@ -3788,6 +3794,7 @@ static db_params S_db_storeOptions[] =  {
    { "odbc_SQL_ROWSET_SIZE", SQL_ROWSET_SIZE },
    { "odbc_ignore_named_placeholders", ODBC_IGNORE_NAMED_PLACEHOLDERS },
    { "odbc_default_bind_type", ODBC_DEFAULT_BIND_TYPE },
+   { "odbc_force_bind_type", ODBC_FORCE_BIND_TYPE },
    { "odbc_force_rebind", ODBC_FORCE_REBIND },
    { "odbc_async_exec", ODBC_ASYNC_EXEC },
    { "odbc_err_handler", ODBC_ERR_HANDLER },
@@ -3808,6 +3815,7 @@ static db_params S_db_fetchOptions[] =  {
    { "odbc_SQL_DRIVER_ODBC_VER", SQL_DRIVER_ODBC_VER },
    { "odbc_ignore_named_placeholders", ODBC_IGNORE_NAMED_PLACEHOLDERS },
    { "odbc_default_bind_type", ODBC_DEFAULT_BIND_TYPE },
+   { "odbc_force_bind_type", ODBC_FORCE_BIND_TYPE },
    { "odbc_force_rebind", ODBC_FORCE_REBIND },
    { "odbc_async_exec", ODBC_ASYNC_EXEC },
    { "odbc_err_handler", ODBC_ERR_HANDLER },
@@ -3914,7 +3922,16 @@ int dbd_db_STORE_attrib(SV *dbh, imp_dbh_t *imp_dbh, SV *keysv, SV *valuesv)
 	  * but setting to 0 will cause SQLDescribeParam to be used.
 	  */
 	 imp_dbh->odbc_default_bind_type = (SQLSMALLINT)SvIV(valuesv);
+	 break;
 
+      case ODBC_FORCE_BIND_TYPE:
+	 bSetSQLConnectionOption = FALSE;
+	 /*
+	  * set value of the forced bind type.  Default is 0
+          * which means the bind type is not forced to be anything -
+          * we will use SQLDescribeParam or fall back on odbc_default_bind_type
+	  */
+	 imp_dbh->odbc_force_bind_type = (SQLSMALLINT)SvIV(valuesv);
 	 break;
 
       case ODBC_FORCE_REBIND:
@@ -4193,6 +4210,10 @@ SV *dbd_db_FETCH_attrib(SV *dbh, imp_dbh_t *imp_dbh, SV *keysv)
         retsv = newSViv(imp_dbh->odbc_default_bind_type);
         break;
 
+      case ODBC_FORCE_BIND_TYPE:
+        retsv = newSViv(imp_dbh->odbc_force_bind_type);
+        break;
+
       case ODBC_FORCE_REBIND:
         retsv = newSViv(imp_dbh->odbc_force_rebind);
         break;
@@ -4309,6 +4330,7 @@ static T_st_params S_st_fetch_params[] =
    s_A("odbc_putdata_start",0),	/* 17 */
    s_A("ParamTypes",0),        /* 18 */
    s_A("odbc_column_display_size",0),	/* 19 */
+   s_A("odbc_force_bind_type",0),             /* 20 */
    s_A("",0),			/* END */
 };
 
@@ -4320,6 +4342,7 @@ static T_st_params S_st_store_params[] =
    s_A("odbc_query_timeout",0),	/* 3 */
    s_A("odbc_putdata_start",0),	/* 4 */
    s_A("odbc_column_display_size",0),	/* 5 */
+   s_A("odbc_force_bind_type",0),	/* 6 */
    s_A("",0),			/* END */
 };
 #undef s_A
@@ -4547,6 +4570,9 @@ SV *dbd_st_FETCH_attrib(SV *sth, imp_sth_t *imp_sth, SV *keysv)
       case 19: /* odbc_column_display_size */
         retsv = newSViv(imp_sth->odbc_column_display_size);
         break;
+      case 20: /* odbc_force_bind_type */
+	 retsv = newSViv(imp_sth->odbc_force_bind_type);
+	 break;
       default:
 	 return Nullsv;
    }
@@ -4608,6 +4634,11 @@ int dbd_st_STORE_attrib(SV *sth, imp_sth_t *imp_sth, SV *keysv, SV *valuesv)
          imp_sth->odbc_column_display_size = SvIV(valuesv);
          return TRUE;
          break;
+
+      case 6:
+	 imp_sth->odbc_force_bind_type = SvIV(valuesv);
+	 return TRUE;
+	 break;
    }
    return FALSE;
 }
@@ -5424,6 +5455,7 @@ static int post_connect(
               imp_dbh->odbc_has_unicode ? "YES" : "NO");
 
    imp_dbh->odbc_default_bind_type = 0;
+   imp_dbh->odbc_force_bind_type = 0;
    /* flag to see if SQLDescribeParam is supported */
    imp_dbh->odbc_sqldescribeparam_supported = -1;
    /* flag to see if SQLDescribeParam is supported */
@@ -5610,7 +5642,7 @@ static SQLSMALLINT default_parameter_type(imp_sth_t *imp_sth, phs_t *phs)
         return imp_sth->odbc_default_bind_type;
     } else {
         /* MS Access can return an invalid precision error in the 12blob
-           test unless the large valud is bound as an SQL_LONGVARCHAR
+           test unless the large value is bound as an SQL_LONGVARCHAR
            or SQL_WLONGVARCHAR. Who knows what large is, but for now it is
            4000 */
         if (!SvOK(phs->sv)) {

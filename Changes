@@ -53,6 +53,11 @@ J. Dillman and his smoker for finding this.
 Fixed some compiler warnings in dbdimp.c output by latest gcc wrt to
 format specifiers in calls to PerlIO_printf.
 
+Added the odbc_force_bind_type attribute to help sort out problems
+with ODBC Drivers which support SQLDescribeParam but describe the
+parameters incorrectly (see rt 50852). Test case also added as
+rt_50852.t.
+
 =head2 Changes in DBD::ODBC  1.23_1 October 21, 2009
 
 makefile.PL changes:

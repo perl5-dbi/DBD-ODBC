@@ -6,7 +6,7 @@
  * portions Copyright (c) 1994,1995,1996  Tim Bunce
  * portions Copyright (c) 1997-2001 Jeff Urlwin
  * portions Copyright (c) 2001 Dean Arnold
- * portions Copyright (c) 2007-2009 Martin J. Evans
+ * portions Copyright (c) 2007-2010 Martin J. Evans
  *
  * You may distribute under the terms of either the GNU General Public
  * License or the Artistic License, as specified in the Perl README file.
@@ -38,6 +38,8 @@ struct imp_dbh_st {
     int  odbc_ignore_named_placeholders;
     /* flag to set default binding type (experimental) */
     SQLSMALLINT  odbc_default_bind_type;
+    /* force bound parameters to be this type */
+    SQLSMALLINT  odbc_force_bind_type;
     /* flag to see if SQLDescribeParam is supported */
     int  odbc_sqldescribeparam_supported;
     /* flag to see if SQLMoreResults is supported */
@@ -135,6 +137,7 @@ struct imp_sth_st {
     UWORD *row_status;			/* row indicators for array binding */
     int  odbc_ignore_named_placeholders;	/* flag to ignore named parameters */
     SQLSMALLINT odbc_default_bind_type;	/* flag to set default binding type (experimental) */
+    SQLSMALLINT odbc_force_bind_type;	/* force bound parameters to be this type */
     int  odbc_exec_direct;		/* flag for executing SQLExecDirect instead of SQLPrepare and SQLExecute.  Magic happens at SQLExecute() */
   int  odbc_force_rebind; /* force rebinding the output columns after each execute to */
 			       /* resolve some issues where certain stored procs can return */
