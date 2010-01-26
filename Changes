@@ -44,7 +44,7 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
 
 =head1 CHANGES
 
-=head2 Changes in DBD::ODBC  1.23_2 November NN, 2009
+=head2 Changes in DBD::ODBC  1.23_2 January 26, 2010
 
 Fixed bug in Makefile.PL which could fail to find unixODBC/iODBC
 header files but not report it as a problem. Thanks to Thomas
