@@ -4,6 +4,12 @@ good luck.
 
 However there are a few things I can say that might help you:
 
+o make sure you install Test::Pod, Test::Pod::Coverage and
+  Test::Kwalitee as tests using those modules only get run when they
+  are installed. If you don't install them you can bet someone else
+  will (probably someone packaging Perl modules for a Linux distro)
+  and you will have missed the failures.
+
 o when a new DBI is released get hold of it, get the latest dbivport.h
   and copy it into DBD::ODBC.
 
