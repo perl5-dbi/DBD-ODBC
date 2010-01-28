@@ -34,9 +34,6 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
    !!DBD::ODBC unsupported attribute passed (Username)
    !!DBD::ODBC unsupported attribute passed (dbi_connect_closure)
    !!DBD::ODBC unsupported attribute passed (LongReadLen)
-  strawberry perl build issue:
-    http://groups.google.com/group/perl.dbd.pg.changes/browse_thread/thread/8205bf83b5a48f63/cf43d87fe644798f?hl=en&q=easysoft&pli=1
-    http://www.nntp.perl.org/group/perl.dbi.users/2008/10/msg33322.html
   Add a perlcritic test - see DBD::Pg
   Why doesn't http://www.presicient.com/dbidocs/ display DBD::ODBC docs
     properly.
