@@ -3401,7 +3401,8 @@ static int rebind_param(
       SQLLEN vl = value_len;
 
       if (DBIc_TRACE(imp_sth, 0, 0, 4))
-          TRACE1(imp_dbh, "      using data_at_exec for size %ld\n", value_len);
+          TRACE1(imp_dbh, "      using data_at_exec for size %lu\n",
+                 (unsigned long)value_len);
 
       d_digits = 0;                         /* not relevant to lobs */
       phs->strlen_or_ind = SQL_LEN_DATA_AT_EXEC(vl);
@@ -3576,7 +3577,7 @@ int dbd_bind_ph(
     imp_sth_t *imp_sth,
     SV *ph_namesv,
     SV *newvalue,
-    IV sql_type,
+    IV in_sql_type,
     SV *attribs,
     int is_inout,
     IV maxlen)
@@ -3588,6 +3589,9 @@ int dbd_bind_ph(
    char namebuf[30];
    phs_t *phs;
    D_imp_dbh_from_sth;
+   SQLSMALLINT sql_type;
+
+   sql_type = (SQLSMALLINT)in_sql_type;
 
    if (SvNIOK(ph_namesv) ) {                /* passed as a number */
       name = namebuf;
@@ -3601,7 +3605,7 @@ int dbd_bind_ph(
        PerlIO_printf(
            DBIc_LOGPIO(imp_dbh),
            "+dbd_bind_ph(%p, name=%s, value='%.200s', attribs=%s, "
-           "sql_type=%ld(%s), is_inout=%d, maxlen=%ld\n",
+           "sql_type=%d(%s), is_inout=%d, maxlen=%ld\n",
            sth, name, SvOK(newvalue) ? SvPV_nolen(newvalue) : "undef",
            attribs ? SvPV_nolen(attribs) : "", sql_type,
            S_SqlTypeToString(sql_type), is_inout, maxlen);
@@ -4611,7 +4615,7 @@ int dbd_st_STORE_attrib(SV *sth, imp_sth_t *imp_sth, SV *keysv, SV *valuesv)
 	 return TRUE;
 
       case 1:
-	 imp_sth->odbc_default_bind_type = SvIV(valuesv);
+	 imp_sth->odbc_default_bind_type = (SQLSMALLINT)SvIV(valuesv);
 	 return TRUE;
 	 break;
 
@@ -4636,7 +4640,7 @@ int dbd_st_STORE_attrib(SV *sth, imp_sth_t *imp_sth, SV *keysv, SV *valuesv)
          break;
 
       case 6:
-	 imp_sth->odbc_force_bind_type = SvIV(valuesv);
+	 imp_sth->odbc_force_bind_type = (SQLSMALLINT)SvIV(valuesv);
 	 return TRUE;
 	 break;
    }

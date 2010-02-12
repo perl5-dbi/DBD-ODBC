@@ -239,6 +239,8 @@ if ($OSNAME eq 'MSWin32') {
 	$opts{DEFINE}  .= " -DWITH_UNICODE";
 	require 5.008001;
     }
+    # stop all those strcpt etc warnings:
+    $opts{DEFINE} .= " -D_CRT_SECURE_NO_DEPRECATE";
     $opts{INC}  = "$extrainc";
     $opts{LIBS} = ["ODBC32.LIB"];
     $opts{macro}->{EXTRALIB} = 'ODBC32.LIB';
