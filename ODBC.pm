@@ -12,7 +12,7 @@
 
 require 5.006;
 
-$DBD::ODBC::VERSION = '1.23_2';
+$DBD::ODBC::VERSION = '1.23_3';
 
 {
     ## no critic (ProhibitMagicNumbers ProhibitExplicitISA)

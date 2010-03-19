@@ -549,7 +549,7 @@ int dbd_db_login(
 /*  This API was introduced in DBI after 1.607 (subversion revision     */
 /*  11723) and is the same as dbd_db_login6 except the connection       */
 /*  strings are SVs so we can detect unicode strings and call           */
-/*  SQLDriverConnectW.                                                  */
+/*  SQLDriveConnectW.                                                  */
 /*                                                                      */
 /************************************************************************/
 int dbd_db_login6_sv(
@@ -1262,7 +1262,8 @@ void dbd_error2(
 	 }
 
          if (SQL_SUCCEEDED(err_rc)) {
-             DBIh_SET_ERR_CHAR(h, imp_xxh, "", 1, ErrorMsg, sqlstate, Nullch);
+             DBIh_SET_ERR_CHAR(h, imp_xxh, "" /* information state */,
+                               1, ErrorMsg, sqlstate, Nullch);
          } else {
              DBIh_SET_ERR_CHAR(h, imp_xxh, Nullch, 1, ErrorMsg,
                                sqlstate, Nullch);
@@ -2015,9 +2016,10 @@ int dbd_describe(SV *h, imp_sth_t *imp_sth, int more)
                 TRACE1(imp_sth,
                        "    Numfields = 0, SQLMoreResults = %d\n", rc);
             if (rc == SQL_SUCCESS_WITH_INFO) {
-                AllODBCErrors(imp_sth->henv, imp_sth->hdbc, imp_sth->hstmt,
-                              DBIc_TRACE(imp_sth, 0, 0, 4),
-                              DBIc_LOGPIO(imp_dbh));
+	       dbd_error(imp_sth, rc, "dbd_describe/SQLMoreResults");
+/*                AllODBCErrors(imp_sth->henv, imp_sth->hdbc, imp_sth->hstmt, */
+/*                               DBIc_TRACE(imp_sth, 0, 0, 4), */
+/*                               DBIc_LOGPIO(imp_dbh)); */
             }
             if (rc == SQL_NO_DATA) {
                 imp_sth->moreResults = 0;
@@ -2590,7 +2592,7 @@ int dbd_st_execute(
     *  execute) DBD::ODBC will call dbd_describe to describe the first
     *  execute, discover there is no result-set and call SQLMoreResults - ok,
     *  but after that, the dbd_describe is done and SQLMoreResults will not
-    *  get called. The following is a klude to get around this until
+    *  get called. The following is a kludge to get around this until
     *  a) DBD::ODBC can be changed to stop skipping over non-result-set
     *  generating statements and b) the SQLMoreResults calls move out of
     *  dbd_describe.

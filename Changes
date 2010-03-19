@@ -41,10 +41,17 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
 
 =head1 CHANGES
 
-=head2 Changes in DBD::ODBC  1.23_3 February 12, 2010
+=head2 Changes in DBD::ODBC  1.23_3 February 23, 2010
 
 Minor changes to Makefile.PL and dbdimp.c to remove some compiler
 warnings.
+
+Fix some calls to SQLMoreResults which were not passing informational
+messages on to DBI's set_err. As you could not see all the
+informational messages from a procedures, only the first.
+
+Fix minor issue in 02simple test which printed the Perl subversion
+before the version.
 
 =head2 Changes in DBD::ODBC  1.23_2 January 26, 2010
 
