@@ -180,11 +180,11 @@ EOT
             ok(!$ev, 'create perl_dbd_proc2 procedure');
 
           SKIP: {
-                skip 'failed toc reate perl_dbd_proc2 procedure', 8 if $ev;
+                skip 'failed to create perl_dbd_proc2 procedure', 8 if $ev;
 
-                _do_proc($dbh, 'perl_dbd_proc1');
+                _do_proc($dbh, 'PERL_DBD_PROC1');
 
-                _do_proc($dbh, 'perl_dbd_proc2');
+                _do_proc($dbh, 'PERL_DBD_PROC2');
             };
         };
     };
@@ -295,7 +295,8 @@ SKIP: {
        if (defined($time)) {
            $time =~ s/0000$//o;
        }
-      if ((defined($time) && $time ne $data[$i][0]) || defined($time) != defined($data[$i][0])) {
+      if ((defined($time) && $time ne $data[$i][0]) ||
+              defined($time) != defined($data[$i][0])) {
 	 diag("Retrieving: $i, $time string length: " . length($str) . "\t!time ");
 	 $iErrCount++;
       }
@@ -432,10 +433,10 @@ SKIP: {
    }
    is($iErrCount, 0, "timestamp handling");
 
-   eval {$dbh->do("DROP TABLE PERL_DBD_TABLE1");};
-   eval {$dbh->do("DROP PROCEDURE PERL_DBD_PROC1");};
+   eval {$dbh->do('DROP TABLE PERL_DBD_TABLE1');};
+   eval {$dbh->do('DROP PROCEDURE PERL_DBD_PROC1');};
 
-   eval {$dbh->do("CREATE TABLE PERL_DBD_TABLE1 (i INTEGER, j integer)");};
+   eval {$dbh->do('CREATE TABLE PERL_DBD_TABLE1 (i INTEGER, j integer)');};
    $proc1 = <<EOT;
 CREATE PROCEDURE PERL_DBD_PROC1 (\@i INT) AS
 DECLARE \@result INT;
@@ -451,20 +452,20 @@ END
 EOT
    $dbh->{RaiseError} = 0;
    eval {$dbh->do($proc1);};
-   my $sth = $dbh->prepare ("{call PERL_DBD_PROC1 (?)}");
+   my $sth = $dbh->prepare ('{call PERL_DBD_PROC1 (?)}');
    my $success = -1;
 
    $sth->bind_param (1, 99, SQL_INTEGER);
    $sth->execute();
    $success = -1;
    while (my @data = $sth->fetchrow_array()) {($success) = @data;}
-   is($success, 100, "procedure outputs results as result set");
+   is($success, 100, 'procedure outputs results as result set');
 
    $sth->bind_param (1, 10, SQL_INTEGER);
    $sth->execute();
    $success = -1;
    while (my @data = $sth->fetchrow_array()) {($success) = @data;}
-   is($success,10, "procedure outputs results as result set2");
+   is($success,10, 'procedure outputs results as result set2');
 
    $sth->bind_param (1, 111, SQL_INTEGER);
    $sth->execute();
@@ -477,7 +478,7 @@ EOT
 	 }
       }
    } while ($sth->{odbc_more_results});
-   is($success, 111, "procedure outputs results as result set 3");
+   is($success, 111, 'procedure outputs results as result set 3');
 
 
 #
@@ -634,7 +635,7 @@ AS
 
    $dbh->{odbc_exec_direct} = 1;
    is($dbh->{odbc_exec_direct}, 1, "test setting odbc_exec_direct");
-   $sth2 = $dbh->prepare("print 'START' select count(*) from perl_dbd_table1 print 'END'");
+   $sth2 = $dbh->prepare("print 'START' select count(*) from PERL_DBD_TABLE1 print 'END'");
    $sth2->execute;
    do {
       while (@row = $sth2->fetchrow_array) {
@@ -648,8 +649,8 @@ AS
    # need the finish if there are print statements (for now)
    #$sth2->finish;
    $dbh->{odbc_err_handler} = undef;
-   $dbh->do("insert into perl_dbd_table1 (i, j) values (1, 2)");
-   $dbh->do("insert into perl_dbd_table1 (i, j) values (3, 4)");
+   $dbh->do("insert into PERL_DBD_TABLE1 (i, j) values (1, 2)");
+   $dbh->do("insert into PERL_DBD_TABLE1 (i, j) values (3, 4)");
 
    $dbh->disconnect;
 

@@ -26,6 +26,7 @@ SKIP: {
         skip "Test::Pod 1.00 required for testing POD", $basic_tests;
     }
     my @pods = all_pod_files();
+    #diag("pod files: " . join(",", @pods));
     foreach my $pod (@pods) {
         next if $pod !~ /(ODBC.pm)|(FAQ.pm)|(Changes.pm)/;
         pod_file_ok($pod);

@@ -2016,7 +2016,7 @@ int dbd_describe(SV *h, imp_sth_t *imp_sth, int more)
                 TRACE1(imp_sth,
                        "    Numfields = 0, SQLMoreResults = %d\n", rc);
             if (rc == SQL_SUCCESS_WITH_INFO) {
-	       dbd_error(imp_sth, rc, "dbd_describe/SQLMoreResults");
+	       dbd_error(h, rc, "dbd_describe/SQLMoreResults");
 /*                AllODBCErrors(imp_sth->henv, imp_sth->hdbc, imp_sth->hstmt, */
 /*                               DBIc_TRACE(imp_sth, 0, 0, 4), */
 /*                               DBIc_LOGPIO(imp_dbh)); */

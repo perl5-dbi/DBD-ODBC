@@ -53,6 +53,10 @@ informational messages from a procedures, only the first.
 Fix minor issue in 02simple test which printed the Perl subversion
 before the version.
 
+Changes to 20SqlServer.t to fix a few typos and make table names
+consistent wrt to case - (as someone had turned on case-sensitivity in
+SQL Server) Similar changes in rt_38977.t and rt_50852.t
+
 =head2 Changes in DBD::ODBC  1.23_2 January 26, 2010
 
 Fixed bug in Makefile.PL which could fail to find unixODBC/iODBC
