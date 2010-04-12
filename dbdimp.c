@@ -1318,7 +1318,7 @@ void dbd_error(SV *h, RETCODE err_rc, char *what)
     * If an error handler is installed, let it decide what messages
     * should or shouldn't be reported.
     */
-   if ((err_rc == SQL_SUCCESS) && DBIc_TRACE(imp_dbh, 0, 0, 3) &&
+   if ((err_rc == SQL_SUCCESS) && !DBIc_TRACE(imp_dbh, 0, 0, 3) &&
        !imp_dbh->odbc_err_handler)
        return;
 

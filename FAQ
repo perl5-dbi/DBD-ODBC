@@ -710,6 +710,26 @@ During connection if you get a HY009 "invalid length or pointer" error
 it is a bug in SQLSetConnectAttr in SQLite and you will need a version
 at least 0.85pre1.
 
+=head2 Where do I get the lastest MDAC Development Kit?
+
+MS keep moving this around. If you want to build DBD::ODBC yourself
+from source you'll need the latest Microsoft Data Access Components
+(MDAC) Software Development Kit. You can get it as part of the Platform
+Development Kit, with some of the Visual Studio versions and occassionally
+from:
+
+http://msdn.microsoft.com/en-us/data/aa937730.aspx
+
+where in April 2010 it listed the "Microsoft Data Access Componetns (MDAC)
+2.8 Software Development Kit.
+
+=head2 Why does DBD::ODBC fail to compile with missing definitions for SQLLEN/SQLULEN?
+
+This happens because Microsoft changed their headers to add SQLLEN/SQLULEN
+types and your C headers are probably out of date. As DBD::ODBC needs
+to use these types you'll need an updated MDAC Development Kit. See
+" Where do I get the lastest MDAC Development Kit?".
+
 =head1 AUTHOR
 
 Parts of this document were written by Tim Bunce,

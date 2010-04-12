@@ -41,7 +41,16 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
 
 =head1 CHANGES
 
-=head2 Changes in DBD::ODBC  1.23_3 February 23, 2010
+=head2 Changes in DBD::ODBC  1.23_4 April 12, 2010
+
+Added more FAQs.
+
+Small optimization to remove calls to SQLError when tracing it not
+turned on. This was a bug. We only need to call SQLError when
+SQLExecute succeeds if there is an error handler or if tracing is
+enabled. The test was for tracing disabled!
+
+=head2 Changes in DBD::ODBC  1.23_3 March 24, 2010
 
 Minor changes to Makefile.PL and dbdimp.c to remove some compiler
 warnings.
