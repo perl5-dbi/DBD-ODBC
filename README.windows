@@ -22,15 +22,28 @@ Quick hints:
 
    perl Makefile.PL -nou
 
-4. If you are building DBD::ODBC for use with ActiveState Perl then
-   good luck. I have never managed to build DBD::ODBC in such a way
-   that it works with ActiveState Perl and had to resort to building
-   Perl for Windows from scratch then building DBD::ODBC. This is
-   something to do with the fact that you need the exact same compiler
-   ActiveState uses.
+4. If you are manually attempting to build DBD::ODBC for use with
+   ActiveState Perl (ActivePerl) don't. You can use cpan like this:
 
-   If you have reliable information on how to do this I would like to
-   know.
+   cpan M/MJ/MJEVANS/DBD-ODBC-1.23_4.tar.gz
+
+   If you don't have Microsoft VC on your PATH, then this will
+   download and install MinGW for you (inside the Perl tree) and use
+   that instead.
+
+   This should work for the latest builds of all major Perl versions,
+   5.8.9.827, 5.10.1.1007 and 5.12.0.1200.  On older versions you may
+   need to install MinGW with PPM "by-hand" first:
+
+   ppm install MinGW
+   cpan M/MJ/MJEVANS/DBD-ODBC-1.23_4.tar.gz
+
+   On ActivePerl 5.8.8 and earlier you will have to download, install
+   and configure MinGW and dmake manually though, so you may not want
+   to bother...
+
+5. With Strawberry Perl you can install DBD::ODBC from cpan as normal
+   - see below.
 
 64bit Windows
 =============
@@ -62,10 +75,22 @@ module.
 See http://rt.cpan.org/Public/Bug/Display.html?id=32811.
 
 Since DBD::ODBC 1.17_2 I believe we have a workaround in the
-Makefile.PL that stops this happening.
+Makefile.PL that stops this happening and in later Strawberry Perl
+versions the problem is fixed.
 
 Reported issues and workarounds
 ===============================
+
+Missing SQLLEN/SQLULEN definitions
+==================================
+
+MS changed the ODBC header files and introduced SQLLEN/SQLULEN types
+whicha re required to build on 64 bit platforms so DBD::ODBC now needs
+them.
+
+If you find you are missing definitions for SQLLEN/SQLULEN you need
+updated header files. See the DBD::ODBC FAQ for where you can find
+them.
 
 Visual Studio 6.0 and SDK Feb 2003
 ==================================
