@@ -41,14 +41,40 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
 
 =head1 CHANGES
 
-=head2 Changes in DBD::ODBC  1.23_4 April 12, 2010
+=head2 Changes in DBD::ODBC  1.23_5 April 20, 2010
+
+Added advice from Jan Dubois (ActiveState) on building DBD::ODBC for
+ActivePerl (see README.windows).
+
+rt56692. Fix spelling mistake in DBD::ODBC pod - thanks to Ansgar
+Burchardt.
+
+Added a 7th way to help documentation - become a tester.
+
+=head2 Changes in DBD::ODBC  1.23_4 April 13, 2010
 
 Added more FAQs.
 
-Small optimization to remove calls to SQLError when tracing it not
+Small optimization to remove calls to SQLError when tracing is not
 turned on. This was a bug. We only need to call SQLError when
 SQLExecute succeeds if there is an error handler or if tracing is
 enabled. The test was for tracing disabled!
+
+Large experimental change primarily affecting MS SQL Server users but
+it does impact on other drivers too. Firstly, for MS SQL Server users
+we no longer SQLFreeStmt(SQL_RESET_PARAMS) and rebind bound parameters
+as it is causing the MS SQL Server ODBC driver to re-prepare the SQL.
+Secondly (for all drivers) we no longer call SQLBindParameter again IF
+all the arguments to it are the same as the previous call. If you find
+something not working you better let me know as this is such a speed
+up I'm going to go with this unless anyone complains.
+
+Minor change to avoid a double call to SQLGetInfo for SQL_DBMS_NAME
+immediately after connection.
+
+Small change for rt 55736 (reported by Matthew Kidd) to not assume a
+parameter is varXXX(max) if SQLDescribeParam failed in the Microsoft
+Native Client driver.
 
 =head2 Changes in DBD::ODBC  1.23_3 March 24, 2010
 
@@ -57,7 +83,7 @@ warnings.
 
 Fix some calls to SQLMoreResults which were not passing informational
 messages on to DBI's set_err. As you could not see all the
-informational messages from a procedures, only the first.
+informational messages from procedures, only the first.
 
 Fix minor issue in 02simple test which printed the Perl subversion
 before the version.

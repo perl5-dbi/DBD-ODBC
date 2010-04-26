@@ -1076,7 +1076,7 @@ int dbd_db_disconnect(SV *dbh, imp_dbh_t *imp_dbh)
    SQLFreeHandle(SQL_HANDLE_DBC, imp_dbh->hdbc);
    imp_dbh->hdbc = SQL_NULL_HDBC;
    imp_drh->connects--;
-   strcpy(imp_dbh->odbc_dbname, "disconnect");
+   strcpy(imp_dbh->odbc_dbms_name, "disconnect");
    if (imp_drh->connects == 0) {
        SQLFreeHandle(SQL_HANDLE_ENV, imp_drh->henv);
        imp_drh->henv = SQL_NULL_HENV;
@@ -3150,419 +3150,491 @@ static int rebind_param(
     imp_sth_t *imp_sth,
     phs_t *phs)
 {
-   dTHR;
-   D_imp_dbh_from_sth;
-   SQLRETURN rc;
-   /* args of SQLBindParameter() call */
-   SQLSMALLINT param_type;
-   SQLSMALLINT value_type;
-   UCHAR *value_ptr;
-   SQLULEN column_size;
-   SQLSMALLINT d_digits;
-   SQLLEN buffer_length;
-   SQLULEN default_column_size;
-   STRLEN value_len = 0;
+    dTHR;
+    D_imp_dbh_from_sth;
+    SQLRETURN rc;
+    SQLULEN default_column_size;
+    STRLEN value_len = 0;
+    /* args of SQLBindParameter() call */
+    SQLSMALLINT param_io_type; /* SQL_PARAM_INPUT_OUTPUT || SQL_PARAM_INPUT */
+    SQLSMALLINT value_type;    /* C data type of parameter */
+    UCHAR *value_ptr;          /* ptr to actual parameter data */
+    SQLULEN column_size;       /* size of column/expression of the parameter */
+    SQLSMALLINT d_digits;      /* decimal digits of parameter */
+    SQLLEN buffer_length;      /* length in bytes of parameter buffer */
+    SQLLEN strlen_or_ind;      /* parameter length or indicator */
 
-   if (DBIc_TRACE(imp_sth, 0, 0, 4)) {
-      char *text = neatsvpv(phs->sv,value_len);
-      PerlIO_printf(
-          DBIc_LOGPIO(imp_dbh),
-          "    +rebind_param %s '%.100s' (size svCUR=%d/SvLEN=%d/max=%ld) "
-          "svtype %u, value type:%d sql type:%d\n",
-          phs->name, text, SvOK(phs->sv) ? SvCUR(phs->sv) : -1,
-          SvOK(phs->sv) ? SvLEN(phs->sv) : -1 ,phs->maxlen,
-          SvTYPE(phs->sv), phs->value_type, phs->sql_type);
-   }
+    if (DBIc_TRACE(imp_sth, 0, 0, 4)) {
+        char *text = neatsvpv(phs->sv, value_len);
+        PerlIO_printf(
+            DBIc_LOGPIO(imp_dbh),
+            "    +rebind_param %s '%.100s' (size svCUR=%d/SvLEN=%d/max=%ld) "
+            "svtype %u, value type:%d sql type:%d\n",
+            phs->name, text, SvOK(phs->sv) ? SvCUR(phs->sv) : -1,
+            SvOK(phs->sv) ? SvLEN(phs->sv) : -1 ,phs->maxlen,
+            SvTYPE(phs->sv), phs->value_type, phs->sql_type);
+    }
 
-   if (phs->is_inout) {
-       /*
-        * At the moment we always do sv_setsv() and rebind.
-        * Later we may optimise this so that more often we can
-        * just copy the value & length over and not rebind.
-        */
-       if (SvREADONLY(phs->sv))
-           croak(PL_no_modify);
-       /* phs->sv _is_ the real live variable, it may 'mutate' later   */
-       /* pre-upgrade high to reduce risk of SvPVX realloc/move        */
-       (void)SvUPGRADE(phs->sv, SVt_PVNV);
-       /* ensure room for result, 28 is magic number (see sv_2pv)      */
+    if (phs->is_inout) {
+        /*
+         * At the moment we always do sv_setsv() and rebind.
+         * Later we may optimise this so that more often we can
+         * just copy the value & length over and not rebind.
+         */
+        if (SvREADONLY(phs->sv))
+            croak(PL_no_modify);
+        /* phs->sv _is_ the real live variable, it may 'mutate' later   */
+        /* pre-upgrade high to reduce risk of SvPVX realloc/move        */
+        (void)SvUPGRADE(phs->sv, SVt_PVNV);
+        /* ensure room for result, 28 is magic number (see sv_2pv)      */
 #if defined(WITH_UNICODE)
-       SvGROW(phs->sv,
-              (phs->maxlen+sizeof(SQLWCHAR) < 28) ?
-              28 : phs->maxlen+sizeof(SQLWCHAR));
+        SvGROW(phs->sv,
+               (phs->maxlen+sizeof(SQLWCHAR) < 28) ?
+               28 : phs->maxlen+sizeof(SQLWCHAR));
 #else
-       SvGROW(phs->sv, (phs->maxlen < 28) ? 28 : phs->maxlen+1);
+        SvGROW(phs->sv, (phs->maxlen < 28) ? 28 : phs->maxlen+1);
 #endif /* WITH_UNICODE */
-   } else {
-       /* phs->sv is copy of real variable, upgrade to at least string */
-       (void)SvUPGRADE(phs->sv, SVt_PV);
-   }
+    } else {
+        /* phs->sv is copy of real variable, upgrade to at least string */
+        (void)SvUPGRADE(phs->sv, SVt_PV);
+    }
 
-   /*
-    * At this point phs->sv must be at least a PV with a valid buffer,
-    * even if it's undef (null)
-    * Here we set phs->sv_buf, and value_len.
-    */
-   if (SvOK(phs->sv)) {
-      phs->sv_buf = SvPV(phs->sv, value_len);
-   } else {
-      /* it's undef but if it was inout param it would point to a
-       * valid buffer, at least  */
-      phs->sv_buf = SvPVX(phs->sv);
-      value_len = 0;
-   }
+    /*
+     * At this point phs->sv must be at least a PV with a valid buffer,
+     * even if it's undef (null)
+     */
+    if (SvOK(phs->sv)) {
+        phs->sv_buf = SvPV(phs->sv, value_len);
+    } else {
+        /* it's undef but if it was inout param it would point to a
+         * valid buffer, at least  */
+        phs->sv_buf = SvPVX(phs->sv);
+        value_len = 0;
+    }
 
-   get_param_type(sth, imp_sth, phs);
+    get_param_type(sth, imp_sth, phs);
 
 #if defined(WITH_UNICODE)
-   if (phs->value_type == SQL_C_WCHAR) {
-       if (DBIc_TRACE(imp_sth, 0, 0, 8)) {
-           TRACE1(imp_dbh,
-                  "      Need to modify phs->sv in place: old length = %i\n",
-                  value_len);
-       }
-       /* Convert the sv in place to UTF-16 encoded characters
-          NOTE: the SV_toWCHAR may modify SvPV(phs->sv */
-       if (SvOK(phs->sv)) {
-           SV_toWCHAR(phs->sv);
-           /* get new buffer and length */
-           phs->sv_buf = SvPV(phs->sv, value_len);
-       } else {                                 /* it is undef */
-           /* need a valid buffer at least */
-           phs->sv_buf = SvPVX(phs->sv);
-           value_len = 0;
-       }
+    if (phs->value_type == SQL_C_WCHAR) {
+        if (DBIc_TRACE(imp_sth, 0, 0, 8)) {
+            TRACE1(imp_dbh,
+                   "      Need to modify phs->sv in place: old length = %i\n",
+                   value_len);
+        }
+        /* Convert the sv in place to UTF-16 encoded characters
+           NOTE: the SV_toWCHAR may modify SvPV(phs->sv */
+        if (SvOK(phs->sv)) {
+            SV_toWCHAR(phs->sv);
+            /* get new buffer and length */
+            phs->sv_buf = SvPV(phs->sv, value_len);
+        } else {                                 /* it is undef */
+            /* need a valid buffer at least */
+            phs->sv_buf = SvPVX(phs->sv);
+            value_len = 0;
+        }
 
-       if (DBIc_TRACE(imp_sth, 0, 0, 8)) {
-           TRACE1(imp_dbh,
-                  "      Need to modify phs->sv in place: new length = %i\n",
-                  value_len);
-       }
-   }
+        if (DBIc_TRACE(imp_sth, 0, 0, 8)) {
+            TRACE1(imp_dbh,
+                   "      Need to modify phs->sv in place: new length = %i\n",
+                   value_len);
+        }
+    }
 
-   /* value_len has current value length now */
-   phs->sv_type = SvTYPE(phs->sv);        /* part of mutation check */
-   phs->maxlen  = SvLEN(phs->sv) - sizeof(SQLWCHAR); /* avail buffer space */
+    /* value_len has current value length now */
+    phs->sv_type = SvTYPE(phs->sv);        /* part of mutation check */
+    phs->maxlen  = SvLEN(phs->sv) - sizeof(SQLWCHAR); /* avail buffer space */
 
 #else  /* !WITH_UNICODE */
-   /* value_len has current value length now */
-   phs->sv_type = SvTYPE(phs->sv);        /* part of mutation check */
-   phs->maxlen  = SvLEN(phs->sv) - 1;         /* avail buffer space */
+    /* value_len has current value length now */
+    phs->sv_type = SvTYPE(phs->sv);        /* part of mutation check */
+    phs->maxlen  = SvLEN(phs->sv) - 1;         /* avail buffer space */
 #endif /* WITH_UNICODE */
 
-   if (DBIc_TRACE(imp_sth, 0, 0, 4)) {
-       PerlIO_printf(
-           DBIc_LOGPIO(imp_dbh),
-           "      bind %s '%.100s' value_len=%d maxlen=%ld null=%d)\n",
-           phs->name, SvOK(phs->sv) ? phs->sv_buf : "(null)",
-           value_len,(long)phs->maxlen, SvOK(phs->sv) ? 0 : 1);
-   }
+    if (DBIc_TRACE(imp_sth, 0, 0, 4)) {
+        PerlIO_printf(
+            DBIc_LOGPIO(imp_dbh),
+            "      bind %s '%.100s' value_len=%d maxlen=%ld null=%d)\n",
+            phs->name, SvOK(phs->sv) ? phs->sv_buf : "(null)",
+            value_len,(long)phs->maxlen, SvOK(phs->sv) ? 0 : 1);
+    }
 
-   /*
-    * JLU: was SQL_PARAM_OUTPUT only, but that caused a problem with
-    * Oracle's drivers and in/out parameters.  Can't be output only
-    * with Oracle.  Need to test on other platforms to ensure this
-    * does not cause a problem.
-    */
-   param_type = phs->is_inout ? SQL_PARAM_INPUT_OUTPUT : SQL_PARAM_INPUT;
-   value_type = phs->value_type;
-   d_digits = value_len;
-   column_size = phs->is_inout ? phs->maxlen : value_len;
+    /*
+     * JLU: was SQL_PARAM_OUTPUT only, but that caused a problem with
+     * Oracle's drivers and in/out parameters.  Can't be output only
+     * with Oracle.
+     */
+    param_io_type = phs->is_inout ? SQL_PARAM_INPUT_OUTPUT : SQL_PARAM_INPUT;
+    value_type = phs->value_type;
+    d_digits = value_len;
+    column_size = phs->is_inout ? phs->maxlen : value_len;
 
-   /* per patch from Paul G. Weiss, who was experiencing re-preparing
-    * of queries when the size of the bound string's were increasing
-    * for example select * from tabtest where name = ?
-    * then executing with 'paul' and then 'thomas' would cause
-    * SQLServer to prepare the query twice, but if we ran 'thomas'
-    * then 'paul', it would not re-prepare the query.  The key seems
-    * to be allocating enough space for the largest parameter.
-    * TBD: the default for this should be a DBD::ODBC specific option
-    * or attribute.
-    */
-   if (phs->sql_type == SQL_VARCHAR && !phs->is_inout) {
-      d_digits = 0;
-      /* default to at least 80 if this is the first time through */
-      if (phs->biggestparam == 0) {
-	 phs->biggestparam = (value_len > 80) ? value_len : 80;
-      } else {
-	 /* bump up max, if needed */
-	 if (value_len > phs->biggestparam) {
-	    phs->biggestparam = value_len;
-	 }
-      }
-   }
+    /* per patch from Paul G. Weiss, who was experiencing re-preparing
+     * of queries when the size of the bound string's were increasing
+     * for example select * from tabtest where name = ?
+     * then executing with 'paul' and then 'thomas' would cause
+     * SQLServer to prepare the query twice, but if we ran 'thomas'
+     * then 'paul', it would not re-prepare the query.  The key seems
+     * to be allocating enough space for the largest parameter.
+     * TBD: the default for this should be a DBD::ODBC specific option
+     * or attribute.
+     */
+    if (phs->sql_type == SQL_VARCHAR && !phs->is_inout) {
+        d_digits = 0;
+        /* default to at least 80 if this is the first time through */
+        if (phs->biggestparam == 0) {
+            phs->biggestparam = (value_len > 80) ? value_len : 80;
+        } else {
+            /* bump up max, if needed */
+            if (value_len > phs->biggestparam) {
+                phs->biggestparam = value_len;
+            }
+        }
+    }
 
-   if ((phs->describe_param_called == 1) &&
-       (SQL_SUCCEEDED(phs->describe_param_status)) &&
-       (phs->requested_type == 0)) {            /* type not overriden */
-       default_column_size = phs->param_size;
-   } else {
-       if ((phs->sql_type == SQL_VARCHAR) && !phs->is_inout) {
-           default_column_size = phs->biggestparam;
-       } else {
-           default_column_size = value_len;
-       }
-   }
+    if ((phs->describe_param_called == 1) &&
+        (SQL_SUCCEEDED(phs->describe_param_status)) &&
+        (phs->requested_type == 0)) {            /* type not overriden */
+        default_column_size = phs->param_size;
+    } else {
+        if ((phs->sql_type == SQL_VARCHAR) && !phs->is_inout) {
+            default_column_size = phs->biggestparam;
+        } else {
+            default_column_size = value_len;
+        }
+    }
 
-   /* JLU
-    * need to look at this.
-    * was buffer_length = value_len for some binding purposes
-    */
-   buffer_length = phs->is_inout ? phs->maxlen : value_len;
+    /* Default buffer_length to specified output length or actual input length */
+    buffer_length = phs->is_inout ? phs->maxlen : value_len;
 
-   /* When we fill a LONGVARBINARY, the CTYPE must be set to SQL_C_BINARY */
-   if (value_type == SQL_C_CHAR) {	/* could be changed by bind_plh */
-       d_digits = 0;                            /* not relevent to char types */
-      switch(phs->sql_type) {
-	 case SQL_LONGVARBINARY:
-	 case SQL_BINARY:
-	 case SQL_VARBINARY:
+    /* When we fill a LONGVARBINARY, the CTYPE must be set to SQL_C_BINARY */
+    if (value_type == SQL_C_CHAR) {    /* could be changed by bind_plh */
+        d_digits = 0;                  /* not relevent to char types */
+        switch(phs->sql_type) {
+          case SQL_LONGVARBINARY:
+          case SQL_BINARY:
+          case SQL_VARBINARY:
 	    value_type = SQL_C_BINARY;
             column_size = default_column_size;
 	    break;
 #ifdef SQL_WLONGVARCHAR
-	 case SQL_WLONGVARCHAR:	/* added for SQLServer 7 ntext type */
+          case SQL_WLONGVARCHAR:	/* added for SQLServer 7 ntext type */
 #endif
-         case SQL_CHAR:
-         case SQL_VARCHAR:
-	 case SQL_LONGVARCHAR:
+          case SQL_CHAR:
+          case SQL_VARCHAR:
+          case SQL_LONGVARCHAR:
             column_size = default_column_size;
 	    break;
-	 case SQL_DATE:
-	 case SQL_TYPE_DATE:
-	 case SQL_TIME:
-	 case SQL_TYPE_TIME:
+          case SQL_DATE:
+          case SQL_TYPE_DATE:
+          case SQL_TIME:
+          case SQL_TYPE_TIME:
 	    break;
-	 case SQL_TIMESTAMP:
-	 case SQL_TYPE_TIMESTAMP:
-	    d_digits = 0;		/* tbd: millisecondS?) */
-	    if (SvOK(phs->sv)) {
-	       char *cp;
-	       if (phs->sv_buf && *phs->sv_buf) {
-		  cp = strchr(phs->sv_buf, '.');
-		  if (cp) {
-		     ++cp;
-		     while (*cp != '\0' && isdigit(*cp)) {
-			cp++;
-			d_digits++;
-		     }
-		  }
-	       } else {
-                   /* hard code for SQL Server when passing Undef to
-                      bound parameters */
-		  column_size = 23;
-	       }
-	    }
+          case SQL_TIMESTAMP:
+          case SQL_TYPE_TIMESTAMP:
+            d_digits = 0;		/* tbd: millisecondS?) */
+            if (SvOK(phs->sv)) {
+                /* Work out decimal digits value from milliseconds */
+                char *cp;
+                if (phs->sv_buf && *phs->sv_buf) {
+                    cp = strchr(phs->sv_buf, '.');
+                    if (cp) {
+                        ++cp;
+                        while (*cp != '\0' && isdigit(*cp)) {
+                            cp++;
+                            d_digits++;
+                        }
+                    }
+                }
+            }
+            /*
+             * 23 is YYYY-MM-DD HH:MM:SS.sss
+             * We have to be really careful here to maintain the column size
+             * whether we are passing NULL/undef or not as the ODBC driver
+             * only has the values we pass to SQLBindParameter to go on and
+             * cannot know until execute time whether we are passing a NULL or
+             * not (i.e., although we pass the strlen_or_ind value - last arg to
+             * SQLBindParameter with a length or SQL_NULL_DATA, this is a ptr
+             * arg and the driver cannot look at it until execute time).
+             * We may know we are going to pass a NULL but if we reduce the
+             * the column size to 0 (or as this function used to do - 1) the
+             * driver might decide it is not a full datetime and decide to
+             * bind as a smalldatetime etc. In fact there is a test for
+             * MS SQL Server in 20SqlServer which binds a datetime and passes
+             * a NULL, a full datetime and lastly a NULL and if we don't maintain
+             * 23 for the first NULL MS SQL Server decides it is a smalldatetime
+             * and we lose the SS.sss in any full datetime passed later.
+             */
+	    column_size = 23;
 	    break;
-	 default:
+          default:
 	    break;
-      }
-   } else if ( value_type = SQL_C_WCHAR) {
-   		d_digits = 0;
-  }
+        }
+    } else if ( value_type = SQL_C_WCHAR) {
+        d_digits = 0;
+    }
 
-   if (!SvOK(phs->sv)) {
-       phs->strlen_or_ind = SQL_NULL_DATA;
-      /* if is_inout, shouldn't we null terminate the buffer and send
-       * it, instead?? */
-      if (!phs->is_inout) {
-	 column_size = 1;
-      }
-      if (phs->is_inout) {
-	 if (!phs->sv_buf) {
-	    croak("panic: DBD::ODBC binding undef with bad buffer!!!!");
-	 }
-         /* just in case, we *know* we called SvGROW above */
-	 phs->sv_buf[0] = '\0';
-	 /* patch for binding undef inout params on sql server */
-	 d_digits = 1;
-         value_ptr = phs->sv_buf;
-      } else {
-	 value_ptr = NULL;
-      }
-   }
-   else {
-      value_ptr = phs->sv_buf;
-      phs->strlen_or_ind = value_len;
-      /* not undef, may be a blank string or something */
-      if (!phs->is_inout && phs->strlen_or_ind == 0) {
-          column_size = 1;
-      }
-   }
-   if (DBIc_TRACE(imp_sth, 0, 0, 4)) {
-      PerlIO_printf(DBIc_LOGPIO(imp_dbh),
-		    "      bind %s value_type:%d %s cs=%lu dd=%d bl=%ld\n",
-		    phs->name, value_type, S_SqlTypeToString(phs->sql_type),
-		    (unsigned long)column_size, d_digits, buffer_length);
-   }
+    if (!SvOK(phs->sv)) {
+        strlen_or_ind = SQL_NULL_DATA;
+        /* if is_inout, shouldn't we null terminate the buffer and send
+         * it, instead?? */
+        if (!phs->is_inout) {
+            /*
+             * We have to be really careful here to maintain the column size
+             * whether we are passing NULL/undef or not as the ODBC driver
+             * only has the values we pass to SQLBindParameter to go on and
+             * cannot know until execute time whether we are passing a NULL or
+             * not (i.e., although we pass the strlen_or_ind value - last arg to
+             * SQLBindParameter with a length or SQL_NULL_DATA, this is a ptr
+             * arg and the driver cannot look at it until execute time).
+             * We may know we are going to pass a NULL but if we reduce the
+             * the column size to 0 (or as this function used to do - 1) the
+             * driver might decide it is a different type (e.g., smalldatetime
+             * instead of datetime).
+             * In fact there is a test for MS SQL Server in 20SqlServer which
+             * binds a datetime and passes a NULL, a full datetime and lastly a
+             * NULL and if we don't maintain the column_size for the first NULL
+             * MS SQL Server decides it is a smalldatetime and we lose the
+             * SS.sss in any full datetime passed later despite setting a correct
+             * column_size and decimal digits.
+             */
+            /* column_size = 1; Used to be this but see comment above */
+            /*
+             * However, at this stage we could have column_size of 0 and
+             * that is no good either or we'll get invalid precision
+             */
+            if (column_size == 0) column_size = 1;
+        }
+        if (phs->is_inout) {
+            if (!phs->sv_buf) {
+                croak("panic: DBD::ODBC binding undef with bad buffer!!!!");
+            }
+            /* just in case, we *know* we called SvGROW above */
+            phs->sv_buf[0] = '\0';
+            /* patch for binding undef inout params on sql server */
+            d_digits = 1;
+            value_ptr = phs->sv_buf;
+        } else {
+            value_ptr = NULL;
+        }
+    }
+    else {
+        value_ptr = phs->sv_buf;
+        strlen_or_ind = value_len;
+        /* not undef, may be a blank string or something */
+        if (!phs->is_inout && strlen_or_ind == 0) {
+            column_size = 1;
+        }
+    }
+    if (DBIc_TRACE(imp_sth, 0, 0, 4)) {
+        PerlIO_printf(DBIc_LOGPIO(imp_dbh),
+                      "      bind %s value_type:%d %s cs=%lu dd=%d bl=%ld\n",
+                      phs->name, value_type, S_SqlTypeToString(phs->sql_type),
+                      (unsigned long)column_size, d_digits, buffer_length);
+    }
 
-   if (value_len < imp_sth->odbc_putdata_start) {
-      /* already set and should be left alone JLU */
-      /* d_digits = value_len; */
-   } else {
-      SQLLEN vl = value_len;
+    if (value_len < imp_sth->odbc_putdata_start) {
+        /* already set and should be left alone JLU */
+        /* d_digits = value_len; */
+    } else {
+        SQLLEN vl = value_len;
 
-      if (DBIc_TRACE(imp_sth, 0, 0, 4))
-          TRACE1(imp_dbh, "      using data_at_exec for size %lu\n",
-                 (unsigned long)value_len);
+        if (DBIc_TRACE(imp_sth, 0, 0, 4))
+            TRACE1(imp_dbh, "      using data_at_exec for size %lu\n",
+                   (unsigned long)value_len);
 
-      d_digits = 0;                         /* not relevant to lobs */
-      phs->strlen_or_ind = SQL_LEN_DATA_AT_EXEC(vl);
-      value_ptr = (UCHAR*) phs;
-   }
-
+        d_digits = 0;                         /* not relevant to lobs */
+        strlen_or_ind = SQL_LEN_DATA_AT_EXEC(vl);
+        value_ptr = (UCHAR*) phs;
+    }
 
 #if THE_FOLLOWING_CODE_IS_FLAWED_AND_BROKEN
-      /*
-       * value_ptr is not null terminated - it is a byte array so PVallocW
-       * won't work as it works on null terminated strings
-       */
+    /*
+     * value_ptr is not null terminated - it is a byte array so PVallocW
+     * won't work as it works on null terminated strings
+     */
 #if defined(WITH_UNICODE)
-      if (value_type==SQL_C_WCHAR) {
-          char * c1;
-          c1 = PVallocW((SQLWCHAR *)value_ptr);
-          TRACE1(imp_dbh, "      Param value = L'%s'\n", c1);
-          PVfreeW(c1);
-      }
+    if (value_type==SQL_C_WCHAR) {
+        char * c1;
+        c1 = PVallocW((SQLWCHAR *)value_ptr);
+        TRACE1(imp_dbh, "      Param value = L'%s'\n", c1);
+        PVfreeW(c1);
+    }
 #endif /* WITH_UNICODE */
 #endif
 
 
-   /*
-    *  The following code is a workaround for a problem in SQL Server
-    *  when inserting more than 400K into varbinary(max) or varchar(max)
-    *  columns. The older SQL Server driver (not the native client driver):
-    *
-    *  o reports the size of xxx(max) columns as 2147483647 bytes in size
-    *    when in reality they can be a lot bigger than that.
-    *  o if you bind more than 400K you get the following errors:
-    *    (HY000, 0, [Microsoft][ODBC SQL Server Driver]
-    *      Warning: Partial insert/update. The insert/update of a text or
-    *      image column(s) did not succeed.)
-    *    (42000, 7125, [Microsoft][ODBC SQL Server Driver][SQL Server]
-    *      The text, ntext, or image pointer value conflicts with the column
-    *      name specified.)
-    *
-    *  There appear to be 2 workarounds but I was not prepared to do the first.
-    *  The first is simply to set the indicator to SQL_LEN_DATA_AT_EXEC(409600)
-    *  if the parameter was larger than 409600 - miraculously it works but
-    *  shouldn't according to MSDN.
-    *  The second workaround (used here) is to set the indicator to
-    *  SQL_LEN_DATA_AT_EXEC(0) and the buffer_length to 0.
-    *
-    */
-   if ((imp_dbh->driver_type == DT_SQL_SERVER) &&
-       ((phs->sql_type == SQL_LONGVARCHAR) ||
-        (phs->sql_type == SQL_LONGVARBINARY) ||
-        (phs->sql_type == SQL_WLONGVARCHAR)) &&
-       /*(column_size == 2147483647) && (phs->strlen_or_ind < 0) &&*/
-       ((-phs->strlen_or_ind + SQL_LEN_DATA_AT_EXEC_OFFSET) >= 409600)) {
-       phs->strlen_or_ind = SQL_LEN_DATA_AT_EXEC(0);
-       buffer_length = 0;
-   }
+    /*
+     *  The following code is a workaround for a problem in SQL Server
+     *  when inserting more than 400K into varbinary(max) or varchar(max)
+     *  columns. The older SQL Server driver (not the native client driver):
+     *
+     *  o reports the size of xxx(max) columns as 2147483647 bytes in size
+     *    when in reality they can be a lot bigger than that.
+     *  o if you bind more than 400K you get the following errors:
+     *    (HY000, 0, [Microsoft][ODBC SQL Server Driver]
+     *      Warning: Partial insert/update. The insert/update of a text or
+     *      image column(s) did not succeed.)
+     *    (42000, 7125, [Microsoft][ODBC SQL Server Driver][SQL Server]
+     *      The text, ntext, or image pointer value conflicts with the column
+     *      name specified.)
+     *
+     *  There appear to be 2 workarounds but I was not prepared to do the first.
+     *  The first is simply to set the indicator to SQL_LEN_DATA_AT_EXEC(409600)
+     *  if the parameter was larger than 409600 - miraculously it works but
+     *  shouldn't according to MSDN.
+     *  The second workaround (used here) is to set the indicator to
+     *  SQL_LEN_DATA_AT_EXEC(0) and the buffer_length to 0.
+     *
+     */
+    if ((imp_dbh->driver_type == DT_SQL_SERVER) &&
+        ((phs->sql_type == SQL_LONGVARCHAR) ||
+         (phs->sql_type == SQL_LONGVARBINARY) ||
+         (phs->sql_type == SQL_WLONGVARCHAR)) &&
+        /*(column_size == 2147483647) && (strlen_or_ind < 0) &&*/
+        ((-strlen_or_ind + SQL_LEN_DATA_AT_EXEC_OFFSET) >= 409600)) {
+        strlen_or_ind = SQL_LEN_DATA_AT_EXEC(0);
+        buffer_length = 0;
+    }
 #if defined(WITH_UNICODE)
-   /*
-    * rt43384 - MS Access does not seem to like us binding parameters as
-    * wide characters and then SQLBindParameter column_size to byte length.
-    * e.g., if you have a text(255) column and try and insert 190 ascii chrs
-    * then the unicode enabled version of DBD::ODBC will convert those 190
-    * ascii chrs to wide chrs and hence double the size to 380. If you pass
-    * 380 to Access for column_size it just returns an invalid precision
-    * value. This changes to column_size to chrs instead of bytes but
-    * only if column_size is not reduced to 0 - which also produces
-    * an access error e.g., in the empty string '' case.
-    */
+    /*
+     * rt43384 - MS Access does not seem to like us binding parameters as
+     * wide characters and then SQLBindParameter column_size to byte length.
+     * e.g., if you have a text(255) column and try and insert 190 ascii chrs
+     * then the unicode enabled version of DBD::ODBC will convert those 190
+     * ascii chrs to wide chrs and hence double the size to 380. If you pass
+     * 380 to Access for column_size it just returns an invalid precision
+     * value. This changes to column_size to chrs instead of bytes but
+     * only if column_size is not reduced to 0 - which also produces
+     * an access error e.g., in the empty string '' case.
+     */
     else if (((imp_dbh->driver_type == DT_MS_ACCESS_JET) ||
               (imp_dbh->driver_type == DT_MS_ACCESS_ACE)) &&
              (value_type == SQL_C_WCHAR) && (column_size > 1)) {
         column_size = column_size / 2;
         if (DBIc_TRACE(imp_sth, 0, 0, 4))
             TRACE0(imp_dbh, "    MSAccess - setting chrs not bytes\n");
-   }
+    }
 #endif
 
-   /*
-    * workaround bug in SQL Server ODBC driver where it can describe some
-    * parameters (especially in SQL using sub selects) the wrong way.
-    * If this is a varchar then the column_size must be at least as big
-    * as the buffer size but if SQL Server associated the wrong column with
-    * our parameter it could get a totally different size. Without this
-    * a varchar(10) column can be desribed as a varchar(n) where n is less
-    * than 10 and this leads to data truncation errors - see rt 39841.
-    */
-   if (((imp_dbh->driver_type == DT_SQL_SERVER) ||
-        (imp_dbh->driver_type == DT_SQL_SERVER_NATIVE_CLIENT)) &&
-       (phs->sql_type == SQL_VARCHAR) &&
-       (column_size < buffer_length)) {
-       column_size = buffer_length;
-   }
-   /*
-    * Yet another workaround for SQL Server native client.
-    * If you have a varbinary(max), varchar(max) or nvarchar(max) you have to
-    * pass 0 for the column_size or you get HY104 "Invalid precision value".
-    * See rt_38977.t which causes this.
-    * The versions of native client I've seen this with are:
-    * 2007.100.1600.22 sqlncli10.dll driver version = ?
-    * 2005.90.1399.00 SQLNCLI.DLL driver version = 09.00.1399
-    *
-    * Update, for nvarchar(max) it does not seem to simply be a driver issue
-    * as with the Easysoft SQL Server ODBC Driver going to Microsoft SQL Server
-    * 09.00.1399 we got the following error for all sizes between 4001 and 8000
-    * (inclusive).
-    * [SQL Server]The size (4001) given to the parameter '@P1' exceeds the
-    *   maximum allowed (4000)
-    *
-    * So to sum up for the native client when the parameter size is 0 or
-    * when the database is sql server and wchar and sql type not overwritten
-    * we need to use column size 0. We cannot do this if the requested_type
-    * was specified as if someone specifies a bind type we haven't called
-    * SQLDescribeParam and it looks like param_size = 0 even when it is
-    * not a xxx(max). e.g., the 40UnicodeRoundTrip tests will fail with
-    * MS SQL Server because they override the type.
-    */
-   if (phs->param_size == 0) {
-       if ((imp_dbh->driver_type == DT_SQL_SERVER_NATIVE_CLIENT) ||
-           ((strcmp(imp_dbh->odbc_dbms_name, "Microsoft SQL Server") == 0) &&
-            (phs->sql_type == SQL_WVARCHAR) &&
-            (phs->requested_type == 0))) {
-           column_size = 0;
-       }
-   }
-   /* for rt_38977 we get:
-    * sloi = -500100 ps=0 sqlt=12 (SQL_VARCHAR)
-    * sloi = -500100 ps=0 sqlt=-3 (SQL_VARBINARY)
-    * sloi = 4001 ps=0 sqlt=-9 (SQL_WVARCHAR) <--- this one fails without above
-    */
+    /*
+     * workaround bug in SQL Server ODBC driver where it can describe some
+     * parameters (especially in SQL using sub selects) the wrong way.
+     * If this is a varchar then the column_size must be at least as big
+     * as the buffer size but if SQL Server associated the wrong column with
+     * our parameter it could get a totally different size. Without this
+     * a varchar(10) column can be desribed as a varchar(n) where n is less
+     * than 10 and this leads to data truncation errors - see rt 39841.
+     */
+    if (((imp_dbh->driver_type == DT_SQL_SERVER) ||
+         (imp_dbh->driver_type == DT_SQL_SERVER_NATIVE_CLIENT)) &&
+        (phs->sql_type == SQL_VARCHAR) &&
+        (column_size < buffer_length)) {
+        column_size = buffer_length;
+    }
+    /*
+     * Yet another workaround for SQL Server native client.
+     * If you have a varbinary(max), varchar(max) or nvarchar(max) you have to
+     * pass 0 for the column_size or you get HY104 "Invalid precision value".
+     * See rt_38977.t which causes this.
+     * The versions of native client I've seen this with are:
+     * 2007.100.1600.22 sqlncli10.dll driver version = ?
+     * 2005.90.1399.00 SQLNCLI.DLL driver version = 09.00.1399
+     *
+     * Update, for nvarchar(max) it does not seem to simply be a driver issue
+     * as with the Easysoft SQL Server ODBC Driver going to Microsoft SQL Server
+     * 09.00.1399 we got the following error for all sizes between 4001 and 8000
+     * (inclusive).
+     * [SQL Server]The size (4001) given to the parameter '@P1' exceeds the
+     *   maximum allowed (4000)
+     *
+     * So to sum up for the native client when the parameter size is 0 or
+     * when the database is sql server and wchar and sql type not overwritten
+     * we need to use column size 0. We cannot do this if the requested_type
+     * was specified as if someone specifies a bind type we haven't called
+     * SQLDescribeParam and it looks like param_size = 0 even when it is
+     * not a xxx(max). e.g., the 40UnicodeRoundTrip tests will fail with
+     * MS SQL Server because they override the type.
+     */
+    if ((phs->param_size == 0) &&
+        (SQL_SUCCEEDED(phs->describe_param_status))) {
+        /* not point in believing param_size = 0 if SQLDescribeParam failed */
+        /* See rt 55736 */
+        if ((imp_dbh->driver_type == DT_SQL_SERVER_NATIVE_CLIENT) ||
+            ((strcmp(imp_dbh->odbc_dbms_name, "Microsoft SQL Server") == 0) &&
+             (phs->sql_type == SQL_WVARCHAR) &&
+             (phs->requested_type == 0))) {
+            column_size = 0;
+        }
+    }
+    /* for rt_38977 we get:
+     * sloi = -500100 ps=0 sqlt=12 (SQL_VARCHAR)
+     * sloi = -500100 ps=0 sqlt=-3 (SQL_VARBINARY)
+     * sloi = 4001 ps=0 sqlt=-9 (SQL_WVARCHAR) <--- this one fails without above
+     */
 
-   /*printf("sloi = %d ps=%d sqlt=%d\n", phs->strlen_or_ind, phs->param_size, phs->sql_type);*/
+    /*printf("sloi = %d ps=%d sqlt=%d\n", strlen_or_ind, phs->param_size, phs->sql_type);*/
 
 
-   if (DBIc_TRACE(imp_sth, 0, 0, 5)) {
-      PerlIO_printf(
-          DBIc_LOGPIO(imp_dbh),
-          "    SQLBindParameter: idx=%d: param_type=%d, name=%s, "
-          "value_type=%d, SQL_Type=%d, column_size=%lu, d_digits=%d, "
-          "value_ptr=%p, buffer_length=%ld, cbValue=%ld, param_size=%lu\n",
-          phs->idx, param_type, phs->name, value_type, phs->sql_type,
-          (unsigned long)column_size, d_digits, value_ptr,
-          (long)buffer_length, (long)phs->strlen_or_ind,
-          (unsigned long)phs->param_size);
-      /* avoid tracing data_at_exec as value_ptr will point to phs */
-      if ((value_type == SQL_C_CHAR) && (phs->strlen_or_ind > 0)) {
-          TRACE1(imp_sth, "      Param value = %s\n", value_ptr);
-      }
-   }
-   rc = SQLBindParameter(imp_sth->hstmt,
-			 phs->idx, param_type, value_type, phs->sql_type,
-			 column_size, d_digits,
-			 value_ptr, buffer_length, &phs->strlen_or_ind);
+    /*
+     * Avoid calling SQLBindParameter again if nothing has changed.
+     * Why, because a) there is no point and b) MS SQL Server will
+     * re-prepare the statement.
+     */
+    /* phs' copy of strlen_or_ind is permanently allocated and the other
+       strlen_or_ind is an automatic variable and won't survive this func
+       but needs to. */
+    phs->strlen_or_ind = strlen_or_ind;
+    if ((param_io_type == SQL_PARAM_INPUT_OUTPUT) ||
+        (!phs->bp_value_ptr) ||                 /* not bound before */
+        ((param_io_type == SQL_PARAM_INPUT) &&    /* input parameter */
+         (value_ptr != phs->bp_value_ptr) ||
+         (value_type != phs->value_type) ||
+         (column_size != phs->bp_column_size) ||
+         (d_digits != phs->bp_d_digits) ||
+         (buffer_length != phs->bp_buffer_length))) {
+        if (DBIc_TRACE(imp_sth, 0, 0, 5)) {
+            PerlIO_printf(
+                DBIc_LOGPIO(imp_dbh),
+                "    SQLBindParameter: idx=%d: io_type=%d, name=%s, "
+                "value_type=%d, SQLType=%d, column_size=%lu, d_digits=%d, "
+                "value_ptr=%p, buffer_length=%ld, ind=%ld, param_size=%lu\n",
+                phs->idx, param_io_type, phs->name, value_type, phs->sql_type,
+                (unsigned long)column_size, d_digits, value_ptr,
+                (long)buffer_length, (long)strlen_or_ind,
+                (unsigned long)phs->param_size);
 
-   if (!SQL_SUCCEEDED(rc)) {
-      dbd_error(sth, rc, "rebind_param/SQLBindParameter");
-      return 0;
-   }
+            /* avoid tracing data_at_exec as value_ptr will point to phs */
+            if ((value_type == SQL_C_CHAR) && (strlen_or_ind > 0)) {
+                TRACE1(imp_sth, "      Param value = %s\n", value_ptr);
+            }
+        }
+#ifdef FRED
+       printf("SQLBindParameter idx=%d pt=%d vt=%d, st=%d, cs=%lu dd=%d vp=%p bl=%ld slorind=%ld %s\n",
+              phs->idx, param_io_type, value_type, phs->sql_type,
+              (unsigned long)column_size, d_digits, value_ptr,
+              buffer_length, (long)phs->strlen_or_ind, value_ptr);
+#endif
+        rc = SQLBindParameter(imp_sth->hstmt,
+                              phs->idx, param_io_type, value_type,
+                              phs->sql_type, column_size, d_digits,
+                              value_ptr, buffer_length,
+                              &phs->strlen_or_ind);
 
-   if (DBIc_TRACE(imp_sth, 0, 0, 4)) TRACE0(imp_dbh, "    -rebind_param\n");
+        if (!SQL_SUCCEEDED(rc)) {
+            dbd_error(sth, rc, "rebind_param/SQLBindParameter");
+            phs->bp_value_ptr = NULL;
+            return 0;
+        }
+        phs->bp_value_ptr = value_ptr;
+        phs->value_type = value_type;
+        phs->bp_column_size = column_size;
+        phs->bp_d_digits = d_digits;
+        phs->bp_buffer_length = buffer_length;
+    } else if (DBIc_TRACE(imp_sth, 0, 0, 5)) {
+        TRACE1(imp_sth, "    Not rebinding param %d - no change\n", phs->idx);
+    }
+
+    if (DBIc_TRACE(imp_sth, 0, 0, 4)) TRACE0(imp_dbh, "    -rebind_param\n");
 
    return 1;
 }
@@ -4174,7 +4246,7 @@ SV *dbd_db_FETCH_attrib(SV *dbh, imp_dbh_t *imp_dbh, SV *keysv)
         break;
 
       case SQL_DBMS_NAME:
-	 retsv = newSVpv(imp_dbh->odbc_dbname, 0);
+	 retsv = newSVpv(imp_dbh->odbc_dbms_name, 0);
 	 break;
 
       case ODBC_IGNORE_NAMED_PLACEHOLDERS:
@@ -5477,24 +5549,11 @@ static int post_connect(
    imp_dbh->odbc_exec_direct = 0; /* default to not having SQLExecDirect used */
    imp_dbh->RowCacheSize = 1;	/* default value for now */
 
-   /* see if we're connected to MS SQL Server */
-   memset(imp_dbh->odbc_dbname, 'z', sizeof(imp_dbh->odbc_dbname));
-   rc = SQLGetInfo(imp_dbh->hdbc, SQL_DBMS_NAME, imp_dbh->odbc_dbname,
-		   (SWORD)sizeof(imp_dbh->odbc_dbname), &dbvlen);
-   if (SQL_SUCCEEDED(rc)) {
-       /* can't find stricmp on my Linux, nor strcmpi. must be a
-        * portable way to do this*/
-      if (!strcmp(imp_dbh->odbc_dbname, "Microsoft SQL Server")) {
-          if (DBIc_TRACE(imp_dbh, 0x04000000, 0, 0))
-              TRACE0(imp_dbh, "Deferring Binding\n");
-	 imp_dbh->odbc_defer_binding = 1;
-      }
-   } else {
-      strcpy(imp_dbh->odbc_dbname, "Unknown/Unsupported");
+   if (!strcmp(imp_dbh->odbc_dbms_name, "Microsoft SQL Server")) {
+       if (DBIc_TRACE(imp_dbh, 0x04000000, 0, 0))
+           TRACE0(imp_dbh, "Deferring Binding\n");
+       imp_dbh->odbc_defer_binding = 0;
    }
-   if (DBIc_TRACE(imp_dbh, 0x04000000, 0, 0))
-       TRACE1(imp_dbh, "SQL_DBMS_NAME = %s\n", imp_dbh->odbc_dbname);
-
    /* check to see if SQLMoreResults is supported */
    rc = SQLGetFunctions(imp_dbh->hdbc, SQL_API_SQLMORERESULTS, &supported);
    if (SQL_SUCCEEDED(rc)) {

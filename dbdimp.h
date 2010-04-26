@@ -33,7 +33,6 @@ struct imp_dbh_st {
     SQLHDBC hdbc;
     char odbc_ver[20];  /* ODBC compat. version for driver */
     SQLSMALLINT max_column_name_len;
-    char odbc_dbname[64];
     /* flag to ignore named parameters */
     int  odbc_ignore_named_placeholders;
     /* flag to set default binding type (experimental) */
@@ -198,6 +197,14 @@ struct phs_st {             /* scalar placeholder */
     SQLSMALLINT described_sql_type;
                             /* sql type as described by SQLDescribeParam */
     SQLSMALLINT sql_type;   /* the sql type of the placeholder */
+
+    /* Remaining values passed to SQLBindParameter that we record to detect
+       if we need to rebind due to changed args */
+    UCHAR *bp_value_ptr;       /* ptr to actual value */
+    SQLSMALLINT bp_d_digits;   /* decimal digits */
+    SQLULEN bp_column_size;
+    SQLLEN bp_buffer_length;
+    
     char name[1];           /* struct is malloc'd bigger as needed */
 };
 
