@@ -573,7 +573,7 @@ get a list of checked in changes.
 
 =head2 Contributing
 
-There are six main ways you may help with the development and
+There are seven main ways you may help with the development and
 maintenance of this module:
 
 =over
@@ -636,6 +636,24 @@ What helps enormously to identify problems in the many combinations
 of DBD::ODBC and ODBC drivers is a large test suite. I would greatly
 appreciate any test cases and in particular any new test cases for
 databases other than MS SQL Server.
+
+=item Test DBD::ODBC
+
+I have a lot of problems deciding when to move a development release
+to an official release since I get few test reports for development
+releases. What often happens is I call for testers on various lists,
+get a few and then get inundated with requests to do an official
+release. Then I do an official release and loads of rts appear out of
+nowhere and the cycle starts again.
+
+DBD::ODBC by its very nature works with many ODBC Drivers and it is
+impossible for me to have and test them all (this differs from other
+DBDs). If you depend on DBD::ODBC you should be interested in new
+releases and if you send me your email address suggesting you are
+prepared to be part of the DBD::ODBC testing network I will credit you
+in the Changes file and perhaps the main DBD::ODBC file.
+
+
 
 =back
 
@@ -1461,7 +1479,7 @@ wchar_t types (which are usually 4) and hence DBD::ODBC will not work
 iODBC when built for unicode.
 
 The ODBC Driver must expect Unicode data specified in SQLBindParameter
-and SQLBindCol to be UTF16 in local endianess. Similarly, in calls to
+and SQLBindCol to be UTF16 in local endianness. Similarly, in calls to
 SQLPrepareW, SQLDescribeColW and SQLDriverConnectW.
 
 You should be aware that once Unicode support is enabled it affects a
