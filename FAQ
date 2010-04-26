@@ -510,6 +510,8 @@ naming the SQL type of the parameter using something like:
 as omitting SQL_VARCHAR will cause DBD::ODBC to use the type
 C<SQLDescribeParam> returned.
 
+See https://connect.microsoft.com/SQLServer/feedback/details/527188/paramater-datatype-lookup-returns-incorrectly and rt ticket 50852.
+
 =head2 Why do I get invalid value for cast specification (22018) from SQL Server when inserting with parameters?
 
 See L<http://support.microsoft.com/kb/269011> on the microsoft web site for
@@ -729,6 +731,31 @@ This happens because Microsoft changed their headers to add SQLLEN/SQLULEN
 types and your C headers are probably out of date. As DBD::ODBC needs
 to use these types you'll need an updated MDAC Development Kit. See
 " Where do I get the lastest MDAC Development Kit?".
+
+=head2 Why do I get errors with bound parameters and MS SQL Server?
+
+See the question "Why do I get data truncated error from SQL Server
+when inserting with parameters?" above. These errors are often because
+of bugs in the MS SQL Server ODBC driver in its SQLBindParameter
+implementation and can be worked around by specifying a type at bind
+time.
+
+e.g.,
+
+Instead of:
+
+
+  my $s = prepare(q/some sql with parameters/);
+  $s->execute($param1, $param2);
+
+try:
+
+  my $s = prepare(q/some sql with parameters/);
+  $s->bind_param(1, $param1, {TYPE => SQL_VARCHAR});
+  $s->bind_param(2, $param2, {TYPE => SQL_VARCHAR});
+  $s->execute;
+
+See https://connect.microsoft.com/SQLServer/feedback/details/527188/paramater-datatype-lookup-returns-incorrectly and rt ticket 50852.
 
 =head1 AUTHOR
 
