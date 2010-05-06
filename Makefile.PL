@@ -245,6 +245,21 @@ if ($OSNAME eq 'MSWin32') {
     $opts{LIBS} = ["ODBC32.LIB"];
     $opts{macro}->{EXTRALIB} = 'ODBC32.LIB';
     print {$sqlhfh} "#include <windows.h>\n";
+    print {$sqlhfh} <<'EOT';
+#ifdef WIN32
+# ifndef _WIN64
+#  ifndef SQLLEN
+#   define SQLLEN          SQLINTEGER
+#  endif
+#  ifndef SQLULEN
+#   define SQLULEN         SQLUINTEGER
+#  endif
+#  ifndef SQLSETPOSIROW
+#   define SQLSETPOSIROW   SQLUSMALLINT
+#  endif
+# endif
+#endif
+EOT
     print {$sqlhfh}
         "#include <sql.h>\n#include <sqltypes.h>\n#include <sqlext.h>\n";
 } elsif ($opt_e) {

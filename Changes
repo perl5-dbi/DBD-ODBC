@@ -41,7 +41,7 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
 
 =head1 CHANGES
 
-=head2 Changes in DBD::ODBC  1.23_5 April 20, 2010
+=head2 Changes in DBD::ODBC  1.23_5 May 6, 2010
 
 Added advice from Jan Dubois (ActiveState) on building DBD::ODBC for
 ActivePerl (see README.windows).
@@ -50,6 +50,9 @@ rt56692. Fix spelling mistake in DBD::ODBC pod - thanks to Ansgar
 Burchardt.
 
 Added a 7th way to help documentation - become a tester.
+
+Hopefully fixed problems building on windows 32 bit platforms that
+have old sql header files not mentioning SQLLEN/SQLULEN.
 
 =head2 Changes in DBD::ODBC  1.23_4 April 13, 2010
 
