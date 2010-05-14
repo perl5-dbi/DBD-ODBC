@@ -50,7 +50,7 @@ $dbh->{RaiseError} = 0;
 $dbh->{odbc_force_bind_type} = SQL_VARCHAR;
 my $dbname = $dbh->get_info(17); # DBI::SQL_DBMS_NAME
 SKIP: {
-   skip "Microsoft SQL Server test not supported using $dbname", 3
+   skip "Microsoft SQL Server test not supported using $dbname", 4
        unless ($dbname =~ /Microsoft SQL Server/i);
 
    eval {
@@ -72,12 +72,12 @@ SKIP: {
 
        $sth = $dbh->prepare(
            q/select name from PERL_DBD_RT_50852 where charindex(?, name) = 1/);
-       ok($sth, 'prepared sql');
+       ok($sth, 'prepared sql'); #4
      SKIP: {
            skip 'Failed to prepare SQL', 1 unless $sth;
 
            ok($sth->execute('fred'), 'execute sql') &&
-               $sth->finish;
+               $sth->finish; #5
        };
    };
 };
