@@ -1,4 +1,7 @@
-Hopefully this will help someone compiling for HP/UX.  I pulled this off dbi-users from Jonathon Leffler.
+$Id$
+
+Hopefully this will help someone compiling for HP/UX.  I pulled this
+off dbi-users from Jonathon Leffler.
 
 If someone using HP/UX can refine this for me, I'd be grateful.
 
@@ -8,7 +11,7 @@ Jeff
 
 
 > Here is the error that I am getting after running the make test:
-> 
+>
 > ======================================================================
 > ======
 > =============
@@ -17,11 +20,11 @@ Jeff
 
 Hi,
 
-If you look in Notes/environment.variables file in the DBD::Informix 
-distribution, you will see a variable DBD_INFORMIX_HPUX_USELIBCL.  The 
-documentation refers to libcl.1; you're running into the equivalent 
-problem with libcl.2.  I suggest that you track down where that is 
-used (Makefile.PL), and change the reference to  '-l:libcl.1' to 
-'-l:libcl.\d' (should be good for a few years, anyway).  As far as I 
+If you look in Notes/environment.variables file in the DBD::Informix
+distribution, you will see a variable DBD_INFORMIX_HPUX_USELIBCL.  The
+documentation refers to libcl.1; you're running into the equivalent
+problem with libcl.2.  I suggest that you track down where that is
+used (Makefile.PL), and change the reference to '-l:libcl.1' to
+'-l:libcl.\d' (should be good for a few years, anyway).  As far as I
 can tell, the libcl library provides nothing of value to ClientSDK.
 

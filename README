@@ -1,3 +1,5 @@
+$Id$
+
 DBD::ODBC -- DBD module interfacing the ODBC databases.
 
    $Id$
@@ -5,7 +7,7 @@ DBD::ODBC -- DBD module interfacing the ODBC databases.
    DBD::ODBC is Copyright (C) 1994,1995,1996,1997,1998  Tim Bunce
    portions Copyright (C) 1997,1998,1999,2000,2001,2002 Jeff Urlwin
    portions Copyright (C) 1997  Thomas K. Wenrich
-   portions Copyright (C) 2007,2008,2009 Martin J. Evans
+   portions Copyright (C) 2007,2008,2009, 2010 Martin J. Evans
 
 LICENSE INFORMATION:
 

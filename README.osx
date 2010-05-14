@@ -1,3 +1,5 @@
+$Id$
+
 A few people have reported the following error when running DBD::ODBC
 on MAC OS X 10.5 (Leopard):
 
