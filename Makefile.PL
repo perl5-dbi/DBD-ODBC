@@ -101,7 +101,6 @@ my %opts =
     ## no critic (RequireInterpolationOfMetachars)
     NAME         => 'DBD::ODBC',
     VERSION_FROM => 'ODBC.pm',
-    NO_META      => 1,
     # See note below on CONFIGURE. This used to work when could rely on
     # CONFIGURE being after PREREQ_PM but that is not the case now so the
     # line below does nothing since 6.33 of MakeMaker.
@@ -121,6 +120,7 @@ my $eumm = $ExtUtils::MakeMaker::VERSION;
 $eumm =~ tr/_//d;
 
 $opts{LICENSE} = 'perl' if $eumm >= 6.3002;
+$opts{NO_META} = 1 if $eumm >= 6.10;
 
 if ($eumm >= 5.43) {
     $opts{AUTHOR} = 'Tim Bunce, Jeff Urlwin, Martin J. Evans mailto:dbi-users@perl.org';

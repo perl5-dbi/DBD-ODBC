@@ -41,6 +41,13 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
 
 =head1 CHANGES
 
+=head2 Changes in DBD::ODBC  1.24 May 14, 2010
+
+Minor change in Makefile.PL to only use NO_META if ExtUtils::MakeMaker
+is at least at version 6.10. Reported by Chunmei Wu.
+
+Minor change to test rt_50852 which had wrong skip count.
+
 =head2 Changes in DBD::ODBC  1.23_5 May 6, 2010
 
 Added advice from Jan Dubois (ActiveState) on building DBD::ODBC for
