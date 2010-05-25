@@ -129,7 +129,7 @@ $DBD::ODBC::VERSION = '1.24';
                 odbc_async_exec => undef, # sth and dbh
                 odbc_exec_direct => undef,
                 odbc_SQL_ROWSET_SIZE => undef,
-                SQL_DRIVER_ODBC_VER => undef,
+                odbc_SQL_DRIVER_ODBC_VER => undef,
                 odbc_cursortype => undef,
                 odbc_query_timeout => undef, # sth and dbh
                 odbc_has_unicode => undef,
@@ -919,7 +919,7 @@ still not pass unicode strings to the prepare method if you also set
 odbc_exec_direct. This is a restriction in this attribute which is
 unavoidable.
 
-=head3 SQL_DRIVER_ODBC_VER
+=head3 odbc_SQL_DRIVER_ODBC_VER
 
 This, while available via get_info() is captured here.  I may get rid
 of this as I only used it for debugging purposes.

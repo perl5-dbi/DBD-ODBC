@@ -28,18 +28,22 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
  Try to produce a Module::Install build.
  There is a blob_read method in DBI (undocumented) that DBD:DB2 & DBD::Pg
    use and might be useful in DBD::ODBC.
- The SQL_DRIVER_ODBC_VER attribute should be odbc_SQL_DRIVER_ODBC_VER.
  Why does level 15 tracing of any DBD::ODBC script show alot of these:
    !!DBD::ODBC unsupported attribute passed (PrintError)
    !!DBD::ODBC unsupported attribute passed (Username)
    !!DBD::ODBC unsupported attribute passed (dbi_connect_closure)
    !!DBD::ODBC unsupported attribute passed (LongReadLen)
   Add a perlcritic test - see DBD::Pg
-  Why doesn't http://www.presicient.com/dbidocs/ display DBD::ODBC docs
-    properly.
-
 
 =head1 CHANGES
+
+=head2 Changes in DBD::ODBC  1.24_1 May NN, 2010
+
+Corrected pod and private attributes for the odbc_SQL_DRIVER_ODBC_VER
+attribute which was documented as SQL_DRIVER_ODBC_VER.
+
+Added FAQ on pauses on statement destruction when all the result-set
+has not been retrieved (mostly freeTDS and MS SQL Server ODBC Driver).
 
 =head2 Changes in DBD::ODBC  1.24 May 14, 2010
 
@@ -1525,7 +1529,7 @@ odbc_SQL_ROWSET_SIZE to obey the DBI rules.
 
 Added odbc_SQL_DRIVER_ODBC_VER, which obtains the version of
 the Driver upon connect.  This internal capture of the version is
-a read-only attributed and is used during array binding of parameters.
+a read-only attribute and is used during array binding of parameters.
 
 Added odbc_ignore_named_placeholders attribute to facilicate
 creating triggers within SAPDB and Oracle, to name two. The

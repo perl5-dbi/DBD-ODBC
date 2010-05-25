@@ -549,7 +549,7 @@ int dbd_db_login(
 /*  This API was introduced in DBI after 1.607 (subversion revision     */
 /*  11723) and is the same as dbd_db_login6 except the connection       */
 /*  strings are SVs so we can detect unicode strings and call           */
-/*  SQLDriveConnectW.                                                  */
+/*  SQLDriveConnectW.                                                   */
 /*                                                                      */
 /************************************************************************/
 int dbd_db_login6_sv(
