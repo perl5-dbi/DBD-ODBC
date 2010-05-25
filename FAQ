@@ -757,6 +757,30 @@ try:
 
 See https://connect.microsoft.com/SQLServer/feedback/details/527188/paramater-datatype-lookup-returns-incorrectly and rt ticket 50852.
 
+=head2 Why does my script pause for a while whenever my statement handle is destroyed (goes out of scope)?
+
+The symptom is that sometimes when your statement handle goes out of
+scope and is hence destroyed your script pauses for a while. If you
+are using MS SQL Server and certain MS SQL Server ODBC Drivers this
+can happen when you issue a select which would return a lot of rows
+but you don't fetch them all.
+
+The problem is that the TDS protocol (normally, without Multiple
+Active Statement support, or MARS) sends all the result-set down the
+socket until it is consumed by the client end. When your statement
+handle is destroyed with pending results the ODBC Driver needs to read
+all the results to clear the socket. In reality MS SQL Server will
+only write so many rows at a time to the socket depending on its
+buffer size and will occasionally look at the socket for new requests
+so it is possible for ODBC Drivers which support SQLCancel to reduce
+the number of rows sent by using DBI's cancel method. In this way the
+statement destruction is speeded up since fewer rows you don't need
+are sent.  See DBI's cancel method and if you destroy a statement
+handle with pending results, call cancel before destruction.
+
+However, you are best not selecting rows you have no intention of
+retrieving.
+
 =head1 AUTHOR
 
 Parts of this document were written by Tim Bunce,
