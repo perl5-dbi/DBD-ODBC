@@ -3369,7 +3369,7 @@ static int rebind_param(
           default:
 	    break;
         }
-    } else if ( value_type = SQL_C_WCHAR) {
+    } else if ( value_type == SQL_C_WCHAR) {
         d_digits = 0;
     }
 

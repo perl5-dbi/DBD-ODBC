@@ -12,7 +12,7 @@
 
 require 5.006;
 
-$DBD::ODBC::VERSION = '1.24';
+$DBD::ODBC::VERSION = '1.24_1';
 
 {
     ## no critic (ProhibitMagicNumbers ProhibitExplicitISA)
@@ -519,7 +519,7 @@ DBD::ODBC - ODBC Driver for DBI
 
 =head1 VERSION
 
-This documentation refers to DBD::ODBC version 1.24.
+This documentation refers to DBD::ODBC version 1.24_1.
 
 =head1 SYNOPSIS
 
