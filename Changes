@@ -37,6 +37,13 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
 
 =head1 CHANGES
 
+=head2 Changes in DBD::ODBC  1.24_2 June 7, 2010
+
+Fix rt57957 reported by Marc Prewitt. DBD::ODBC was not ignoring named
+placeholders and ? inside comments. Comments are deemed as text
+between "/*" and "*/" (if not in a literal) and line comments begin
+with "--".
+
 =head2 Changes in DBD::ODBC  1.24_1 May 27, 2010
 
 Corrected pod and private attributes for the odbc_SQL_DRIVER_ODBC_VER

@@ -1367,8 +1367,12 @@ We need two data structures to translate this stuff:
 void dbd_preparse(imp_sth_t *imp_sth, char *statement)
 {
    dTHR;
-   bool in_literal = FALSE;
-   char *src, *start, *dest;
+   enum {DEFAULT, LITERAL, COMMENT, LINE_COMMENT} states;
+   int state = DEFAULT;
+   int next_state;
+   char literal_ch = '\0';
+
+   char *src, *dest;
    phs_t phs_tpl, *phs;
    SV *phs_sv;
    int idx=0, style=0, laststyle=0;
@@ -1377,7 +1381,6 @@ void dbd_preparse(imp_sth_t *imp_sth, char *statement)
    char name[256];
    SV **svpp;
    char ch;
-   char literal_ch = '\0';
 
    /* allocate room for copy of statement with spare capacity	*/
    imp_sth->statement = (char*)safemalloc(strlen(statement)+1);
@@ -1393,91 +1396,116 @@ void dbd_preparse(imp_sth_t *imp_sth, char *statement)
        TRACE1(imp_sth, "    ignore named placeholders = %d\n",
               imp_sth->odbc_ignore_named_placeholders);
    while(*src) {
-      /*
-       * JLU 10/6/2000 fixed to make the literal a " instead of '
-       * JLU 1/28/2001 fixed to make literals either " or ', but deal
-       * with ' "foo" ' or " foo's " correctly (just to be safe).
-       *
-       */
-      if (*src == '"' || *src == '\'') {
-	 if (!in_literal) {
-	    literal_ch = *src;
-	    in_literal = 1;
-	 } else {
-	    if (*src == literal_ch) {
-	       in_literal = 0;
-	    }
-	 }
-      }
-      if ((*src != ':' && *src != '?') || in_literal) {
-	 *dest++ = *src++;
-	 continue;
-      }
-      start = dest;                         /* save name inc colon */
-      ch = *src++;
-      if (ch == '?') {                    /* X/Open standard */
-	 idx++;
-	 sprintf(name, "%d", idx);
-	 *dest++ = ch;
-	 style = 3;
-      }
-      else if (isDIGIT(*src)) {                 /* ':1' */
-	 char *p = name;
-	 *dest++ = '?';
-	 idx = atoi(src);
-	 while(isDIGIT(*src))
-	    *p++ = *src++;
-	 *p = 0;
-	 style = 1;
-	 if (DBIc_TRACE(imp_sth, 0, 0, 5))
-             TRACE1(imp_sth, "    found numbered parameter = %s\n", name);
-      }
-      else if (!imp_sth->odbc_ignore_named_placeholders && isALNUM(*src)) {
-	 /* ':foo' is valid, only if we are ignoring named
-	  * parameters
-	  */
-	 char *p = name;
-         idx++;
-	 *dest++ = '?';
+       int next_state = state;
 
-	 while(isALNUM(*src))	/* includes '_'	*/
-	    *p++ = *src++;
-	 *p = 0;
-	 style = 2;
-	 if (DBIc_TRACE(imp_sth, 0, 0, 5))
-             TRACE1(imp_sth, "    found named parameter = %s\n", name);
-      }
-      else {			/* perhaps ':=' PL/SQL construct */
-	 *dest++ = ch;
-	 continue;
-      }
-      *dest = '\0';			/* handy for debugging	*/
-      if (laststyle && style != laststyle)
-	 croak("Can't mix placeholder styles (%d/%d)",style,laststyle);
-      laststyle = style;
+       switch (state) {
+         case DEFAULT:
+         {
+             if ((*src == '\'') || (*src == '"')) {
+                 literal_ch = *src;
+                 next_state = LITERAL;
+             } else if ((*src == '/') && (*(src + 1) == '*')) {
+                 next_state = COMMENT;
+             } else if ((*src == '-') && (*(src + 1) == '-')) {
+                 next_state = LINE_COMMENT;
+             } else if ((*src == '?') || (*src == ':')) {
+                 ch = *src++;
+                 if (ch == '?') {                    /* X/Open standard */
+                     idx++;
+                     sprintf(name, "%d", idx);
+                     *dest++ = ch;
+                     style = 3;
+                 }
+                 else if (isDIGIT(*src)) {                 /* ':1' */
+                     char *p = name;
+                     *dest++ = '?';
+                     idx = atoi(src);
+                     while(isDIGIT(*src))
+                         *p++ = *src++;
+                     *p = 0;
+                     style = 1;
+                     if (DBIc_TRACE(imp_sth, 0, 0, 5))
+                         TRACE1(imp_sth, "    found numbered parameter = %s\n", name);
+                 }
+                 else if (!imp_sth->odbc_ignore_named_placeholders &&
+                          isALNUM(*src)) {
+                     /* ':foo' is valid, only if we are ignoring named
+                      * parameters
+                      */
+                     char *p = name;
+                     idx++;
+                     *dest++ = '?';
 
-      if (imp_sth->all_params_hv == NULL)
-	 imp_sth->all_params_hv = newHV();
-      namelen = strlen(name);
+                     while(isALNUM(*src))	/* includes '_'	*/
+                         *p++ = *src++;
+                     *p = 0;
+                     style = 2;
+                     if (DBIc_TRACE(imp_sth, 0, 0, 5))
+                         TRACE1(imp_sth, "    found named parameter = %s\n", name);
+                 }
+                 else {			/* perhaps ':=' PL/SQL construct */
+                     *dest++ = ch;
+                     continue;
+                 }
+                 *dest = '\0';			/* handy for debugging	*/
+                 if (laststyle && style != laststyle)
+                     croak("Can't mix placeholder styles (%d/%d)",style,laststyle);
+                 laststyle = style;
 
-      svpp = hv_fetch(imp_sth->all_params_hv, name, (I32)namelen, 0);
-      if (svpp == NULL) {
-          if (DBIc_TRACE(imp_sth, 0, 0, 5))
-              TRACE1(imp_sth, "    creating new parameter key %s\n", name);
-	 /* create SV holding the placeholder */
-	 phs_sv = newSVpv((char*)&phs_tpl, sizeof(phs_tpl)+namelen+1);
-	 phs = (phs_t*)SvPVX(phs_sv);
-	 strcpy(phs->name, name);
-	 phs->idx = idx;
+                 if (imp_sth->all_params_hv == NULL)
+                     imp_sth->all_params_hv = newHV();
+                 namelen = strlen(name);
 
-	 /* store placeholder to all_params_hv */
-	 svpp = hv_store(imp_sth->all_params_hv, name, (I32)namelen, phs_sv, 0);
-      } else {
-          if (DBIc_TRACE(imp_sth, 0, 0, 5))
-              TRACE1(imp_sth, "    parameter key %s already exists\n", name);
-         croak("DBD::ODBC does not yet support binding a named parameter more than once\n");
-      }
+                 svpp = hv_fetch(imp_sth->all_params_hv, name, (I32)namelen, 0);
+                 if (svpp == NULL) {
+                     if (DBIc_TRACE(imp_sth, 0, 0, 5))
+                         TRACE1(imp_sth, "    creating new parameter key %s\n", name);
+                     /* create SV holding the placeholder */
+                     phs_sv = newSVpv((char*)&phs_tpl, sizeof(phs_tpl)+namelen+1);
+                     phs = (phs_t*)SvPVX(phs_sv);
+                     strcpy(phs->name, name);
+                     phs->idx = idx;
+
+                     /* store placeholder to all_params_hv */
+                     svpp = hv_store(imp_sth->all_params_hv, name, (I32)namelen, phs_sv, 0);
+                 } else {
+                     if (DBIc_TRACE(imp_sth, 0, 0, 5))
+                         TRACE1(imp_sth, "    parameter key %s already exists\n", name);
+                     croak("DBD::ODBC does not yet support binding a named parameter more than once\n");
+                 }
+                 break;
+             }
+             *dest++ = *src++;
+             break;
+         }
+         case LITERAL:
+         {
+             if (*src == literal_ch) {
+                 next_state = DEFAULT;
+             }
+             *dest++ = *src++;
+             break;
+         }
+         case COMMENT:
+         {
+             if ((*(src - 1) == '*') && (*src == '/')) {
+                 next_state = DEFAULT;
+             }
+             *dest++ = *src++;
+             break;
+         }
+         case LINE_COMMENT:
+         {
+             if (*src == '\n') {
+                 next_state = DEFAULT;
+             }
+             *dest++ = *src++;
+             break;
+         }
+       }
+       state = next_state;
    }
+
    *dest = '\0';
    if (imp_sth->all_params_hv) {
       DBIc_NUM_PARAMS(imp_sth) = (int)HvKEYS(imp_sth->all_params_hv);

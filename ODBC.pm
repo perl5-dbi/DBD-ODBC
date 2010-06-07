@@ -12,7 +12,7 @@
 
 require 5.006;
 
-$DBD::ODBC::VERSION = '1.24_1';
+$DBD::ODBC::VERSION = '1.24_2';
 
 {
     ## no critic (ProhibitMagicNumbers ProhibitExplicitISA)
@@ -519,7 +519,7 @@ DBD::ODBC - ODBC Driver for DBI
 
 =head1 VERSION
 
-This documentation refers to DBD::ODBC version 1.24_1.
+This documentation refers to DBD::ODBC version 1.24_2.
 
 =head1 SYNOPSIS
 
@@ -1265,6 +1265,24 @@ For comprehensive tracing of DBI method calls without all the DBI
 internals see L<DBIx::Log4perl>.
 
 =head2 Deviations from the DBI specification
+
+=head3 Comments in SQL
+
+DBI does not say anything in particular about comments in SQL.
+DBD::ODBC looks for placeholders in the SQL string and until 1.24_2 it
+did not recognise comments in SQL strings so could find what it
+believes to be a placeholder in a comment e.g.,
+
+  select '1' /* placeholder ? in comment */
+  select -- named placeholder :named in comment
+    '1'
+
+I cannot be exact about support for ignoring placeholders in literals
+but it has existed for a long time in DBD::ODBC. Support for ignoring
+placeholders in comments was added in 1.24_2. If you find a case where
+a named placeholder is not ignored and should be see
+L</odbc_ignore_named_placeholders> for a workaround and mail me an
+example along with your ODBC driver name.
 
 =head3 Mixed placeholder types
 
