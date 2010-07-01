@@ -37,12 +37,18 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
 
 =head1 CHANGES
 
-=head2 Changes in DBD::ODBC  1.24_2 June 7, 2010
+=head2 Changes in DBD::ODBC  1.24_2 June 21, 2010
 
 Fix rt57957 reported by Marc Prewitt. DBD::ODBC was not ignoring named
 placeholders and ? inside comments. Comments are deemed as text
 between "/*" and "*/" (if not in a literal) and line comments begin
 with "--".
+
+Added a FAQ on procedures not completing in MS SQL Server. Thanks to
+Peter Rabbitson for hitting this problem and reminding me I'd seen it
+a couple of times before.
+
+Added a FAQ on equality comparisons with ntext columns.
 
 =head2 Changes in DBD::ODBC  1.24_1 May 27, 2010
 

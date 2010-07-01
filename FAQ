@@ -327,7 +327,7 @@ follows:
   my $s = $h->prepare('select * into #tmp from mytable',
                       { odbc_exec_direct => 1});
 
-See L</odbc_exec_direct>.
+See L</DBD/ODBC/odbc_exec_direct>.
 
 =head2 Why cannot I connect to my data source on Windows 64?
 
@@ -780,6 +780,40 @@ handle with pending results, call cancel before destruction.
 
 However, you are best not selecting rows you have no intention of
 retrieving.
+
+=head2 Why does my backup/restore/some_other_procedure in MS SQL Server not complete?
+
+MS SQL Server batches up results in a procedure. A result may be the
+output of a print or a select or in some cases even an insert/update
+(see SET NOCOUNT ON|OFF). If you attempt to call a procedure using the
+C<do> method and it outputs results (e.g., a print statement saying
+the % completed) the procedure probably will not fully
+complete. Instead you should do the following:
+
+  $sth-prepare(call to my procedure);
+  $sth->execute;
+  do {
+    while (my @row = $sth->fetchrow_array()) {
+      # do stuff here
+    }
+  } while ($sth->{odbc_more_results});
+  # do not forget to check $sth->err here if not using RaiseError as
+  # the outer while loop will stop when there are no more results OR
+  # if an error occurs.
+
+=head2 Why do I get "The data types ntext and varchar are incompatible in the equal to operator"?
+
+Or "The data types ntext and nvarchar(max) are incompatible in the
+equal to operator".
+
+MS SQL Server does not like equality comparisons with ntext columns.
+You can get this error without using any Perl or DBD::ODBC simply by doing:
+
+  select * from mytable where ntext_column = 'hello'
+
+You unfortunately need to change your SQL to:
+
+  select * from mytable where CAST(ntext_column AS nvarchar(max)) = 'hello'
 
 =head1 AUTHOR
 
