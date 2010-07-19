@@ -12,6 +12,13 @@
 
 require 5.006;
 
+# NOTE: Don't forget to update the version reference in the POD below too.
+# NOTE: If you create a developer release x.y_z ensure y is greater than
+# the preceding y in the non developer release e.g., 1.24 should be followed
+# by 1.25_1 and then released as 1.26.
+# see discussion on dbi-users at
+# http://www.nntp.perl.org/group/perl.dbi.dev/2010/07/msg6096.html and
+# http://www.dagolden.com/index.php/369/version-numbers-should-be-boring/
 $DBD::ODBC::VERSION = '1.24_2';
 
 {
@@ -1265,6 +1272,20 @@ For comprehensive tracing of DBI method calls without all the DBI
 internals see L<DBIx::Log4perl>.
 
 =head2 Deviations from the DBI specification
+
+=head last_insert_id
+
+DBD::ODBC does not support DBI's last_insert_id. There is no ODBC
+defined way of obtaining this information. Generally the mechanism
+(and it differs vastly between databases and ODBC drivers) it to issue
+a select of some form (e.g., select @@identity or select
+sequence.currval from dual, etc).
+
+There are literally dozens of databases and ODBC drivers supported by
+DBD::ODBC and I cannot have them all. If you know how to retrieve the
+information for last_insert_id and you mail me the ODBC Driver
+name/version and database name/version with a small working example I
+will collect examples and document them here.
 
 =head3 Comments in SQL
 

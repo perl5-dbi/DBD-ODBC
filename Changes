@@ -50,6 +50,8 @@ a couple of times before.
 
 Added a FAQ on equality comparisons with ntext columns.
 
+Added pod for last_insert_id which is not currently supported.
+
 =head2 Changes in DBD::ODBC  1.24_1 May 27, 2010
 
 Corrected pod and private attributes for the odbc_SQL_DRIVER_ODBC_VER
