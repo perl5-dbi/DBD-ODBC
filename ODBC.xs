@@ -8,7 +8,47 @@ INCLUDE: ODBC.xsi
 
 MODULE = DBD::ODBC    PACKAGE = DBD::ODBC::st
 
-void 
+SV *
+odbc_lob_read(sth, colno, bufsv, length, attr = NULL)
+     SV  *sth
+     int colno
+     SV  *bufsv
+     UV  length
+     SV  *attr;
+    PROTOTYPE: $$$$;$
+    PREINIT:
+     char *buf;
+     UV   ret_len;
+     IV   sql_type = 0;
+    INIT:
+     if (length == 0) {
+         croak("Cannot retrieve 0 length lob");
+     }
+    CODE:
+     if (attr) {
+         SV **svp;
+         DBD_ATTRIBS_CHECK("odbc_lob_read", sth, attr);
+         DBD_ATTRIB_GET_IV(attr, "Type", 4, svp, sql_type);
+     }
+     if (SvROK(bufsv)) {
+        bufsv = SvRV(bufsv);
+     }
+     sv_setpvn(bufsv, "", 0);                   /* ensure we can grow ok */
+
+     buf = SvGROW(bufsv, length + 1);
+     ret_len = odbc_st_lob_read(sth, colno, bufsv, length, sql_type);
+     if (ret_len > 0) {
+         SvCUR_set(bufsv, ret_len);      /* set length in SV */
+         *SvEND(bufsv) = '\0';           /* NUL terminate */
+         SvSETMAGIC(bufsv);
+         RETVAL = newSViv(ret_len);
+     } else {
+         XSRETURN_UNDEF;
+     }
+     OUTPUT:
+        RETVAL
+
+void
 _ColAttributes(sth, colno, ftype)
 	SV *	sth
 	int		colno
@@ -21,7 +61,7 @@ _Cancel(sth)
     SV *	sth
 
     CODE:
-	ST(0) = odbc_cancel(sth);		
+	ST(0) = odbc_cancel(sth);
 
 void
 _tables(dbh, sth, catalog, schema, table, type)
@@ -112,7 +152,7 @@ _columns(dbh, sth, catalog, schema, table, column)
 	CODE:
 	ST(0) = odbc_db_columns(dbh, sth, catalog, schema, table, column) ? &sv_yes : &sv_no;
 
-void 
+void
 _GetInfo(dbh, ftype)
 	SV *	dbh
 	int		ftype
@@ -127,7 +167,7 @@ _GetTypeInfo(dbh, sth, ftype)
 	CODE:
 	ST(0) = odbc_get_type_info(dbh, sth, ftype) ? &sv_yes : &sv_no;
 
-void 
+void
 _GetStatistics(dbh, sth, CatalogName, SchemaName, TableName, Unique)
 	SV *	dbh
 	SV *	sth
@@ -150,7 +190,7 @@ _GetPrimaryKeys(dbh, sth, CatalogName, SchemaName, TableName)
         /* the following will end up in dbdimp.c/dbd_st_primary_keys */
 	ST(0) = odbc_st_primary_keys(dbh, sth, CatalogName, SchemaName, TableName) ? &sv_yes : &sv_no;
 
-void 
+void
 _GetSpecialColumns(dbh, sth, Identifier, CatalogName, SchemaName, TableName, Scope, Nullable)
 	SV *	dbh
 	SV *	sth
@@ -163,7 +203,7 @@ _GetSpecialColumns(dbh, sth, Identifier, CatalogName, SchemaName, TableName, Sco
 	CODE:
 	ST(0) = odbc_get_special_columns(dbh, sth, Identifier, CatalogName, SchemaName, TableName, Scope, Nullable) ? &sv_yes : &sv_no;
 
-void 
+void
 _GetForeignKeys(dbh, sth, PK_CatalogName, PK_SchemaName, PK_TableName, FK_CatalogName, FK_SchemaName, FK_TableName)
 	SV *	dbh
 	SV *	sth
@@ -247,7 +287,7 @@ data_sources(drh, attr = NULL)
 	while (1) {
             rc = SQLDataSources(imp_drh->henv, fDirection,
                                 dsn+9, /* strlen("DBI:ODBC:") */
-                                SQL_MAX_DSN_LENGTH, 
+                                SQL_MAX_DSN_LENGTH,
 								&dsn_length,
                                 description, sizeof(description),
                                 &description_length);

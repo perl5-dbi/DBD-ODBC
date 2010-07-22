@@ -109,7 +109,8 @@ struct imp_sth_st {
     SQLHSTMT   hstmt;
 
     int        moreResults;	/* are there more results to fetch?	*/
-    int        done_desc;	/* have we described this sth yet ?	*/
+    int        done_desc;	/* have we described this sth yet?	*/
+    int        done_bind;       /* have we bound the columns yet? */
 
     /* Input Details	*/
     char      *statement;	/* sql (see sth_scan)		*/
@@ -121,6 +122,7 @@ struct imp_sth_st {
 				 * by ptrs from within the fbh structures
 				 */
     UCHAR    *RowBuffer;	/* holds row data; referenced from fbh */
+    SQLLEN   RowBufferSizeReqd;
     imp_fbh_t *fbh;		/* array of imp_fbh_t structs	*/
 
     SQLLEN   RowCount;		/* Rows affected by insert, update, delete
@@ -167,10 +169,9 @@ struct imp_fbh_st { 	/* field buffer EXPERIMENTAL */
 				 */
     UCHAR *data;		/* points into sth->RowBuffer */
     SQLLEN datalen;		/* length returned from fetch for single row. */
-    UDWORD maxcnt;		/* max num of rows to return per fetch */
-    SV *colary;			/* ref to array to recv output data */
-    SDWORD *col_indics;	/* individual column length/NULL indicators for array binding */
-    int is_array;		/* TRUE => bound to array */
+    unsigned long bind_flags;   /* flags passed to bind_col */
+#define ODBC_TREAT_AS_LOB 0x1
+    IV req_type;                /* type passed to bind_col */
 };
 
 
@@ -204,7 +205,7 @@ struct phs_st {             /* scalar placeholder */
     SQLSMALLINT bp_d_digits;   /* decimal digits */
     SQLULEN bp_column_size;
     SQLLEN bp_buffer_length;
-    
+
     char name[1];           /* struct is malloc'd bigger as needed */
 };
 
@@ -242,4 +243,5 @@ struct phs_st {             /* scalar placeholder */
 #define dbd_st_tables		odbc_st_tables
 #define dbd_st_primary_keys	odbc_st_primary_keys
 #define dbd_db_execdirect	odbc_db_execdirect
+#define dbd_st_bind_col     	odbc_st_bind_col
 /* end */

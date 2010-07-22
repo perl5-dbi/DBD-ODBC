@@ -37,7 +37,7 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
 
 =head1 CHANGES
 
-=head2 Changes in DBD::ODBC  1.24_2 June 21, 2010
+=head2 Changes in DBD::ODBC  1.24_2 July 22, 2010
 
 Fix rt57957 reported by Marc Prewitt. DBD::ODBC was not ignoring named
 placeholders and ? inside comments. Comments are deemed as text
@@ -51,6 +51,31 @@ a couple of times before.
 Added a FAQ on equality comparisons with ntext columns.
 
 Added pod for last_insert_id which is not currently supported.
+
+Fix bug where if SQLMoreResults was called and failed it was not
+reported.
+
+Removed some unused fields from the fbh structure which should save
+a little memory for each column in a result-set.
+
+Started adding support for DBI's DiscardString and StrictlyTyped but not
+complete yet so don't use them yet.
+
+Added experimental odbc_lob_read method - see pod. Thanks to tye and
+ikegami on perlmonks for pointing out some problems with my initial
+implementation.
+
+Moved the binding of columns to the first call to fetch instead of
+after execute is called as it prevents bind_col overrriding the type
+used for binding and I needed it to support odbc_lob_read. This may
+have undesired affects so any testing of this release would be
+appreciated.
+
+Added bind_col method so DBD::ODBC can support attributes on a
+bind_col call.
+
+Removed support for DBI's blob_read - it was totally flawed and did
+not work at all. May replace in the future.
 
 =head2 Changes in DBD::ODBC  1.24_1 May 27, 2010
 

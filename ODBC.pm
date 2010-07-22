@@ -71,7 +71,7 @@ $DBD::ODBC::VERSION = '1.24_2';
 	    'State' => \$DBD::ODBC::sqlstate,
 	    'Attribution' => 'DBD::ODBC by Jeff Urlwin, Tim Bunce and Martin J. Evans',
 	    });
-
+        DBD::ODBC::st->install_method("odbc_lob_read");
 	return $drh;
     }
 
@@ -1031,6 +1031,61 @@ now 3.x, this can be used to force 2.x behavior via something like: my
   $dbh = DBI->connect("dbi:ODBC:$DSN", $user, $pass,
                       { odbc_version =>2});
 
+=head2 Private statement methods
+
+=head3 odbc_lob_read
+
+  $chrs_or_bytes_read = $sth->lob_read($column_no, \$lob, $length, \%attr);
+
+Reads C<$length> bytes from the lob at column C<$column_no> returning
+the lob into C<$lob>.
+
+NOTE: This is currently an experimental method and may change in the
+future e.g., it may support automatic concatenation of the lob
+parts onto the end of the C<$lob> with the addition of an extra flag
+or destination offset as in DBI's undocumented blob_read.
+
+The type the lob is retrieved as may be overriden in C<%attr> using
+C<TYPE =E<gt> sql_type>. C<%attr> is optional and if omitted defaults to
+SQL_C_BINARY for binary columns and SQL_C_CHAR/SQL_C_WCHAR for other
+column types depending on whether DBD::ODBC is built with unicode
+support. C<$chrs_or_bytes_read> will by the bytes read when the column
+types SQL_C_CHAR or SQL_C_BINARY are used and characters read if the
+column type is SQL_C_WCHAR.
+
+When built with unicode support C<$length> specifes the amount of
+buffer space to be used when retrieving the lob data but as it is
+returned as SQLWCHAR characters this means you at most retrieve
+C<$length/2> characters. When those retrieved characters are encoded
+in UTF-8 for Perl, the C<$lob> scalar may need to be larger than
+C<$length> so DBD::ODBC grows it appropriately.
+
+You can retrieve a lob in chunks like this:
+
+  $sth->bind_col($column, undef, {BindAsLOB=>1});
+  while(my $retrieved = $sth->odbc_lob_read($column, \my $data, $length)) {
+      print "retrieved=$retrieved lob_data=$data\n";
+  }
+
+NOTE: to retrieve a lob like this you B<must> first bind the lob
+column specifying BindAsLOB or DBD::ODBC will 1) bind the column as
+normal and it will be subject to LongReadLen and b) fail
+odbc_lob_read.
+
+NOTE: Some database engines and ODBC drivers do not allow you to
+retrieve columns out of order (e.g., MS SQL Server unless you are
+using cursors).  In those cases you must ensure the lob retrieved is
+the last (or only) column in your select list.
+
+NOTE: You can retrieve only part of a lob but you will probably have
+to call finish on the statement handle before you do anything else
+with that statement.
+
+NOTE: If your select contains multiple lobs you cannot read part of
+the first lob, the second lob then return to the first lob. You must
+read all lobs in order and completely or read part of a lob and then
+do no further calls to odbc_lob_read.
+
 =head2 Private statement attributes
 
 =head3 odbc_more_results
@@ -1273,7 +1328,7 @@ internals see L<DBIx::Log4perl>.
 
 =head2 Deviations from the DBI specification
 
-=head last_insert_id
+=head3 last_insert_id
 
 DBD::ODBC does not support DBI's last_insert_id. There is no ODBC
 defined way of obtaining this information. Generally the mechanism
