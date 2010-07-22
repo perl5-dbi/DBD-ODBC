@@ -37,6 +37,6 @@ int  odbc_get_foreign_keys _((SV *dbh, SV *sth, char *PK_CatalogName, char *PK_S
 void dbd_error _((SV *h, RETCODE err_rc, char *what));
 void dbd_error2 _((SV *h, RETCODE err_rc, char *what, HENV henv, HDBC hdbc, HSTMT hstmt));
 int dbd_db_execdirect _(( SV *dbh, SV *statement ));
-
+UV odbc_st_lob_read(SV *sth, int colno, SV *data, UV length, IV type);
 
 /* end of ODBC.h */
