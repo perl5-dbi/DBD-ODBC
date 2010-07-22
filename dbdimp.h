@@ -13,6 +13,8 @@
  *
  */
 
+/* some constants for driver specific types */
+#define MS_SQLS_XML_TYPE -152
 
 typedef struct imp_fbh_st imp_fbh_t;
 

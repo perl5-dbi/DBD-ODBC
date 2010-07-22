@@ -77,6 +77,8 @@ bind_col call.
 Removed support for DBI's blob_read - it was totally flawed and did
 not work at all. May replace in the future.
 
+Added support for MS SQL Server XML type (SQL type -152). See rt 59621.
+
 =head2 Changes in DBD::ODBC  1.24_1 May 27, 2010
 
 Corrected pod and private attributes for the odbc_SQL_DRIVER_ODBC_VER

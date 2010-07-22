@@ -1963,6 +1963,7 @@ static const char *S_SqlTypeToString (SWORD sqltype)
       case SQL_BIGINT:	return "BIGINT";
       case SQL_TINYINT:	return "TINYINT";
       case SQL_BIT:	return "BIT";
+      case MS_SQLS_XML_TYPE: return "MS SQL Server XML";
    }
    return "unknown";
 }
@@ -2304,6 +2305,9 @@ int dbd_describe(SV *h, imp_sth_t *imp_sth, int more)
           case SQL_LONGVARCHAR:
 	    fbh->ColDisplaySize = DBIc_LongReadLen(imp_sth)+1;
 	    break;
+          case MS_SQLS_XML_TYPE:
+            fbh->ColDisplaySize = DBIc_LongReadLen(imp_sth)+1;
+            break;
 #ifdef TIMESTAMP_STRUCT	/* XXX! */
           case SQL_TIMESTAMP:
           case SQL_TYPE_TIMESTAMP:
@@ -3715,7 +3719,7 @@ int dbd_st_bind_col(
 
         DBD_ATTRIBS_CHECK("dbd_st_bind_col", sth, attribs);
 
-        if (DBD_ATTRIB_TRUE(attribs, "BindAsLOB", 9, svp)) {
+        if (DBD_ATTRIB_TRUE(attribs, "TreatAsLOB", 10, svp)) {
             imp_sth->fbh[field-1].bind_flags |= ODBC_TREAT_AS_LOB;
         }
 #if DBIXS_REVISION >= 13590
