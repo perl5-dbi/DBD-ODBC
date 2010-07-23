@@ -18,7 +18,7 @@ odbc_lob_read(sth, colno, bufsv, length, attr = NULL)
     PROTOTYPE: $$$$;$
     PREINIT:
      char *buf;
-     UV   ret_len;
+     IV   ret_len;
      IV   sql_type = 0;
     INIT:
      if (length == 0) {
@@ -37,7 +37,7 @@ odbc_lob_read(sth, colno, bufsv, length, attr = NULL)
 
      buf = SvGROW(bufsv, length + 1);
      ret_len = odbc_st_lob_read(sth, colno, bufsv, length, sql_type);
-     if (ret_len > 0) {
+     if (ret_len >= 0) {
          SvCUR_set(bufsv, ret_len);      /* set length in SV */
          *SvEND(bufsv) = '\0';           /* NUL terminate */
          SvSETMAGIC(bufsv);

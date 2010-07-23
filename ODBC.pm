@@ -1038,7 +1038,9 @@ now 3.x, this can be used to force 2.x behavior via something like: my
   $chrs_or_bytes_read = $sth->lob_read($column_no, \$lob, $length, \%attr);
 
 Reads C<$length> bytes from the lob at column C<$column_no> returning
-the lob into C<$lob>.
+the lob into C<$lob> and the number of bytes or characters read into
+C<$chrs_or_bytes_read>. If an error occurs undef will be returned.
+When there is no more data to be read 0 is returned.
 
 NOTE: This is currently an experimental method and may change in the
 future e.g., it may support automatic concatenation of the lob

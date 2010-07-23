@@ -5171,7 +5171,7 @@ SV *
 
 
 
-UV odbc_st_lob_read(
+IV odbc_st_lob_read(
     SV *sth,
     int colno,
     SV *data,
@@ -5184,14 +5184,14 @@ UV odbc_st_lob_read(
     SQLRETURN rc;
     imp_fbh_t *fbh;
     SQLSMALLINT col_type;
-    UV retlen;
+    IV retlen;
     char *buf = SvPV_nolen(data);
 
     fbh = &imp_sth->fbh[colno-1];
 
     /*printf("fbh->ColSqlType=%s\n", S_SqlTypeToString(fbh->ColSqlType));*/
     if ((fbh->bind_flags & ODBC_TREAT_AS_LOB) == 0) {
-        croak("Column %d was not bound with BindAsLOB", colno);
+        croak("Column %d was not bound with TreatAsLOB", colno);
     }
 
     if ((fbh->ColSqlType == SQL_BINARY) ||
@@ -5204,6 +5204,9 @@ UV odbc_st_lob_read(
 #else
         col_type = SQL_C_CHAR;
 #endif  /* WITH_UNICODE */
+    }
+    if (type != 0) {
+        col_type = type;
     }
 
     rc = SQLGetData(imp_sth->hstmt, colno, col_type, buf, length, &len);
@@ -5218,14 +5221,14 @@ UV odbc_st_lob_read(
         return 0;
     } else if (!SQL_SUCCEEDED(rc)) {
         dbd_error(sth, rc, "odbc_st_lob_read/SQLGetData");
-        return 0;
+        return -1;
     } else if (rc == SQL_SUCCESS_WITH_INFO) {
         /* we are assuming this is 01004 - string data right truncation
            unless len == SQL_NO_TOTAL */
         if (len == SQL_NO_TOTAL) {
             dbd_error(sth, rc,
                       "Driver did not return the lob length - SQL_NO_TOTAL)");
-            return 0;
+            return -1;
         }
         retlen = length - 1;
     } else if (rc == SQL_SUCCESS) {
