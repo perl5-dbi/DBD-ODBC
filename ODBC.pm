@@ -1362,6 +1362,20 @@ a named placeholder is not ignored and should be see
 L</odbc_ignore_named_placeholders> for a workaround and mail me an
 example along with your ODBC driver name.
 
+=head2 do
+
+DBD::ODBC implements C<do> by calling SQLExecDirect in ODBC and not
+SQLPrepare followed by SQLExecute so C<do> is not the same as:
+
+  $dbh->prepare($sql)->execute()
+
+It does this to avoid a round-trip to the server so it is faster.
+Normally this is good but some people fall foul of this with MS SQL
+Server if they call a procedure which outputs print statements (e.g.,
+backup) as the procedure may not complete. See the DBD::ODBC FAQ and
+in general you are better to use prepare/execute when calling
+procedures.
+
 =head3 Mixed placeholder types
 
 There are 3 conventions for place holders in DBI. These are '?', ':N'

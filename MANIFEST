@@ -103,6 +103,7 @@ t/rt_46597.t
 t/rt_50852.t
 t/rt_57957.t
 t/rt_null_nvarchar.t
+t/rt_59621.t
 unicode_helper.c
 unicode_helper.h
 if_you_are_taking_over_this_code.txt

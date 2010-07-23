@@ -1369,9 +1369,8 @@ We need two data structures to translate this stuff:
 void dbd_preparse(imp_sth_t *imp_sth, char *statement)
 {
    dTHR;
-   enum {DEFAULT, LITERAL, COMMENT, LINE_COMMENT} states;
-   int state = DEFAULT;
-   int next_state;
+   enum STATES {DEFAULT, LITERAL, COMMENT, LINE_COMMENT};
+   enum STATES state = DEFAULT;
    char literal_ch = '\0';
 
    char *src, *dest;
@@ -1398,7 +1397,7 @@ void dbd_preparse(imp_sth_t *imp_sth, char *statement)
        TRACE1(imp_sth, "    ignore named placeholders = %d\n",
               imp_sth->odbc_ignore_named_placeholders);
    while(*src) {
-       int next_state = state;
+       enum STATES next_state = state;
 
        switch (state) {
          case DEFAULT:
@@ -2009,7 +2008,6 @@ int dbd_describe(SV *h, imp_sth_t *imp_sth, int more)
 {
     dTHR;
     SQLRETURN rc;                           /* ODBC fn return value */
-    UCHAR *rbuf_ptr;
     SQLSMALLINT i;
     imp_fbh_t *fbh;
     SQLLEN colbuf_bytes_reqd = 0;
@@ -2023,6 +2021,8 @@ int dbd_describe(SV *h, imp_sth_t *imp_sth, int more)
 
     if (imp_sth->done_desc)
         return 1;                       /* success, already done it */
+
+    imp_sth->done_bind = 0;
 
     rc = SQLNumResultCols(imp_sth->hstmt, &num_fields);
     if (!SQL_SUCCEEDED(rc)) {
@@ -2145,7 +2145,7 @@ int dbd_describe(SV *h, imp_sth_t *imp_sth, int more)
         cur_col_name += fbh->ColNameLen * sizeof(SQLWCHAR);
 #else
         cur_col_name += fbh->ColNameLen + 1;
-        /*cur_col_name[fbh->ColNameLen] = '\0';*/   /* should not be necessary */
+        cur_col_name[fbh->ColNameLen] = '\0';   /* should not be necessary */
 #endif
         if (DBIc_TRACE(imp_sth, 0, 0, 8))
             PerlIO_printf(DBIc_LOGPIO(imp_dbh),
@@ -2337,6 +2337,7 @@ int dbd_describe(SV *h, imp_sth_t *imp_sth, int more)
     }
     if (!SQL_SUCCEEDED(rc)) {
         /* dbd_error called above */
+        if (DBIc_TRACE(imp_sth, 0, 0, 5)) TRACE0(imp_sth, "Freeing fbh\n");
         Safefree(imp_sth->fbh);
         imp_sth->fbh = NULL;
         return 0;
@@ -2344,16 +2345,9 @@ int dbd_describe(SV *h, imp_sth_t *imp_sth, int more)
 
     imp_sth->RowBufferSizeReqd = colbuf_bytes_reqd;
 
-    /*rc = bind_columns(h, imp_sth);*/
+    if (DBIc_TRACE(imp_sth, 0, 0, 4))
+        TRACE1(imp_sth, "    -dbd_describe done_bind=%d\n", imp_sth->done_bind);
 
-    imp_sth->done_bind = 0;
-
-    if (!SQL_SUCCEEDED(rc)) {
-        /* dbd_error called above */
-        Safefree(imp_sth->fbh);
-        imp_sth->fbh = NULL;
-        return 0;
-    }
     return 1;
 }
 
@@ -2366,10 +2360,14 @@ static SQLRETURN bind_columns(
     SQLSMALLINT num_fields;
     UCHAR *rbuf_ptr;
     imp_fbh_t *fbh;
-    SQLRETURN rc;                           /* ODBC fn return value */
+    SQLRETURN rc = SQL_SUCCESS;                           /* ODBC fn return value */
     SQLSMALLINT i;
 
     num_fields = DBIc_NUM_FIELDS(imp_sth);
+
+    if (DBIc_TRACE(imp_sth, 0, 0, 4))
+        TRACE2(imp_sth,
+               "    bind_columns fbh=%p fields=%d\n", imp_sth->fbh, num_fields);
 
     /* allocate Row memory */
     Newz(42, imp_sth->RowBuffer,
@@ -2403,8 +2401,13 @@ static SQLRETURN bind_columns(
                 dbd_error(h, rc, "describe/SQLBindCol");
                 break;
             }
+        } else if (DBIc_TRACE(imp_sth, 0, 0, 4)) {
+            TRACE1(imp_sth, "      TreatAsLOB bind_flags = %lu\n",
+                   fbh->bind_flags);
         }
     }
+    if (DBIc_TRACE(imp_sth, 0, 0, 4))
+	  	 TRACE1(imp_sth, "    bind_columns=%d\n", rc);
     return rc;
 }
 
@@ -5206,7 +5209,7 @@ IV odbc_st_lob_read(
 #endif  /* WITH_UNICODE */
     }
     if (type != 0) {
-        col_type = type;
+        col_type = (SQLSMALLINT)type;
     }
 
     rc = SQLGetData(imp_sth->hstmt, colno, col_type, buf, length, &len);

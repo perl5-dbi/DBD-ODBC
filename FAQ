@@ -529,7 +529,7 @@ column or a non-numeric string to a numeric column.
 =head2 Why do I get strange results with SQL Server and named parameters?
 
 If you are using a MS SQL Server driver and named parameters to
-procedures be very careful to use then in the sasme order they are
+procedures be very careful to use then in the same order they are
 defined in the procedure. i.e., if you have a procedure like this:
 
   create procedure test

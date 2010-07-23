@@ -37,7 +37,7 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
 
 =head1 CHANGES
 
-=head2 Changes in DBD::ODBC  1.24_2 July 22, 2010
+=head2 Changes in DBD::ODBC  1.24_2 July 23, 2010
 
 Fix rt57957 reported by Marc Prewitt. DBD::ODBC was not ignoring named
 placeholders and ? inside comments. Comments are deemed as text
@@ -78,6 +78,9 @@ Removed support for DBI's blob_read - it was totally flawed and did
 not work at all. May replace in the future.
 
 Added support for MS SQL Server XML type (SQL type -152). See rt 59621.
+
+Added note on do method implementation in DBD::ODBC and how some may
+consider it to deviate from the DBI specification.
 
 =head2 Changes in DBD::ODBC  1.24_1 May 27, 2010
 
