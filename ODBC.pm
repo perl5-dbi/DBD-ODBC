@@ -1344,6 +1344,11 @@ information for last_insert_id and you mail me the ODBC Driver
 name/version and database name/version with a small working example I
 will collect examples and document them here.
 
+B<Microsoft Access>. Recent versions of MS Access support I<select
+@@identity> to retrieve the last insert ID.  See
+http://support.microsoft.com/kb/815629. Information provided by Robert
+Freimuth.
+
 =head3 Comments in SQL
 
 DBI does not say anything in particular about comments in SQL.
