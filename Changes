@@ -37,6 +37,16 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
 
 =head1 CHANGES
 
+=head2 Changes in DBD::ODBC  1.24_3 XXXX NN, 2010
+
+Added note from Robert Freimuth for obtaining the last insert ID in MS
+Access.
+
+Changed all &sv_yes/&sv_no occurrances in XS to PL_sv_yes/PL_sv_no as
+the originals have now gone from blead Perl.
+
+Minor change to fix missing newline in trace output.
+
 =head2 Changes in DBD::ODBC  1.24_2 July 23, 2010
 
 Fix rt57957 reported by Marc Prewitt. DBD::ODBC was not ignoring named

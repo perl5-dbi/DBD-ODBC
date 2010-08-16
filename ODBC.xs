@@ -73,7 +73,7 @@ _tables(dbh, sth, catalog, schema, table, type)
 	char *	type
 	CODE:
 	/* list all tables and views (0 as last parameter) */
-	ST(0) = dbd_st_tables(dbh, sth, catalog, schema, table, type) ? &sv_yes : &sv_no;
+	ST(0) = dbd_st_tables(dbh, sth, catalog, schema, table, type) ? &PL_sv_yes : &PL_sv_no;
 
 void
 _primary_keys(dbh, sth, catalog, schema, table)
@@ -83,7 +83,7 @@ _primary_keys(dbh, sth, catalog, schema, table)
     char *	schema
     char *	table
     CODE:
-    ST(0) = dbd_st_primary_keys(dbh, sth, catalog, schema, table) ? &sv_yes : &sv_no;
+    ST(0) = dbd_st_primary_keys(dbh, sth, catalog, schema, table) ? &PL_sv_yes : &PL_sv_no;
 
 void
 _statistics(dbh, sth, catalog, schema, table, unique, quick)
@@ -97,7 +97,7 @@ _statistics(dbh, sth, catalog, schema, table, unique, quick)
 
     CODE:
     ST(0) = dbd_st_statistics(dbh, sth, catalog, schema, table,
-                              unique, quick) ? &sv_yes : &sv_no;
+                              unique, quick) ? &PL_sv_yes : &PL_sv_no;
 
 void
 DescribeCol(sth, colno)
@@ -150,7 +150,7 @@ _columns(dbh, sth, catalog, schema, table, column)
 	char *	table
 	char *	column
 	CODE:
-	ST(0) = odbc_db_columns(dbh, sth, catalog, schema, table, column) ? &sv_yes : &sv_no;
+	ST(0) = odbc_db_columns(dbh, sth, catalog, schema, table, column) ? &PL_sv_yes : &PL_sv_no;
 
 void
 _GetInfo(dbh, ftype)
@@ -165,7 +165,7 @@ _GetTypeInfo(dbh, sth, ftype)
 	SV *	sth
 	int		ftype
 	CODE:
-	ST(0) = odbc_get_type_info(dbh, sth, ftype) ? &sv_yes : &sv_no;
+	ST(0) = odbc_get_type_info(dbh, sth, ftype) ? &PL_sv_yes : &PL_sv_no;
 
 void
 _GetStatistics(dbh, sth, CatalogName, SchemaName, TableName, Unique)
@@ -177,7 +177,7 @@ _GetStatistics(dbh, sth, CatalogName, SchemaName, TableName, Unique)
 	int     Unique
 	CODE:
         ST(0) = dbd_st_statistics(dbh, sth, CatalogName, SchemaName,
-                                  TableName, Unique, 0) ? &sv_yes : &sv_no;
+                                  TableName, Unique, 0) ? &PL_sv_yes : &PL_sv_no;
 
 void
 _GetPrimaryKeys(dbh, sth, CatalogName, SchemaName, TableName)
@@ -188,7 +188,7 @@ _GetPrimaryKeys(dbh, sth, CatalogName, SchemaName, TableName)
 	char *	TableName
 	CODE:
         /* the following will end up in dbdimp.c/dbd_st_primary_keys */
-	ST(0) = odbc_st_primary_keys(dbh, sth, CatalogName, SchemaName, TableName) ? &sv_yes : &sv_no;
+	ST(0) = odbc_st_primary_keys(dbh, sth, CatalogName, SchemaName, TableName) ? &PL_sv_yes : &PL_sv_no;
 
 void
 _GetSpecialColumns(dbh, sth, Identifier, CatalogName, SchemaName, TableName, Scope, Nullable)
@@ -201,7 +201,7 @@ _GetSpecialColumns(dbh, sth, Identifier, CatalogName, SchemaName, TableName, Sco
     int     Scope
     int     Nullable
 	CODE:
-	ST(0) = odbc_get_special_columns(dbh, sth, Identifier, CatalogName, SchemaName, TableName, Scope, Nullable) ? &sv_yes : &sv_no;
+	ST(0) = odbc_get_special_columns(dbh, sth, Identifier, CatalogName, SchemaName, TableName, Scope, Nullable) ? &PL_sv_yes : &PL_sv_no;
 
 void
 _GetForeignKeys(dbh, sth, PK_CatalogName, PK_SchemaName, PK_TableName, FK_CatalogName, FK_SchemaName, FK_TableName)
@@ -214,7 +214,7 @@ _GetForeignKeys(dbh, sth, PK_CatalogName, PK_SchemaName, PK_TableName, FK_Catalo
 	char *	FK_SchemaName
 	char *	FK_TableName
 	CODE:
-	ST(0) = odbc_get_foreign_keys(dbh, sth, PK_CatalogName, PK_SchemaName, PK_TableName, FK_CatalogName, FK_SchemaName, FK_TableName) ? &sv_yes : &sv_no;
+	ST(0) = odbc_get_foreign_keys(dbh, sth, PK_CatalogName, PK_SchemaName, PK_TableName, FK_CatalogName, FK_SchemaName, FK_TableName) ? &PL_sv_yes : &PL_sv_no;
 
 #
 # Corresponds to ODBC 2.0.  3.0's SQL_API_ODBC3_ALL_FUNCTIONS is handled also
@@ -234,18 +234,18 @@ GetFunctions(dbh, func)
 	   switch (func) {
 	      case SQL_API_ALL_FUNCTIONS:
 			for (i = 0; i < 100; i++) {
-				XPUSHs(pfExists[i] ? &sv_yes : &sv_no);
+				XPUSHs(pfExists[i] ? &PL_sv_yes : &PL_sv_no);
 			}
 			break;
 	      case SQL_API_ODBC3_ALL_FUNCTIONS:
 		 for (i = 0; i < SQL_API_ODBC3_ALL_FUNCTIONS_SIZE; i++) {
 		    for (j = 0; j < 8 * sizeof(pfExists[i]); j++) {
-		       XPUSHs((pfExists[i] & (1 << j)) ? &sv_yes : &sv_no);
+		       XPUSHs((pfExists[i] & (1 << j)) ? &PL_sv_yes : &PL_sv_no);
 		    }
 		 }
 		 break;
 	      default:
-		XPUSHs(pfExists[0] ? &sv_yes : &sv_no);
+		XPUSHs(pfExists[0] ? &PL_sv_yes : &PL_sv_no);
 	   }
 	}
 
