@@ -3237,7 +3237,7 @@ static int rebind_param(
          * just copy the value & length over and not rebind.
          */
         if (SvREADONLY(phs->sv))
-            croak(PL_no_modify);
+            Perl_croak(aTHX_ PL_no_modify);
         /* phs->sv _is_ the real live variable, it may 'mutate' later   */
         /* pre-upgrade high to reduce risk of SvPVX realloc/move        */
         (void)SvUPGRADE(phs->sv, SVt_PVNV);
