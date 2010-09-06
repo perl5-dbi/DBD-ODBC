@@ -815,6 +815,23 @@ You unfortunately need to change your SQL to:
 
   select * from mytable where CAST(ntext_column AS nvarchar(max)) = 'hello'
 
+=head2 Why are my integers returned as decimals?
+
+If you are using the MS SQL Server ODBC driver and get
+integers/booleans back as apparently decimals e.g. 0.00 instead of 0 and
+integer primary keys as nn.nn you've probably either:
+
+=over
+
+=item enabled regional settings in the ODBC DSN setup (called "use regional settings with outputting..."
+
+=item added "Regional=Yes" to your connection string.
+
+The MS SQL Server ODBC Driver regional settings are massively flawed
+and break lots of applications - turn it off.
+
+=back
+
 =head1 AUTHOR
 
 Parts of this document were written by Tim Bunce,
