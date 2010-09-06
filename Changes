@@ -37,7 +37,7 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
 
 =head1 CHANGES
 
-=head2 Changes in DBD::ODBC  1.24_3 XXXX NN, 2010
+=head2 Changes in DBD::ODBC  1.24_3 September 6, 2010
 
 Added note from Robert Freimuth for obtaining the last insert ID in MS
 Access.
@@ -46,6 +46,9 @@ Changed all &sv_yes/&sv_no occurrances in XS to PL_sv_yes/PL_sv_no as
 the originals have now gone from blead Perl.
 
 Minor change to fix missing newline in trace output.
+
+Added a FAQ entry for how "use regional settings" in MS SQL Server
+breaks things.
 
 =head2 Changes in DBD::ODBC  1.24_2 July 23, 2010
 
