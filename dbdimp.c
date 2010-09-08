@@ -33,6 +33,7 @@
  */
 #define NEED_newRV_noinc
 #define NEED_sv_2pv_flags
+#define NEED_my_snprintf
 
 #include "ODBC.h"
 #if defined(WITH_UNICODE)
@@ -1417,7 +1418,7 @@ void dbd_preparse(imp_sth_t *imp_sth, char *statement)
                  ch = *src++;
                  if (ch == '?') {                    /* X/Open standard */
                      idx++;
-                     sprintf(name, "%d", idx);
+                     my_snprintf(name, sizeof(name), "%d", idx);
                      *dest++ = ch;
                      style = 3;
                  }
@@ -1535,8 +1536,7 @@ int dbd_st_tables(
    D_imp_sth(sth);
    RETCODE rc;
    int dbh_active;
-   /* SV **svp; */
-   /* char cname[128];	*/				/* cursorname */
+   size_t max_stmt_len;
    dTHR;
 
    imp_sth->henv = imp_dbh->henv;	/* needed for dbd_error */
@@ -1554,13 +1554,17 @@ int dbd_st_tables(
 
    /* just for sanity, later.  Any internals that may rely on this (including */
    /* debugging) will have valid data */
-   imp_sth->statement = (char *)safemalloc(strlen(cSqlTables)+
-					   strlen(XXSAFECHAR(catalog)) +
-					   strlen(XXSAFECHAR(schema)) +
-					   strlen(XXSAFECHAR(table)) +
-					   strlen(XXSAFECHAR(table_type))+1);
-   sprintf(imp_sth->statement, cSqlTables, XXSAFECHAR(catalog),
-	   XXSAFECHAR(schema), XXSAFECHAR(table), XXSAFECHAR(table_type));
+   max_stmt_len =
+       strlen(cSqlTables)+
+       strlen(XXSAFECHAR(catalog)) +
+       strlen(XXSAFECHAR(schema)) +
+       strlen(XXSAFECHAR(table)) +
+       strlen(XXSAFECHAR(table_type))+1;
+
+   imp_sth->statement = (char *)safemalloc(max_stmt_len);
+   my_snprintf(imp_sth->statement, max_stmt_len, cSqlTables,
+               XXSAFECHAR(catalog), XXSAFECHAR(schema),
+               XXSAFECHAR(table), XXSAFECHAR(table_type));
 
    rc = SQLTables(imp_sth->hstmt,
 		  (catalog && *catalog) ? catalog : 0, SQL_NTS,
@@ -1598,6 +1602,7 @@ int dbd_st_primary_keys(
    D_imp_sth(sth);
    RETCODE rc;
    int dbh_active;
+   size_t max_stmt_len;
 
    imp_sth->henv = imp_dbh->henv;	/* needed for dbd_error */
    imp_sth->hdbc = imp_dbh->hdbc;
@@ -1614,14 +1619,17 @@ int dbd_st_primary_keys(
 
    /* just for sanity, later.  Any internals that may rely on this (including */
    /* debugging) will have valid data */
-   imp_sth->statement = (char *)safemalloc(strlen(cSqlPrimaryKeys)+
-					   strlen(XXSAFECHAR(catalog))+
-					   strlen(XXSAFECHAR(schema))+
-					   strlen(XXSAFECHAR(table))+1);
+   max_stmt_len =
+       strlen(cSqlPrimaryKeys)+
+       strlen(XXSAFECHAR(catalog))+
+       strlen(XXSAFECHAR(schema))+
+       strlen(XXSAFECHAR(table))+1;
 
-   sprintf(imp_sth->statement,
-	   cSqlPrimaryKeys, XXSAFECHAR(catalog), XXSAFECHAR(schema),
-	   XXSAFECHAR(table));
+   imp_sth->statement = (char *)safemalloc(max_stmt_len);
+
+   my_snprintf(imp_sth->statement, max_stmt_len,
+               cSqlPrimaryKeys, XXSAFECHAR(catalog), XXSAFECHAR(schema),
+               XXSAFECHAR(table));
 
    rc = SQLPrimaryKeys(imp_sth->hstmt,
 		       (catalog && *catalog) ? catalog : 0, SQL_NTS,
@@ -1664,6 +1672,7 @@ int dbd_st_statistics(
    int dbh_active;
    SQLUSMALLINT odbc_unique;
    SQLUSMALLINT odbc_quick;
+   size_t max_stmt_len;
 
    imp_sth->henv = imp_dbh->henv;	/* needed for dbd_error */
    imp_sth->hdbc = imp_dbh->hdbc;
@@ -1683,14 +1692,17 @@ int dbd_st_statistics(
 
    /* just for sanity, later.  Any internals that may rely on this (including */
    /* debugging) will have valid data */
-   imp_sth->statement = (char *)safemalloc(strlen(cSqlStatistics)+
-					   strlen(XXSAFECHAR(catalog))+
-					   strlen(XXSAFECHAR(schema))+
-					   strlen(XXSAFECHAR(table))+1);
+   max_stmt_len =
+       strlen(cSqlStatistics)+
+       strlen(XXSAFECHAR(catalog))+
+       strlen(XXSAFECHAR(schema))+
+       strlen(XXSAFECHAR(table))+1;
 
-   sprintf(imp_sth->statement,
-	   cSqlStatistics, XXSAFECHAR(catalog), XXSAFECHAR(schema),
-	   XXSAFECHAR(table), unique, quick);
+   imp_sth->statement = (char *)safemalloc(max_stmt_len);
+
+   my_snprintf(imp_sth->statement, max_stmt_len,
+               cSqlStatistics, XXSAFECHAR(catalog), XXSAFECHAR(schema),
+               XXSAFECHAR(table), unique, quick);
 
    rc = SQLStatistics(imp_sth->hstmt,
                       (catalog && *catalog) ? catalog : 0, SQL_NTS,
@@ -3021,7 +3033,7 @@ void dbd_st_destroy(SV *sth, imp_sth_t *imp_sth)
       I32 retlen;
       hv_iterinit(hv);
       while( (sv = hv_iternextsv(hv, &key, &retlen)) != NULL ) {
-	 if (sv != &sv_undef) {
+	 if (sv != &PL_sv_undef) {
 	    phs_t *phs_tpl = (phs_t*)(void*)SvPVX(sv);
 	    sv_free(phs_tpl->sv);
 	 }

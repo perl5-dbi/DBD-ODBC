@@ -37,6 +37,12 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
 
 =head1 CHANGES
 
+=head2 Changes in DBD::ODBC  1.24_4 September 8, 2010
+
+Left a sv_undef in - thanks smoke testers for finding that.
+
+Change sprintf to snprintf for safety.
+
 =head2 Changes in DBD::ODBC  1.24_3 September 6, 2010
 
 Added note from Robert Freimuth for obtaining the last insert ID in MS
