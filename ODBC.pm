@@ -19,7 +19,7 @@ require 5.006;
 # see discussion on dbi-users at
 # http://www.nntp.perl.org/group/perl.dbi.dev/2010/07/msg6096.html and
 # http://www.dagolden.com/index.php/369/version-numbers-should-be-boring/
-$DBD::ODBC::VERSION = '1.24_4';
+$DBD::ODBC::VERSION = '1.24_6';
 
 {
     ## no critic (ProhibitMagicNumbers ProhibitExplicitISA)
@@ -526,7 +526,7 @@ DBD::ODBC - ODBC Driver for DBI
 
 =head1 VERSION
 
-This documentation refers to DBD::ODBC version 1.24_4.
+This documentation refers to DBD::ODBC version 1.24_6.
 
 =head1 SYNOPSIS
 
@@ -1504,7 +1504,7 @@ unicode.
 
 =head3 Enabling and Disabling Unicode support
 
-On Windows Unicode support as ss enabled by default and to disable it
+On Windows Unicode support is enabled by default and to disable it
 you will need to specify C<-nou> to F<Makefile.PL> to get back to the
 original behavior of DBD::ODBC before any Unicode support was added.
 
