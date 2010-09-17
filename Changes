@@ -34,8 +34,25 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
    !!DBD::ODBC unsupported attribute passed (dbi_connect_closure)
    !!DBD::ODBC unsupported attribute passed (LongReadLen)
   Add a perlcritic test - see DBD::Pg
+ Anywhere we are storing a value in an SV that we didn't create
+   (and thus might have magic) should probably set magic.
 
 =head1 CHANGES
+
+=head2 Changes in DBD::ODBC  1.24_6 September 16, 2010
+
+rt 61370 - default XML type parameters in SQL Server to SQL_WCHAR so
+they accept unicode strings.
+
+=head2 Changes in DBD::ODBC  1.24_5 September 15, 2010
+
+Fixed missing SvSETMAGIC on a bound scalar which was causing length()
+to return the wrong result - see
+http://www.perlmonks.org/?node_id=860211 and a big thank you to Perl
+Monks and in particular ikegami.
+
+Changed bind_col so it actually pays attention to the TYPE attribute
+as you could not override the bind type of a bound column before.
 
 =head2 Changes in DBD::ODBC  1.24_4 September 8, 2010
 

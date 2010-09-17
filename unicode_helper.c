@@ -99,10 +99,10 @@ static SV * _dosvwv(SV * sv, UTF16 * wp, STRLEN len, new_cat_set_t mode)
         sv=newSVpvn(p,svlen);
         break;
       case do_cat:
-        sv_catpvn(sv,p,svlen);
+        sv_catpvn_mg(sv,p,svlen);
         break;
       case do_set:
-        sv_setpvn(sv,p,svlen);
+        sv_setpvn_mg(sv,p,svlen);
         break;
       default:
         croak("_dosvwv called with bad mode value");
