@@ -1,7 +1,7 @@
 --- #YAML:1.0
 name: DBD-ODBC
 abstract: ODBC DBD for Perl DBI
-version: 1.25
+version: 1.26_1
 version_from: ODBC.pm
 author:
   - Tim Bunce
@@ -11,15 +11,18 @@ license: perl
 distribution_type: module
 requires:
     DBI: 1.21
-    perl: 5.006
+    perl: 5.008
+    Test::Simple: 0.90
 #
 # Added build_requires/configure_requires DBI as DBD::ODBC needs DBI::DBD to
 # get postamble etc
 #
 build_requires:
   DBI: 1.21
+  ExtUtils::MakeMaker: 0
 configure_requires:
   DBI: 1.21
+  ExtUtils::MakeMaker: 0
 dynamic_config: 1
 resources:
   license: http://dev.perl.org/licenses/
