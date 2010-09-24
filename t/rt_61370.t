@@ -19,10 +19,6 @@ binmode Test::More->builder->failure_output, ":utf8";
 
 binmode STDOUT, ':utf8';
 
-my $has_test_nowarnings = 1;
-eval "require Test::NoWarnings";
-$has_test_nowarnings = undef if $@;
-
 use DBI qw(:sql_types);
 use_ok('ODBCTEST');
 
@@ -42,8 +38,6 @@ END {
             $dbh->do(q/drop table PERL_DBD_RT_61370/);
         };
     }
-    Test::NoWarnings::had_no_warnings()
-          if ($has_test_nowarnings);
 }
 
 $dbh = DBI->connect();
@@ -142,7 +136,7 @@ SKIP: {
 
         foreach my $row(@rowdata) {
             $sth->fetch;
-            diag(sprintf("%3u %s", length($row->[1]), $row->[1]));
+            #diag(sprintf("%3u %s", length($row->[1]), $row->[1]));
             is($xml, $row->[1], 'inserted/selected strings match'); # 3,5
             is(length($xml), length($row->[1]),
                'inserted/selected string sizes match'); # 4,6
