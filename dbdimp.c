@@ -2018,7 +2018,7 @@ static const char *S_SqlCTypeToString (SWORD sqltype)
       s_c(SQL_C_TYPE_TIMESTAMP);
    }
 #undef s_c
-   sprintf(s_buf, "(CType %d)", sqltype);
+   my_snprintf(s_buf, sizeof(s_buf), "(CType %d)", sqltype);
    return s_buf;
 }
 
@@ -2947,9 +2947,10 @@ AV *dbd_st_fetch(SV *sth, imp_sth_t *imp_sth)
              {
                  TIMESTAMP_STRUCT *ts;
                  ts = (TIMESTAMP_STRUCT *)fbh->data;
-                 sprintf(cvbuf, "%04d-%02d-%02d %02d:%02d:%02d",
-                         ts->year, ts->month, ts->day,
-                         ts->hour, ts->minute, ts->second, ts->fraction);
+                 my_snprintf(cvbuf, sizeof(cvbuf),
+                             "%04d-%02d-%02d %02d:%02d:%02d",
+                             ts->year, ts->month, ts->day,
+                             ts->hour, ts->minute, ts->second, ts->fraction);
                  sv_setpv(sv, cvbuf);
                  break;
              }
@@ -3814,7 +3815,7 @@ int dbd_bind_ph(
 
    if (SvNIOK(ph_namesv) ) {                /* passed as a number */
       name = namebuf;
-      sprintf(name, "%d", (int)SvIV(ph_namesv));
+      my_snprintf(name, sizeof(name), "%d", (int)SvIV(ph_namesv));
       name_len = strlen(name);
    }
    else {
@@ -5074,6 +5075,7 @@ char * FK_TableName;
    D_imp_sth(sth);
    RETCODE rc;
    int dbh_active;
+   size_t max_stmt_len;
 
    imp_sth->henv = imp_dbh->henv;	/* needed for dbd_error */
    imp_sth->hdbc = imp_dbh->hdbc;
@@ -5091,19 +5093,22 @@ char * FK_TableName;
 
    /* just for sanity, later.  Any internals that may rely on this (including */
    /* debugging) will have valid data */
-   imp_sth->statement = (char *)safemalloc(strlen(cSqlForeignKeys)+
-					   strlen(XXSAFECHAR(PK_CatalogName))+
-					   strlen(XXSAFECHAR(PK_SchemaName))+
-					   strlen(XXSAFECHAR(PK_TableName))+
-					   strlen(XXSAFECHAR(FK_CatalogName))+
-					   strlen(XXSAFECHAR(FK_SchemaName))+
-					   strlen(XXSAFECHAR(FK_TableName))+
-					   1);
+   max_stmt_len = strlen(cSqlForeignKeys)+
+       strlen(XXSAFECHAR(PK_CatalogName))+
+       strlen(XXSAFECHAR(PK_SchemaName))+
+       strlen(XXSAFECHAR(PK_TableName))+
+       strlen(XXSAFECHAR(FK_CatalogName))+
+       strlen(XXSAFECHAR(FK_SchemaName))+
+       strlen(XXSAFECHAR(FK_TableName))+
+       1;
 
-   sprintf(imp_sth->statement,
-	   cSqlForeignKeys,
-	   XXSAFECHAR(PK_CatalogName), XXSAFECHAR(PK_SchemaName),XXSAFECHAR(PK_TableName),
-	   XXSAFECHAR(FK_CatalogName), XXSAFECHAR(FK_SchemaName),XXSAFECHAR(FK_TableName)
+   imp_sth->statement = (char *)safemalloc(max_stmt_len);
+
+   my_snprintf(imp_sth->statement, max_stmt_len,
+               cSqlForeignKeys,
+               XXSAFECHAR(PK_CatalogName), XXSAFECHAR(PK_SchemaName),
+               XXSAFECHAR(PK_TableName), XXSAFECHAR(FK_CatalogName),
+               XXSAFECHAR(FK_SchemaName),XXSAFECHAR(FK_TableName)
 	  );
    /* fix to handle "" (undef) calls -- thanks to Kevin Shepherd */
    rc = SQLForeignKeys(
@@ -5163,6 +5168,7 @@ int ftype;
    D_imp_sth(sth);
    RETCODE rc;
    int dbh_active;
+   size_t max_stmt_len;
 
 #if 0
    /* TBD: cursorname? */
@@ -5184,8 +5190,9 @@ int ftype;
 
    /* just for sanity, later. Any internals that may rely on this (including */
    /* debugging) will have valid data */
-   imp_sth->statement = (char *)safemalloc(strlen(cSqlGetTypeInfo)+ftype/10+1);
-   sprintf(imp_sth->statement, cSqlGetTypeInfo, ftype);
+   max_stmt_len = strlen(cSqlGetTypeInfo)+ftype/10+1;
+   imp_sth->statement = (char *)safemalloc(max_stmt_len);
+   my_snprintf(imp_sth->statement, max_stmt_len, cSqlGetTypeInfo, ftype);
 
    rc = SQLGetTypeInfo(imp_sth->hstmt, (SQLSMALLINT)ftype);
 
@@ -5457,6 +5464,7 @@ char *column;
     int dbh_active;
     imp_sth->henv = imp_dbh->henv;	/* needed for dbd_error */
     imp_sth->hdbc = imp_dbh->hdbc;
+    size_t max_stmt_len;
 
     imp_sth->done_desc = 0;
 
@@ -5470,15 +5478,17 @@ char *column;
 
     /* just for sanity, later.  Any internals that may rely on this (including */
     /* debugging) will have valid data */
-    imp_sth->statement = (char *)safemalloc(strlen(cSqlColumns)+
-                                            strlen(XXSAFECHAR(catalog))+
-                                            strlen(XXSAFECHAR(schema))+
-                                            strlen(XXSAFECHAR(table))+
-                                            strlen(XXSAFECHAR(column))+1);
+    max_stmt_len = strlen(cSqlColumns)+
+        strlen(XXSAFECHAR(catalog))+
+        strlen(XXSAFECHAR(schema))+
+        strlen(XXSAFECHAR(table))+
+        strlen(XXSAFECHAR(column))+1;
 
-    sprintf(imp_sth->statement,
-            cSqlColumns, XXSAFECHAR(catalog), XXSAFECHAR(schema),
-            XXSAFECHAR(table), XXSAFECHAR(column));
+    imp_sth->statement = (char *)safemalloc(max_stmt_len);
+
+    my_snprintf(imp_sth->statement, max_stmt_len,
+                cSqlColumns, XXSAFECHAR(catalog), XXSAFECHAR(schema),
+                XXSAFECHAR(table), XXSAFECHAR(column));
 
     rc = SQLColumns(imp_sth->hstmt,
                     (catalog && *catalog) ? catalog : 0, SQL_NTS,
