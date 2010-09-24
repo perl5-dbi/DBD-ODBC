@@ -39,12 +39,17 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
 
 =head2 Changes in DBD::ODBC
 
-=head2 Changes in DBD::ODBC  1.26_1 September 22, 2010
+=head2 Changes in DBD::ODBC  1.26_1 September 24, 2010
 
 Bumped Test::Simple requirement up to 0.90 so we can use done_testing and
 note.
 
 Bump Perl requirement to 5.8 as per DBI.
+
+Workaround a bug in mdbtools which fails to set the out connection
+string in a SQLDriverConnect call. This can lead to:
+
+  panic: sv_setpvn called with negative strlen at blib/lib/DBD/ODBC.pm line 107.
 
 Added rt_61370.t for rt 61370.
 

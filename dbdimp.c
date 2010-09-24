@@ -898,6 +898,11 @@ int dbd_db_login6(
        char out_str[512];
        SQLSMALLINT out_str_len;
 
+       /* Work around a bug in mdbtools where the out connection string length
+          can sometimes be unset. We set it to a rediculous value and if it
+          remains we know mdbtools did not return it. */
+       out_str_len = 9999;
+
        rc = SQLDriverConnect(imp_dbh->hdbc,
                              0, /* no hwnd */
                              dbname,
@@ -905,7 +910,12 @@ int dbd_db_login6(
                              out_str, sizeof(out_str), &out_str_len,
                              SQL_DRIVER_NOPROMPT);
        if (SQL_SUCCEEDED(rc)) {
-           imp_dbh->out_connect_string = newSVpv(out_str, out_str_len);
+           if (out_str_len == 9999) {
+               imp_dbh->out_connect_string = newSVpv("", 0);
+           } else {
+               imp_dbh->out_connect_string = newSVpv(out_str, out_str_len);
+           }
+
            if (DBIc_TRACE(imp_dbh, 0x04000000, 0, 0))
        	       TRACE1(imp_dbh, "Out connection string: %s\n",
                       SvPV_nolen(imp_dbh->out_connect_string));
@@ -2887,89 +2897,93 @@ AV *dbd_st_fetch(SV *sth, imp_sth_t *imp_sth)
    ChopBlanks = DBIc_has(imp_sth, DBIcf_ChopBlanks);
 
    for(i=0; i < num_fields; ++i) {
-      imp_fbh_t *fbh = &imp_sth->fbh[i];
-      SV *sv = AvARRAY(av)[i]; /* Note: we (re)use the SV in the AV	*/
+       imp_fbh_t *fbh = &imp_sth->fbh[i];
+       SV *sv = AvARRAY(av)[i]; /* Note: we (re)use the SV in the AV	*/
 
-      if (DBIc_TRACE(imp_sth, 0, 0, 4))
-	 PerlIO_printf(
-             DBIc_LOGPIO(imp_dbh),
-             "    fetch col#%d %s datalen=%ld displ=%lu\n",
-             i+1, fbh->ColName, (long)fbh->datalen,
-             (unsigned long)fbh->ColDisplaySize);
+       if (DBIc_TRACE(imp_sth, 0, 0, 4))
+           PerlIO_printf(
+               DBIc_LOGPIO(imp_dbh),
+               "    fetch col#%d %s datalen=%ld displ=%lu\n",
+               i+1, fbh->ColName, (long)fbh->datalen,
+               (unsigned long)fbh->ColDisplaySize);
 
-      if (fbh->datalen == SQL_NULL_DATA) {	/* NULL value		*/
-	 SvOK_off(sv);
-	 continue;
-      }
+       if (fbh->datalen == SQL_NULL_DATA) {	/* NULL value		*/
+           SvOK_off(sv);
+           continue;
+       }
 
-      if (fbh->datalen > fbh->ColDisplaySize || fbh->datalen < 0) {
-	 /* truncated LONG ??? DBIcf_LongTruncOk() */
-	 /* DBIcf_LongTruncOk this should only apply to LONG type fields */
-	 /* truncation of other fields should always be an error since it's */
-	 /* a sign of an internal error */
-	 if (!DBIc_has(imp_sth, DBIcf_LongTruncOk)
-	     /*  && rc == SQL_SUCCESS_WITH_INFO */) {
+       if (fbh->datalen > fbh->ColDisplaySize || fbh->datalen < 0) {
+           /* truncated LONG ??? DBIcf_LongTruncOk() */
+           /* DBIcf_LongTruncOk this should only apply to LONG type fields */
+           /* truncation of other fields should always be an error since it's */
+           /* a sign of an internal error */
+           if (!DBIc_has(imp_sth, DBIcf_LongTruncOk)
+               /*  && rc == SQL_SUCCESS_WITH_INFO */) {
 
-	    /*
-	     * Since we've detected the problem locally via the datalen,
-	     * we don't need to worry about the value of rc.
-	     *
-	     * This used to make sure rc was set to SQL_SUCCESS_WITH_INFO
-	     * but since it's an error and not SUCCESS, call dbd_error()
-	     * with SQL_ERROR explicitly instead.
-	     */
+               /*
+                * Since we've detected the problem locally via the datalen,
+                * we don't need to worry about the value of rc.
+                *
+                * This used to make sure rc was set to SQL_SUCCESS_WITH_INFO
+                * but since it's an error and not SUCCESS, call dbd_error()
+                * with SQL_ERROR explicitly instead.
+                */
 
-	    dbd_error(
-                sth, SQL_ERROR,
-                "st_fetch/SQLFetch (long truncated DBI attribute LongTruncOk "
-                "not set and/or LongReadLen too small)");
-	    return Nullav;
-	 }
-	 /* LongTruncOk true, just ensure perl has the right length
-	  * for the truncated data.
-	  */
-	 sv_setpvn(sv, (char*)fbh->data, fbh->ColDisplaySize);
-      }
-      else switch(fbh->ftype) {
+               dbd_error(
+                   sth, SQL_ERROR,
+                   "st_fetch/SQLFetch (long truncated DBI attribute LongTruncOk "
+                   "not set and/or LongReadLen too small)");
+               return Nullav;
+           }
+           /* LongTruncOk true, just ensure perl has the right length
+            * for the truncated data.
+            */
+           sv_setpvn(sv, (char*)fbh->data, fbh->ColDisplaySize);
+       } else {
+           switch(fbh->ftype) {
 #ifdef TIMESTAMP_STRUCT /* iODBC doesn't define this */
-	 TIMESTAMP_STRUCT *ts;
-	 case SQL_C_TIMESTAMP:
-	 case SQL_C_TYPE_TIMESTAMP:
-	    ts = (TIMESTAMP_STRUCT *)fbh->data;
-	    sprintf(cvbuf, "%04d-%02d-%02d %02d:%02d:%02d",
-		    ts->year, ts->month, ts->day,
-		    ts->hour, ts->minute, ts->second, ts->fraction);
-	    sv_setpv(sv, cvbuf);
-	    break;
+             case SQL_C_TIMESTAMP:
+             case SQL_C_TYPE_TIMESTAMP:
+             {
+                 TIMESTAMP_STRUCT *ts;
+                 ts = (TIMESTAMP_STRUCT *)fbh->data;
+                 sprintf(cvbuf, "%04d-%02d-%02d %02d:%02d:%02d",
+                         ts->year, ts->month, ts->day,
+                         ts->hour, ts->minute, ts->second, ts->fraction);
+                 sv_setpv(sv, cvbuf);
+                 break;
+             }
 #endif
 #if defined(WITH_UNICODE)
-         case SQL_C_WCHAR:
-	   if (ChopBlanks && fbh->ColSqlType == SQL_WCHAR && fbh->datalen > 0)
-	   {
-	     SQLWCHAR *p = (SQLWCHAR*)fbh->data;
-	     while(fbh->datalen && p[fbh->datalen-1]==L' ') {
-	       --fbh->datalen;
-	     }
-           }
-	   sv_setwvn(sv,(SQLWCHAR*)fbh->data,fbh->datalen/sizeof(SQLWCHAR));
-	   break;
+             case SQL_C_WCHAR:
+               if (ChopBlanks && fbh->ColSqlType == SQL_WCHAR &&
+                   fbh->datalen > 0)
+               {
+                   SQLWCHAR *p = (SQLWCHAR*)fbh->data;
+                   while(fbh->datalen && p[fbh->datalen-1]==L' ') {
+                       --fbh->datalen;
+                   }
+               }
+               sv_setwvn(sv,(SQLWCHAR*)fbh->data,fbh->datalen/sizeof(SQLWCHAR));
+               break;
 #endif /* WITH_UNICODE */
-	 default:
-           if (ChopBlanks && fbh->ColSqlType == SQL_CHAR && fbh->datalen > 0)
-           {
-	       char *p = (char*)fbh->data;
-	       while(fbh->datalen && p[fbh->datalen - 1]==' ')
-                   --fbh->datalen;
-           }
-           sv_setpvn(sv, (char*)fbh->data, fbh->datalen);
-	   if (imp_sth->odbc_utf8_on && fbh->ftype != SQL_C_BINARY ) {
+             default:
+               if (ChopBlanks && fbh->ColSqlType == SQL_CHAR &&
+                   fbh->datalen > 0) {
+                   char *p = (char*)fbh->data;
+                   while(fbh->datalen && p[fbh->datalen - 1]==' ')
+                       --fbh->datalen;
+               }
+               sv_setpvn(sv, (char*)fbh->data, fbh->datalen);
+               if (imp_sth->odbc_utf8_on && fbh->ftype != SQL_C_BINARY ) {
 #ifdef sv_utf8_decode
-           sv_utf8_decode(sv);
+                   sv_utf8_decode(sv);
 #else
-           SvUTF8_on(sv);
+                   SvUTF8_on(sv);
 #endif
-	   }
-      }
+               }
+           }
+       }
    }
    return av;
 }
