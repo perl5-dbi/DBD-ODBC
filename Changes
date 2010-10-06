@@ -53,6 +53,17 @@ string in a SQLDriverConnect call. This can lead to:
 
 Added rt_61370.t for rt 61370.
 
+Removed last remaining sprintf calls and replaced with snprintf.
+
+Changed the point at which DBD::ODBC switches from VARCHAR to
+LONGVARCHAR or WVARCHAR to WLONGVARCHAR when SQLDesribeParam fails. It
+was 4000 and is now 2000 for unicode builds.  Works around a daft
+issue in the MS SQL Server driver which will not allow 'x' x 2001
+converted to wide characters to be inserted into a varchar(8000).
+
+Minor change to Makefile.PL to print out found libs for iODBC and
+unixODBC.
+
 =head2 Changes in DBD::ODBC  1.25 September 22, 2010
 
 Official release of 1.25 combining all the changes in the 1.24_x

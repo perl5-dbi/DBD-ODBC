@@ -523,7 +523,7 @@ EOT
             qq{typedef void* PTR;\n#include <sql.h>\n#include <sqlext.h>\n};
     } elsif ($myodbc eq 'iodbc') {
 	my @libs = glob "$odbclibdir/*iodbc*.*";
-	my @ilibs = grep { /\.($dlext|$soext|$arext)$/ } @libs;
+	my @ilibs = grep { /\.($dlext|$soext|$arext)/ } @libs;
         if (scalar(@ilibs) == 0) {
             die "That's odd, I can't see any iodbc libs in $odbclibdir. " .
                 "This is all I found:\n" . join(q{,}, @libs) . "\n" .
@@ -985,8 +985,9 @@ sub find_iodbc
     }
     for my $d(@dirs) {
         print "  Looking for iODBC libs in $d\n";
-        if (glob "$d/*iodbc*") {
-            print "    Found iODBC libs in $d\n";
+        my @found;
+        if (@found = glob "$d/*iodbc*") {
+            print "    Found iODBC libs ", join(",", @found), " in $d\n";
             return ('iodbc', $d);
         }
     }
@@ -1008,9 +1009,10 @@ sub find_unixodbc
     push @dirs, "$home/lib" if !defined($opt_o) && !defined($ENV{ODBCHOME});
 
     for my $d(@dirs) {
+        my @found;
         print "  Looking for unixODBC libs in $d\n";
-        if (glob "$d/*odbc*") {
-            print "    Found unixODBC libs in $d\n";
+        if (@found = glob "$d/*odbc*") {
+            print "    Found unixODBC libs ", join(",", @found), " in $d\n";
             return ('unixodbc', $d);
         }
     }
