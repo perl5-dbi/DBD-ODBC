@@ -64,6 +64,8 @@ converted to wide characters to be inserted into a varchar(8000).
 Minor change to Makefile.PL to print out found libs for iODBC and
 unixODBC.
 
+Added some FAQs for problems with iODBC and a recent bug in DBI.
+
 =head2 Changes in DBD::ODBC  1.25 September 22, 2010
 
 Official release of 1.25 combining all the changes in the 1.24_x

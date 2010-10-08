@@ -832,6 +832,52 @@ and break lots of applications - turn it off.
 
 =back
 
+=head2 Why does Connect call fail on Ubuntu with a "undefined symbol SQLxxx" error?
+
+Sometimes SQLxxx is SQLAllocHandle or SQLFetch but it could almost be
+any ODBC API.
+
+Did you build DBD::ODBC against iODBC? Some versions of Ubunutu Linux
+seem to install the libiodbc shared object without a libiodbc.so
+symbolic link. The key giveaway when you build DBD::ODBC is a warning like
+this:
+
+  Note (probably harmless): No library found for -liodbc.so
+
+You can fix this manually by creating a symbolic link something like this:
+
+  sudo ln /usr/lib/libiodbc.so.2 /usr/lib/libiodbc.so
+
+but to be honest this just moved the problem on for me and I've never got
+iODBC working on Ubuntu.
+
+I suggest you remove iODBC and installing the unixodbc, unixodbc-dev and
+unixodbc-bin packages.
+
+=head Why does Connect fail with "Option type out of range"
+
+You are probably setting an ODBC connection option like
+odbc_SQL_ROWSET_SIZE in the connect method. The problem is that some
+options can be set in ODBC with SQLSetConnectOption but not retrieved
+(silly but that is how some of the driver managers work). In the past
+this did not matter but a small bug in DBI introduced years ago causes
+attribute values to be fetched.
+
+You need to get a DBI release newer than 1.615 or revision 14463 from
+the DBI subversion repository. The change was:
+
+  --- dbi/trunk/DBI.pm	(original)
+  +++ dbi/trunk/DBI.pm	Thu Oct  7 02:45:05 2010
+  @@ -717,7 +717,8 @@
+   		$dbh->{$a} = delete $apply->{$a};
+   	    }
+   	    while ( my ($a, $v) = each %$apply) {
+  -		eval { $dbh->{$a} = $v } or $@ && warn $@;
+  +		eval { $dbh->{$a} = $v }; # assign in void context to avoid re-FETCH
+  +                warn $@ if $@;
+   	    }
+   	}
+
 =head1 AUTHOR
 
 Parts of this document were written by Tim Bunce,

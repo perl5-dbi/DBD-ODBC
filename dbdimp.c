@@ -51,7 +51,8 @@
 #define TRACE2(a,b,c,d) PerlIO_printf(DBIc_LOGPIO(a), (b), (c), (d))
 #define TRACE3(a,b,c,d,e) PerlIO_printf(DBIc_LOGPIO(a), (b), (c), (d), (e))
 
-static SQLSMALLINT default_parameter_type(imp_sth_t *imp_sth, phs_t *phs);
+static SQLSMALLINT default_parameter_type(
+    char *why, imp_sth_t *imp_sth, phs_t *phs);
 static int post_connect(SV *dbh, imp_dbh_t *imp_dbh, SV *attr);
 static int set_odbc_version(SV *dbh, imp_dbh_t *imp_dbh, SV* attr);
 static const char *S_SqlTypeToString (SWORD sqltype);
@@ -104,9 +105,11 @@ int dbd_st_finish(SV *sth, imp_sth_t *imp_sth);
 #ifdef WITH_UNICODE
 # define ODBC_BACKUP_BIND_TYPE_VALUE	SQL_WVARCHAR
 # define ODBC_BACKUP_LONG_BIND_TYPE_VALUE    SQL_WLONGVARCHAR
+# define ODBC_SWITCH_TO_LONGVARCHAR 2000
 #else
 # define ODBC_BACKUP_BIND_TYPE_VALUE	SQL_VARCHAR
 # define ODBC_BACKUP_LONG_BIND_TYPE_VALUE	SQL_LONGVARCHAR
+# define ODBC_SWITCH_TO_LONGVARCHAR 4000
 #endif
 
 SV *dbd_param_err(SQLHANDLE h, int recno);
@@ -3139,9 +3142,8 @@ static void get_param_type(SV *sth, imp_sth_t *imp_sth, phs_t *phs)
           default a SQL type to bind the parameter as. The default is either
           the value set with odbc_default_bind_type or a fallback of
           SQL_VARCHAR. */
-       phs->sql_type = default_parameter_type(imp_sth, phs);
-       if (DBIc_TRACE(imp_sth, 0, 0, 4))
-           TRACE1(imp_dbh, "      defaulted param type to %d\n", phs->sql_type);
+       phs->sql_type = default_parameter_type(
+           "SQLDescribeParam not supported", imp_sth, phs);
    } else if (!phs->describe_param_called) {
        /* If we haven't had a go at calling SQLDescribeParam before for this
           parameter, have a go now. If it fails we'll default the sql type
@@ -3154,10 +3156,8 @@ static void get_param_type(SV *sth, imp_sth_t *imp_sth, phs_t *phs)
        phs->describe_param_called = 1;
        phs->describe_param_status = rc;
        if (!SQL_SUCCEEDED(rc)) {
-           phs->sql_type = default_parameter_type(imp_sth, phs);
-           if (DBIc_TRACE(imp_sth, 0, 0, 3))
-               TRACE1(imp_dbh, "      SQLDescribeParam failed reverting to "
-                      "default SQL bind type %d\n", phs->sql_type);
+           phs->sql_type = default_parameter_type(
+               "SQLDescribeParam failed", imp_sth, phs);
            /* show any odbc errors in log */
            AllODBCErrors(imp_sth->henv, imp_sth->hdbc, imp_sth->hstmt,
                          DBIc_TRACE(imp_sth, 0, 0, 3),
@@ -5462,9 +5462,9 @@ char *column;
     D_imp_sth(sth);
     RETCODE rc;
     int dbh_active;
+    size_t max_stmt_len;
     imp_sth->henv = imp_dbh->henv;	/* needed for dbd_error */
     imp_sth->hdbc = imp_dbh->hdbc;
-    size_t max_stmt_len;
 
     imp_sth->done_desc = 0;
 
@@ -5946,7 +5946,8 @@ static int post_connect(
 
 
 
-static SQLSMALLINT default_parameter_type(imp_sth_t *imp_sth, phs_t *phs)
+static SQLSMALLINT default_parameter_type(
+    char *why, imp_sth_t *imp_sth, phs_t *phs)
 {
     if (imp_sth->odbc_default_bind_type != 0) {
         return imp_sth->odbc_default_bind_type;
@@ -5955,11 +5956,26 @@ static SQLSMALLINT default_parameter_type(imp_sth_t *imp_sth, phs_t *phs)
            test unless the large value is bound as an SQL_LONGVARCHAR
            or SQL_WLONGVARCHAR. Who knows what large is, but for now it is
            4000 */
+        /*
+          Changed to 2000 for the varchar max swtich as in a unicode build we
+          can change a string of 'x' x 2001 into 4002 wide chrs and SQL Server
+          will also return invalid precision in this case on a varchar(4000).
+          Of course, being SQL Server, it also has this problem with the
+          newer varchar(8000)! */
         if (!SvOK(phs->sv)) {
+           if (DBIc_TRACE(imp_sth, 0, 0, 3))
+               TRACE2(imp_sth, "%s, sv is not OK, defaulting to %d\n",
+                      why, ODBC_BACKUP_BIND_TYPE_VALUE);
             return ODBC_BACKUP_BIND_TYPE_VALUE;
-        } else if (SvCUR(phs->sv) > 4000) {
+        } else if (SvCUR(phs->sv) > ODBC_SWITCH_TO_LONGVARCHAR) {
+           if (DBIc_TRACE(imp_sth, 0, 0, 3))
+               TRACE3(imp_sth, "%s, sv=%d bytes, defaulting to %d\n",
+                      why, SvCUR(phs->sv), ODBC_BACKUP_LONG_BIND_TYPE_VALUE);
             return ODBC_BACKUP_LONG_BIND_TYPE_VALUE;
         } else {
+           if (DBIc_TRACE(imp_sth, 0, 0, 3))
+               TRACE3(imp_sth, "%s, sv=%d bytes, defaulting to %d\n",
+                      why, SvCUR(phs->sv), ODBC_BACKUP_BIND_TYPE_VALUE);
             return ODBC_BACKUP_BIND_TYPE_VALUE;
         }
     }
