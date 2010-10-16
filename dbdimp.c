@@ -1118,9 +1118,9 @@ int dbd_db_commit(SV *dbh, imp_dbh_t *imp_dbh)
    dTHR;
 
    /* TBD: 3.0 update */
-   rc = SQLTransact(imp_dbh->henv, imp_dbh->hdbc, SQL_COMMIT);
+   rc = SQLEndTran(SQL_HANDLE_DBC, imp_dbh->hdbc, SQL_COMMIT);
    if (!SQL_SUCCEEDED(rc)) {
-      dbd_error(dbh, rc, "db_commit/SQLTransact");
+      dbd_error(dbh, rc, "db_commit/SQLEndTran");
       return 0;
    }
    /* support for DBI 1.20 begin_work */
@@ -1141,9 +1141,9 @@ int dbd_db_rollback(SV *dbh, imp_dbh_t *imp_dbh)
    dTHR;
 
    /* TBD: 3.0 update */
-   rc = SQLTransact(imp_dbh->henv, imp_dbh->hdbc, SQL_ROLLBACK);
+   rc = SQLEndTran(SQL_HANDLE_DBC, imp_dbh->hdbc, SQL_ROLLBACK);
    if (!SQL_SUCCEEDED(rc)) {
-      dbd_error(dbh, rc, "db_rollback/SQLTransact");
+      dbd_error(dbh, rc, "db_rollback/SQLEndTran");
       return 0;
    }
    /* support for DBI 1.20 begin_work */
@@ -4106,7 +4106,7 @@ int dbd_db_STORE_attrib(SV *dbh, imp_dbh_t *imp_dbh, SV *keysv, SV *valuesv)
    STRLEN plen;
    char *key = SvPV(keysv,kl);
    int on;
-   UDWORD vParam;
+   SQLULEN vParam;
    const db_params *pars;
    int bSetSQLConnectionOption;
 
@@ -4127,7 +4127,7 @@ int dbd_db_STORE_attrib(SV *dbh, imp_dbh_t *imp_dbh, SV *keysv, SV *valuesv)
 	 vParam = SvIV(valuesv);
 	 break;
       case SQL_OPT_TRACEFILE:
-	 vParam = (UDWORD) SvPV(valuesv, plen);
+	 vParam = (SQLULEN) SvPV(valuesv, plen);
 	 break;
 
       case ODBC_IGNORE_NAMED_PLACEHOLDERS:

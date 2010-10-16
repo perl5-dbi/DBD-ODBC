@@ -41,6 +41,10 @@ $Revision: 10667 $
 
   Reformatted this file to save Jens work.
 
+  Changed calls to SQLTransact (ODBC 2.0) to SQLEndTran (ODBC 3.0).  There
+  really shouldn't be any ODBC 2.0 drivers still around but even if there
+  are, the ODBC driver manager should do the mapping for us.
+
 =head2 Changes in DBD::ODBC  1.25 September 22, 2010
 
   Official release of 1.25 combining all the changes in the 1.24_x
