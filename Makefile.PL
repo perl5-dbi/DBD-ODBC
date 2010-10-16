@@ -1059,7 +1059,11 @@ changes_pm = ' . File::Spec->catfile($self->{INST_LIB}, 'DBD/ODBC', 'Changes.pm'
 inst_libdbdodbc = ' . File::Spec->catdir($self->{INST_LIB}, 'DBD/ODBC') . '
 faq_pm = ' . File::Spec->catfile($self->{INST_LIB}, 'DBD/ODBC', 'FAQ.pm') . '
 
-config :: $(changes_pm) $(faq_pm)
+# make TO_DO file available as installed pod docs "perldoc DBD::ODBC::TO_DO"
+inst_libdbdodbc = ' . File::Spec->catdir($self->{INST_LIB}, 'DBD/ODBC') . '
+todo_pm = ' . File::Spec->catfile($self->{INST_LIB}, 'DBD/ODBC', 'TO_DO.pm') . '
+
+config :: $(changes_pm) $(faq_pm) $(todo_pm)
 	@$(NOOP)
 
 $(changes_pm): Changes
@@ -1071,6 +1075,11 @@ $(faq_pm): FAQ
 	$(NOECHO) $(MKPATH) $(inst_libdbdodbc)
 	$(NOECHO) $(RM_F) $(faq_pm)
 	$(CP) FAQ $(faq_pm)
+
+$(todo_pm): TO_DO
+	$(NOECHO) $(MKPATH) $(inst_libdbdodbc)
+	$(NOECHO) $(RM_F) $(todo_pm)
+	$(CP) TO_DO $(todo_pm)
 ';
 
 }
