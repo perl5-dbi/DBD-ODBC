@@ -130,7 +130,6 @@ struct imp_sth_st {
     SQLLEN   RowCount;		/* Rows affected by insert, update, delete
 				 * (unreliable for SELECT)
 				 */
-    int eod;			/* End of data seen */
     SV	*param_sts;			/* ref to param status array for array bound PHs */
     int params_procd;			/* to recv number of parms processed by an SQLExecute() */
     UWORD *param_status;		/* row indicators for array binding */

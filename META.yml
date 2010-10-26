@@ -10,7 +10,7 @@ author:
 license: perl
 distribution_type: module
 requires:
-    DBI: 1.21
+    DBI: 1.609
     perl: 5.008
     Test::Simple: 0.90
 #

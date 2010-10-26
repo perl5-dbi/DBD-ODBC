@@ -6,7 +6,19 @@ As of $LastChangedDate$
 
 $Revision: 10667 $
 
-=head2 Changes in DBD::ODBC  1.26_1 September 24, 2010
+=head2 Changes in DBD::ODBC  1.26_1 October 24, 2010
+
+  There are over 200 block changes in the source code for this release
+  from the previous one (see below). If you are using DBD::ODBC in
+  production you should not upgrade without testing this release first
+  as it introduces a lot of internal changes. DBD::ODBC has now gone
+  entirely ODBC 3 and relies on an ODBC Driver Manager to map calls
+  to ODBC 2.0 drivers (why are you still using ODBC 2.0 drivers?).
+  From now on DBD::ODBC needs to be linked with an ODBC Driver Manager
+  and I recommend unixODBC on UNIX and the MS ODBC Driver Manager
+  on Windows. There are really good reasons for this but mainly it
+  is because an ODBC Driver Manager will map ODBC 2.0 calls to an
+  ODBC 3.0 driver and vice versa and handle UNICODE transparently.
 
   Bumped Test::Simple requirement up to 0.90 so we can use done_testing
   and note.
@@ -16,8 +28,8 @@ $Revision: 10667 $
   Workaround a bug in mdbtools which fails to set the out connection
   string in a SQLDriverConnect call. This can lead to:
 
-  panic: sv_setpvn called with negative strlen at blib/lib/DBD/ODBC.pm
-  line 107.
+  Fixed panic: sv_setpvn called with negative strlen at
+  blib/lib/DBD/ODBC.pm line 107.
 
   Added rt_61370.t for rt 61370.
 
@@ -34,16 +46,48 @@ $Revision: 10667 $
 
   Added some FAQs for problems with iODBC and a recent bug in DBI.
 
-  Fixed warning on 64 bit Strawberry Perl when compiling dbdimp.c for cast
-  from ptr to UDWORD.
+  Added FAQ on my_snprintf problem.
+
+  Fixed some pod errors in FAQ document.
+
+  Fixed warning on 64 bit Strawberry Perl when compiling dbdimp.c for
+  cast from ptr to UDWORD.
 
   Moved to_do items from Changes to TO_DO.
 
   Reformatted this file to save Jens work.
 
-  Changed calls to SQLTransact (ODBC 2.0) to SQLEndTran (ODBC 3.0).  There
-  really shouldn't be any ODBC 2.0 drivers still around but even if there
-  are, the ODBC driver manager should do the mapping for us.
+  Changed calls to SQLTransact (ODBC 2.0) to SQLEndTran (ODBC 3.0).
+  There really shouldn't be any ODBC 2.0 drivers still around but even
+  if there are, the ODBC driver manager should do the mapping for us.
+
+  Changed calls to SQLGetConnectOption/SQLSetConnectOption to
+  to SQLGetConnectAttr/SQLSetConnectAttr for ODBC 3.0.
+
+  Changed calls to SQLColAttributes (ODBC 2.0) to SQLColAttribute
+  (ODBC 3.0).
+
+  Bumped requirement on DBI to 1.609 because that is the first version
+  to contain a dbipport.h which defined my_snprintf - see
+  https://rt.cpan.org/Public/Bug/Display.html?id=62346 and
+  http://www.nntp.perl.org/group/perl.dbi.dev/2010/10/msg6335.html
+
+  Various small changes to dbdimp.c which should have no effect other
+  than to make it leaner:
+
+    Removed all dTHR occurrences from dbdimp.c as it is a NOOP since 5.8
+     and we need 5.8 at least.
+    Removed dbd_param_err as it was not used
+    Removed odbc_get_query_timeout as it was never compiled
+    Removed eod field from statement as it was never used
+    Removed a load of commented out code
+    Replaced some SvPV calls with SvPV_nolen when we didn't used the
+      length
+    Removed some silly code from dbd_db_execdirect which attempted to
+      return -3 - don't think it could ever get run.
+    Minor tracing output tidy up
+    Removed dbd_caution as it was no used
+    Localised more variable declarations
 
 =head2 Changes in DBD::ODBC  1.25 September 22, 2010
 

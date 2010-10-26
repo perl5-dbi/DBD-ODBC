@@ -13,7 +13,7 @@ END {
           if ($has_test_nowarnings);
 }
 
-my $basic_tests = 3;
+my $basic_tests = 4;
 my $tests = $basic_tests;
 $tests += 1 if $has_test_nowarnings;
 plan tests => $tests;
@@ -28,7 +28,7 @@ SKIP: {
     my @pods = all_pod_files();
     #diag("pod files: " . join(",", @pods));
     foreach my $pod (@pods) {
-        next if $pod !~ /(ODBC.pm)|(FAQ.pm)|(Changes.pm)/;
+        next if $pod !~ /(ODBC.pm)|(FAQ.pm)|(Changes.pm)|(TO_DO.pm)/;
         pod_file_ok($pod);
     }
 };

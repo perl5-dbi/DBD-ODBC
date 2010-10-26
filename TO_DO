@@ -25,10 +25,6 @@ $Revision: 10667 $
   Keep checking Oracle's ODBC drivers for Windows to fix the Date
     binding problem
 
-  Change SQLSetConnectOption to SQLSetConnectAttr as we are ODBC 3 now
-
-  Change SQLColAttributes calls (now deprecated) to SQLColAttribute
-
   Add support for $sth->more_results based on DBD::ODBC-specific attribute
 
   There is a Columns private ODBC method which is not documented.
