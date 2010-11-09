@@ -6,6 +6,11 @@ As of $LastChangedDate$
 
 $Revision: 10667 $
 
+=head2 Changes in DBD::ODBC  1.26_2 November 9, 2010
+
+  Fixed bug found by frew where an snprintf can overflow when binding
+  alot of parameters.
+
 =head2 Changes in DBD::ODBC  1.26_1 October 24, 2010
 
   There are over 200 block changes in the source code for this release

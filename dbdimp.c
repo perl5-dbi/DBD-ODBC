@@ -3709,7 +3709,7 @@ int dbd_bind_ph(
 
    if (SvNIOK(ph_namesv) ) {                /* passed as a number */
       name = namebuf;
-      my_snprintf(name, sizeof(name), "%d", (int)SvIV(ph_namesv));
+      my_snprintf(name, sizeof(namebuf), "%d", (int)SvIV(ph_namesv));
       name_len = strlen(name);
    }
    else {
