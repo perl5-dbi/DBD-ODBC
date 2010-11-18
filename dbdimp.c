@@ -158,6 +158,10 @@ static void odbc_clear_result_set(SV *sth, imp_sth_t *imp_sth)
    char *key;
    I32 keylen;
 
+   if (DBIc_TRACE(imp_sth, 0, 0, 3)) {
+      TRACE0(imp_sth, "odbc_clear_result_set\n");
+   }
+
    Safefree(imp_sth->fbh);
    Safefree(imp_sth->ColNames);
    Safefree(imp_sth->RowBuffer);
@@ -2345,6 +2349,8 @@ static SQLRETURN bind_columns(
                    fbh->bind_flags);
         }
     }
+    imp_sth->done_bind = 1;
+
     if (DBIc_TRACE(imp_sth, 0, 0, 4))
 	  	 TRACE1(imp_sth, "    bind_columns=%d\n", rc);
     return rc;
@@ -4492,7 +4498,8 @@ SV *dbd_st_FETCH_attrib(SV *sth, imp_sth_t *imp_sth, SV *keysv)
    if (par->len <= 0)
       return Nullsv;
 
-   if (par->need_describe && !imp_sth->done_desc && !dbd_describe(sth, imp_sth,0))
+   if (par->need_describe && !imp_sth->done_desc &&
+       !dbd_describe(sth, imp_sth,0))
    {
       /* dbd_describe has already called dbd_error()          */
       /* we can't return Nullsv here because the xs code will */
