@@ -5089,7 +5089,7 @@ int ftype;
 
    /* just for sanity, later. Any internals that may rely on this (including */
    /* debugging) will have valid data */
-   max_stmt_len = strlen(cSqlGetTypeInfo)+ftype/10+1;
+   max_stmt_len = strlen(cSqlGetTypeInfo)+(abs(ftype)/10)+2;
    imp_sth->statement = (char *)safemalloc(max_stmt_len);
    my_snprintf(imp_sth->statement, max_stmt_len, cSqlGetTypeInfo, ftype);
 

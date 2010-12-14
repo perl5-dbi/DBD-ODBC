@@ -37,6 +37,7 @@ unless($dbh) {
 }
 $dbh->{RaiseError} = 1;
 $dbh->{ChopBlanks} = 1;
+$dbh->{PrintError} = 0;
 
 my $dbms_name = $dbh->get_info(17);
 ok($dbms_name, "got DBMS name: $dbms_name"); # 2
@@ -81,8 +82,8 @@ sub doit
 
     my $s = $dbh->prepare_cached(
         q/insert into PERL_DBD_RT_62033 (b) values(?);select @@identity/);
-    $s->execute(@_);
-    #diag "sql errors $DBI::errstr\n" if $DBI::errstr;
+    eval {$s->execute(@_)};
+    #diag "sql errors $@\n" if $@;
 
     my $x = $s->{odbc_more_results};
     my $identity;

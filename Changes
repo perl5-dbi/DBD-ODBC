@@ -12,6 +12,16 @@ $Revision: 10667 $
   active flag was sometimes not set on the statement after
   SQLMoreResults indicates a result-set exists.
 
+  Fix rt63550 reported by John Corcoran where is a do method call
+  fails the SQL C<Statement> is not available in an error handler as
+  we never created a DBI statement in the first place. Added a note
+  to "do" deviations pod.
+
+  Minor fix to head at wrong level in the pod.
+
+  Fix a possible snprintf buffer overflow in GetTypeInfo when
+  the type is specified and it is negative.
+
 =head2 Changes in DBD::ODBC  1.26_3 November 18, 2010
 
   Fixed rt 63108. The change to column binding in 1.24_2 was not

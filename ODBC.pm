@@ -370,16 +370,14 @@ $DBD::ODBC::VERSION = '1.26_4';
         ## no critic (ProhibitMagicNumbers)
         if( -1 == $#params )
         {
-          # No parameters, use execute immediate
-          $rows = ExecDirect( $dbh, $statement );
-          if( 0 == $rows )
-          {
-              $rows = "0E0";    # 0 but true
-          }
-          elsif( $rows < -1 )
-          {
-              undef $rows;
-          }
+            $dbh->STORE(Statement => $statement);
+            # No parameters, use execute immediate
+            $rows = ExecDirect( $dbh, $statement );
+            if( 0 == $rows ) {
+                $rows = "0E0";    # 0 but true
+            } elsif( $rows < -1 ) {
+                undef $rows;
+            }
         }
         else
         {
@@ -1367,7 +1365,11 @@ a named placeholder is not ignored and should be see
 L</odbc_ignore_named_placeholders> for a workaround and mail me an
 example along with your ODBC driver name.
 
-=head2 do
+=head3 do
+
+This is not really a deviation from the DBI specification since DBI
+allows a driver to avoid the overhead of creating an DBI statement
+handle for do().
 
 DBD::ODBC implements C<do> by calling SQLExecDirect in ODBC and not
 SQLPrepare followed by SQLExecute so C<do> is not the same as:
@@ -1380,6 +1382,11 @@ Server if they call a procedure which outputs print statements (e.g.,
 backup) as the procedure may not complete. See the DBD::ODBC FAQ and
 in general you are better to use prepare/execute when calling
 procedures.
+
+In addition, you should realise that since DBD::ODBC does not create a
+DBI statement for do calls, if you set up an error handler the handle
+passed in when a do fails will be the database handle and not
+a statement handle.
 
 =head3 Mixed placeholder types
 
