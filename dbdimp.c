@@ -2031,7 +2031,7 @@ int dbd_describe(SV *h, imp_sth_t *imp_sth, int more)
         imp_sth->done_desc = 1;
         return 1;
     }
-
+    DBIc_ACTIVE_on(imp_sth); /*HERE*/
     /* allocate field buffers */
     Newz(42, imp_sth->fbh, num_fields, imp_fbh_t);
     /* the +255 below instead is due to an old comment in this code before
@@ -4616,7 +4616,13 @@ SV *dbd_st_FETCH_attrib(SV *sth, imp_sth_t *imp_sth, SV *keysv)
 	    }
 	       /* XXX need to 'finish' here */
 	    dbd_st_finish(sth, imp_sth);
-	 }
+	 } else {
+             if (DBIc_TRACE(imp_sth, 0, 0, 4)) {
+                 TRACE2(imp_sth,
+                        "    fetch odbc_more_results, numfields == %d "
+                        "&& moreResults = %d\n", i, imp_sth->moreResults);
+             }
+         }
 	 break;
       case 11:                                  /* ParamValues */
       {

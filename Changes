@@ -6,6 +6,12 @@ As of $LastChangedDate$
 
 $Revision: 10667 $
 
+=head2 Changes in DBD::ODBC  1.26_4 December 14, 2010
+
+  Fixed bug highlighted by investigation into rt 62033 where the
+  active flag was sometimes not set on the statement after
+  SQLMoreResults indicates a result-set exists.
+
 =head2 Changes in DBD::ODBC  1.26_3 November 18, 2010
 
   Fixed rt 63108. The change to column binding in 1.24_2 was not
