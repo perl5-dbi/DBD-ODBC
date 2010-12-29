@@ -6,7 +6,7 @@
  * portions Copyright (c) 1994,1995,1996  Tim Bunce
  * portions Copyright (c) 1997-2001 Jeff Urlwin
  * portions Copyright (c) 2001 Dean Arnold
- * portions Copyright (c) 2007-2010 Martin J. Evans
+ * portions Copyright (c) 2007-2011 Martin J. Evans
  *
  * You may distribute under the terms of either the GNU General Public
  * License or the Artistic License, as specified in the Perl README file.
@@ -83,7 +83,14 @@ struct imp_dbh_st {
      * from the driver.
      */
     int odbc_utf8_on;
-
+    /* save the value passed to odbc_SQL_ROWSET_SIZE so we can return
+     * it without calling SQLGetConnectAttr because some MS driver
+     * managers (e.g., since MDAC 2.7 and on 64bit Windows) don't allow
+     * you to retrieve it. Normally, we'd just say stop fetching it but
+     * until DBI 1.616 DBI itself issues a FETCH if you mention
+     * odbc_SQL_ROWSET_SIZE in the connect method.*/
+    SQLULEN rowset_size;
+    
     /*
      *  We need special workarounds for the following drivers. To avoid
      *  strcmping their names every time we do it once and store the type here

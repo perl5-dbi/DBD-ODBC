@@ -19,7 +19,7 @@ require 5.006;
 # see discussion on dbi-users at
 # http://www.nntp.perl.org/group/perl.dbi.dev/2010/07/msg6096.html and
 # http://www.dagolden.com/index.php/369/version-numbers-should-be-boring/
-$DBD::ODBC::VERSION = '1.27';
+$DBD::ODBC::VERSION = '1.28_1';
 
 {
     ## no critic (ProhibitMagicNumbers ProhibitExplicitISA)
@@ -524,7 +524,7 @@ DBD::ODBC - ODBC Driver for DBI
 
 =head1 VERSION
 
-This documentation refers to DBD::ODBC version 1.27.
+This documentation refers to DBD::ODBC version 1.28_1.
 
 =head1 SYNOPSIS
 
@@ -863,36 +863,65 @@ Check F<t/20SQLServer.t> and F<t/10handler.t>.
 
 =head3 odbc_SQL_ROWSET_SIZE
 
-Here is the information from the original patch, however, this
-could/has caused SQL Server to "lock up".  Please use at your own
-risk!
+Setting odbc_SQL_ROWSET_SIZE results in a call to SQLSetConnectAttr
+to set the ODBC SQL_ROWSET_SIZE (9) attribute to whatever value you
+set odbc_SQL_ROWSET_SIZE to.
 
-C<SQL_ROWSET_SIZE> attribute patch from Andrew Brown
+The ODBC default for SQL_ROWSET_SIZE is 1.
 
-  > There are only 2 additional lines allowing for the setting of
-  > SQL_ROWSET_SIZE as db handle option.
-  >
-  > The purpose to my madness is simple. SqlServer (7 anyway) by default
-  > supports only one select statement at once (using standard ODBC cursors).
-  > According to the SqlServer documentation you can alter the default
-  > setting of three values to force the use of server cursors - in
-  > which case multiple selects are possible.
-  >
-  > The code change allows for:
-  > $dbh->{SQL_ROWSET_SIZE} = 2;    # Any value > 1
-  >
-  > For this very purpose.
-  >
-  > The setting of SQL_ROWSET_SIZE only affects the extended fetch
-  > command as far as I can work out and thus setting this option
-  > shouldn't affect DBD::ODBC operations directly in any way.
-  >
-  > Andrew
-  >
+Usually MS SQL Server does not support multiple active statements
+(MAS) i.e., you cannot have 2 or more outstanding selects.  You can
+set odbc_SQL_ROWSET_SIZE to 2 to persuade MS SQL Server to support
+multiple active statements.
 
-In versions of SQL Server 2008 and later see "Multiple Active
+Setting SQL_ROWSET_SIZE usually only affects calls to SQLExtendedFetch
+but does allow MAS and as DBD::ODBC does not use SQLExtendedFetch there
+should be no ill effects to DBD::ODBC.
+
+Be careful with this attribute as once set to anything larger than 1
+(the default) you must retrieve all result-sets before the statement
+handle goes out of scope or you can upset the TDS protocol and this
+can result in a hang. With DBI this is unlikely as DBI warns when a
+statement goes out of scope with outstanding results.
+
+NOTE: if you get an error saying "[Microsoft][ODBC SQL Server
+Driver]Invalid attribute/option identifier (SQL-HY092)" when you set
+odbc_SQL_ROWSET_SIZE in the connect method you need to either a)
+upgrade to DBI 1.616 or above b) set odbc_SQL_ROWSET_SIZE after
+connect.
+
+In versions of SQL Server 2005 and later see "Multiple Active
 Statements (MAS)" in the DBD::ODBC::FAQ instead of using this
 attribute.
+
+Thanks to Andrew Brown for the original patch.
+
+DBD developer note: Here lies a bag of worms. Firstly, SQL_ROWSET_SIZE
+is an ODBC 2 attribute and is usally a statement attribute not a
+connection attribute. However, in ODBC 2.0 you could set statement
+attributes on a connection handle and it acted as a default for all
+subsequent statement handles created under that connection handle. If
+you are using ODBC 3 the driver manager continues to map this call but
+the ODBC Driver needs to act on it (the MS SQL Server driver still
+appears to but some other ODBC drivers for MS SQL Server do not).
+Secondly, somewhere a long the line MS decided it was no longer valid
+to retrieve the SQL_ROWSET_SIZE attribute from a connection handle in
+an ODBC 3 application (which DBD::ODBC now is). In itself, this would
+not be a problem except for a minor bug in DBI which until release
+1.616 mistakenly issued a FETCH on any attribute mentioned in the
+connect method call. As a result, it you use a DBI prior to 1.616 and
+attempt to set odbc_SQL_ROWSET_SIZE in the connect method call, DBI
+issues a FETCH on odbc_SQL_ROWSET_SIZE and the driver manager throws
+it out as an invalid attribute thus resulting in an error. The only
+way around this (other than upgrading DBI) is to set
+odbc_SQL_ROWSET_SIZE AFTER the call to connect. Thirdly, MS withdrew
+the SQLROWSETSIZE macro from the sql header files in MDAC 2.7 for 64
+bit platforms i.e., SQLROWSETSIZE is not defined on 64 bit platforms
+from MDAC 2.7 as it is in a "#ifdef win32" (see
+http://msdn.microsoft.com/en-us/library/ms716287%28v=vs.85%29.aspx).
+Setting SQL_ROWSET_SIZE still seems to take effect on 64 bit platforms
+but you can no longer retrieve its value from a connection handle
+(hence the issue above with DBI redundant FETCH).
 
 =head3 odbc_exec_direct
 

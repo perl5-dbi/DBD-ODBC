@@ -245,6 +245,10 @@ string as in:
 
   $h->DBI->connect('dbi:ODBC:DSN=mydsn;MARS_Connection=Yes;');
 
+NOTE: If you are using MS SQL Server drivers you will need to use the
+Native Client Driver to use MARS or a later MS SQL Server ODBC driver
+(2008 or later).
+
 For other drivers it depends. I believe various Oracle ODBC drivers do
 support multiple active statements as myodbc does.
 

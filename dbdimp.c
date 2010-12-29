@@ -3,7 +3,7 @@
  * portions Copyright (c) 1994,1995,1996,1997  Tim Bunce
  * portions Copyright (c) 1997 Thomas K. Wenrich
  * portions Copyright (c) 1997-2001 Jeff Urlwin
- * portions Copyright (c) 2007-2010 Martin J. Evans
+ * portions Copyright (c) 2007-2011 Martin J. Evans
  *
  * You may distribute under the terms of either the GNU General Public
  * License or the Artistic License, as specified in the Perl README file.
@@ -4228,15 +4228,16 @@ int dbd_db_STORE_attrib(SV *dbh, imp_dbh_t *imp_dbh, SV *keysv, SV *valuesv)
    }
 
    if (bSetSQLConnectionOption) {
-      /* TBD: 3.0 update */
-
        rc = SQLSetConnectAttr(imp_dbh->hdbc, pars->fOption,
                               vParam, attr_length);
 
       if (!SQL_SUCCEEDED(rc)) {
-	 dbd_error(dbh, rc, "db_STORE/SQLSetConnectAttr");
-	 return FALSE;
+          dbd_error(dbh, rc, "db_STORE/SQLSetConnectAttr");
+          return FALSE;
       }
+      if (pars->fOption == SQL_ROWSET_SIZE)
+          imp_dbh->rowset_size = (SQLULEN)vParam;
+
       /* keep our flags in sync */
       if (kl == 10 && strEQ(key, "AutoCommit"))
 	 DBIc_set(imp_dbh, DBIcf_AutoCommit, SvTRUE(valuesv));
@@ -4365,6 +4366,7 @@ SV *dbd_db_FETCH_attrib(SV *dbh, imp_dbh_t *imp_dbh, SV *keysv)
       case ODBC_ROWCACHESIZE:
 	 retsv = newSViv(imp_dbh->RowCacheSize);
 	 break;
+
       default:
 	 /*
 	  * The remainders we support are ODBC attributes like
@@ -4377,11 +4379,18 @@ SV *dbd_db_FETCH_attrib(SV *dbh, imp_dbh_t *imp_dbh, SV *keysv)
 
 	 rc = SQLGetConnectAttr(
              imp_dbh->hdbc, pars->fOption, &vParam, SQL_IS_UINTEGER, 0);
-	 dbd_error(dbh, rc, "db_FETCH/SQLGetConnectAttr");
+         if (pars->fOption != SQL_ROWSET_SIZE)
+             dbd_error(dbh, rc, "db_FETCH/SQLGetConnectAttr");
+         
 	 if (!SQL_SUCCEEDED(rc)) {
              if (DBIc_TRACE(imp_dbh, 0, 0, 3))
                  TRACE1(imp_dbh,
                         "    !!SQLGetConnectAttr=%d in dbd_db_FETCH\n", rc);
+             if (pars->fOption == SQL_ROWSET_SIZE) {
+                 AllODBCErrors(imp_dbh->henv, imp_dbh->hdbc, 0, 0,
+                               DBIc_LOGPIO(imp_dbh));
+                 vParam = imp_dbh->rowset_size;
+             }
 	    return Nullsv;
 	 }
 
@@ -5672,6 +5681,14 @@ static int post_connect(
 
    imp_dbh->odbc_default_bind_type = 0;
    imp_dbh->odbc_force_bind_type = 0;
+#ifdef SQL_ROWSET_SIZE_DEFAULT
+   imp_dbh->rowset_size = SQL_ROWSET_SIZE_DEFAULT;
+#else
+   /* it should be 1 anyway so above should be redundant but included
+      here partly to remind me what it is */
+   imp_dbh->rowset_size = 1;
+#endif
+
    /* flag to see if SQLDescribeParam is supported */
    imp_dbh->odbc_sqldescribeparam_supported = -1;
    /* flag to see if SQLDescribeParam is supported */
