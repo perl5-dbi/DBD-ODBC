@@ -190,7 +190,9 @@ or Openlink.
 
 =head2 How do I access a MS-Access database from Linux?
 
-There are basically two choices:
+There are basically three choices:
+
+* a commericial MS Access ODBC Driver like the one from Easysoft.
 
 * a commercial ODBC Bridge like the ones from Easysoft or OpenLink.
 
@@ -245,9 +247,9 @@ string as in:
 
   $h->DBI->connect('dbi:ODBC:DSN=mydsn;MARS_Connection=Yes;');
 
-NOTE: If you are using MS SQL Server drivers you will need to use the
-Native Client Driver to use MARS or a later MS SQL Server ODBC driver
-(2008 or later).
+NOTE: Even though you may be using MS SQL Server 2005 if you are using
+MS SQL Server drivers you will need to use the Native Client Driver or
+a later MS SQL Server ODBC driver (2008 or later) to use MARS.
 
 For other drivers it depends. I believe various Oracle ODBC drivers do
 support multiple active statements as myodbc does.
@@ -784,6 +786,10 @@ handle with pending results, call cancel before destruction.
 
 However, you are best not selecting rows you have no intention of
 retrieving.
+
+See cancel_big_fetch.pl in the DBD::ODBC examples dir. NOTE: more recent
+MS SQL Server drivers are better in this respect and sometimes the test
+script cancel_big_fetch.pl shows no difference.
 
 =head2 Why does my backup/restore/some_other_procedure in MS SQL Server not complete?
 

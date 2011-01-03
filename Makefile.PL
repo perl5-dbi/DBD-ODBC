@@ -186,6 +186,8 @@ to make sure you are using the right one.
 
 EOT
     }
+    # see rt 46944 for why the following was suggested to be commented
+    # out which I rejected as PERL_MM_USE_DEFAULT can be used
     prompt("Press return to continue...");
 }
 print "Overriding ODBC Directory with command line option: $opt_o\n"

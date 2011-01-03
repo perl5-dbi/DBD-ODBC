@@ -31,6 +31,9 @@
  * Internal replacements for standard C library functions:
  * http://search.cpan.org/~jesse/perl-5.12.1/pod/perlclib.pod
  * http://search.cpan.org/dist/Devel-PPPort/PPPort.pm
+ *
+ * MS ODBC 64 bit:
+ * http://msdn.microsoft.com/en-us/library/ms716287%28v=vs.85%29.aspx
  */
 #define NEED_newRV_noinc
 #define NEED_sv_2pv_flags
@@ -48,6 +51,8 @@
 
 /* Can't find a constant in DBI for SQL tracing but it is 256 */
 #define SQL_TRACE_FLAG 0x100
+#define UNICODE_TRACING 0x02000000
+#define CONNECTION_TRACING 0x04000000
 #define TRACE0(a,b) PerlIO_printf(DBIc_LOGPIO(a), (b))
 #define TRACE1(a,b,c) PerlIO_printf(DBIc_LOGPIO(a), (b), (c))
 #define TRACE2(a,b,c,d) PerlIO_printf(DBIc_LOGPIO(a), (b), (c), (d))
@@ -397,7 +402,7 @@ int dbd_db_execdirect(SV *dbh,
        STRLEN wsql_len;
        SV *sql_copy;
 
-       if (DBIc_TRACE(imp_dbh, 0x02000000, 0, 0))
+       if (DBIc_TRACE(imp_dbh, UNICODE_TRACING, 0, 0)) /* odbcunicode */
            TRACE0(imp_dbh, "    Processing utf8 sql in unicode mode\n");
 
        sql_copy = sv_mortalcopy(statement);
@@ -408,13 +413,13 @@ int dbd_db_execdirect(SV *dbh,
 
        ret = SQLExecDirectW(stmt, wsql, wsql_len / sizeof(SQLWCHAR));
    } else {
-       if (DBIc_TRACE(imp_dbh, 0x02000000, 0, 0))
-           TRACE0(imp_dbh, "    Processing utf8 sql in non-unicode mode\n");
+       if (DBIc_TRACE(imp_dbh, UNICODE_TRACING, 0, 0)) /* odbcunicode */
+           TRACE0(imp_dbh, "    Processing non utf8 sql in unicode mode\n");
 
        ret = SQLExecDirect(stmt, (SQLCHAR *)SvPV_nolen(statement), SQL_NTS);
    }
 #else
-   if (DBIc_TRACE(imp_dbh, 0x02000000, 0, 0))
+   if (DBIc_TRACE(imp_dbh, UNICODE_TRACING, 0, 0))   /* odbcunicode */
        TRACE0(imp_dbh, "    Processing sql in non-unicode mode\n");
    ret = SQLExecDirect(stmt, (SQLCHAR *)SvPV_nolen(statement), SQL_NTS);
 #endif
@@ -537,7 +542,7 @@ int dbd_db_login6_sv(
     SV *attr)
 {
 #ifndef WITH_UNICODE
-   if (DBIc_TRACE(imp_dbh, 0x04000000, 0, 0))
+   if (DBIc_TRACE(imp_dbh, CONNECTION_TRACING, 0, 0))
        TRACE0(imp_dbh, "non-Unicode login6_sv\n");
    return dbd_db_login6(dbh, imp_dbh, SvPV_nolen(dbname),
                         (SvOK(uid) ? SvPV_nolen(uid) : NULL),
@@ -552,7 +557,7 @@ int dbd_db_login6_sv(
    SQLWCHAR dc_constr[512];
    STRLEN dc_constr_len;
 
-   if (DBIc_TRACE(imp_dbh, 0x04000000, 0, 0)) {
+   if (DBIc_TRACE(imp_dbh, CONNECTION_TRACING, 0, 0)) {
        TRACE2(imp_dbh, "Unicode login6 dbname=%s, uid=%s, pwd=xxxxx\n",
               SvPV_nolen(dbname), neatsvpv(uid, 0));
    }
@@ -599,11 +604,11 @@ int dbd_db_login6_sv(
        sv_catpv(dbname, ";");
        /*sv_catpvf(dbname, ";UID=%s;PWD=%s;",
 	 SvPV_nolen(uid), SvPV_nolen(pwd));*/
-       if (DBIc_TRACE(imp_dbh, 0x04000000, 0, 0))
+       if (DBIc_TRACE(imp_dbh, CONNECTION_TRACING, 0, 0))
            TRACE1(imp_dbh, "Now using dbname = %s\n", SvPV_nolen(dbname));
    }
 
-   if (DBIc_TRACE(imp_dbh, 0x04000000, 0, 0))
+   if (DBIc_TRACE(imp_dbh, CONNECTION_TRACING, 0, 0))
       TRACE2(imp_dbh, "    SQLDriverConnect '%s', '%s', 'xxxx'\n",
              SvPV_nolen(dbname), neatsvpv(uid, 0));
 
@@ -638,7 +643,7 @@ int dbd_db_login6_sv(
                               SQL_DRIVER_NOPROMPT);
        if (SQL_SUCCEEDED(rc)) {
            imp_dbh->out_connect_string = sv_newwvn(wout_str, wout_str_len);
-           if (DBIc_TRACE(imp_dbh, 0x04000000, 0, 0))
+           if (DBIc_TRACE(imp_dbh, CONNECTION_TRACING, 0, 0))
                TRACE1(imp_dbh, "Out connection string: %s\n",
                       SvPV_nolen(imp_dbh->out_connect_string));
        }
@@ -649,7 +654,7 @@ int dbd_db_login6_sv(
        SQLWCHAR *wuidp, *wpwdp;
        SQLSMALLINT uid_len, pwd_len;
 
-       if (DBIc_TRACE(imp_dbh, 0x04000000, 0, 0))
+       if (DBIc_TRACE(imp_dbh, CONNECTION_TRACING, 0, 0))
            TRACE0(imp_dbh, "    SQLDriverConnectW failed:\n");
        /*
         * Added code for DBD::ODBC 0.39 to help return a better
@@ -679,7 +684,7 @@ int dbd_db_login6_sv(
         * and quietly take all error messages */
        AllODBCErrors(imp_dbh->henv, imp_dbh->hdbc, 0, 0, DBIc_LOGPIO(imp_dbh));
 
-       if (DBIc_TRACE(imp_dbh, 0x04000000, 0, 0))
+       if (DBIc_TRACE(imp_dbh, CONNECTION_TRACING, 0, 0))
            TRACE2(imp_dbh, "    SQLConnect '%s', '%s'\n",
                   neatsvpv(dbname, 0), neatsvpv(uid, 0));
 
@@ -774,7 +779,7 @@ int dbd_db_login6(
    unsigned int i;
 #endif
 
-   if (DBIc_TRACE(imp_dbh, 0x04000000, 0, 0))
+   if (DBIc_TRACE(imp_dbh, CONNECTION_TRACING, 0, 0))
        TRACE0(imp_dbh, "dbd_db_login6\n");
    if (!imp_drh->connects) {
       rc = SQLAllocHandle(SQL_HANDLE_ENV, SQL_NULL_HANDLE, &imp_drh->henv);
@@ -827,7 +832,7 @@ int dbd_db_login6(
        dbname = dbname_local;
    }
 
-   if (DBIc_TRACE(imp_dbh, 0x04000000, 0, 0))
+   if (DBIc_TRACE(imp_dbh, CONNECTION_TRACING, 0, 0))
       TRACE2(imp_dbh, "    SQLDriverConnect '%s', '%s', 'xxxx'\n",
              dbname, (uid ? uid : ""));
 
@@ -856,7 +861,7 @@ int dbd_db_login6(
                               SQL_DRIVER_NOPROMPT);
        if (SQL_SUCCEEDED(rc)) {
            imp_dbh->out_connect_string = sv_newwvn(wout_str, wout_str_len);
-           if (DBIc_TRACE(imp_dbh, 0x04000000, 0, 0))
+           if (DBIc_TRACE(imp_dbh, CONNECTION_TRACING, 0, 0))
                TRACE1(imp_dbh, "Out connection string: %s\n",
                       SvPV_nolen(imp_dbh->out_connect_string));
        }
@@ -886,7 +891,7 @@ int dbd_db_login6(
                imp_dbh->out_connect_string = newSVpv(out_str, out_str_len);
            }
 
-           if (DBIc_TRACE(imp_dbh, 0x04000000, 0, 0))
+           if (DBIc_TRACE(imp_dbh, CONNECTION_TRACING, 0, 0))
        	       TRACE1(imp_dbh, "Out connection string: %s\n",
                       SvPV_nolen(imp_dbh->out_connect_string));
        }
@@ -937,7 +942,7 @@ int dbd_db_login6(
       AllODBCErrors(imp_dbh->henv, imp_dbh->hdbc, 0, 0, DBIc_LOGPIO(imp_dbh));
 #endif /* DriverConnect supported */
 
-      if (DBIc_TRACE(imp_dbh, 0x04000000, 0, 0))
+      if (DBIc_TRACE(imp_dbh, CONNECTION_TRACING, 0, 0))
           TRACE2(imp_dbh, "    SQLConnect '%s', '%s'\n",
                  dbname, (uid ? uid : ""));
 #ifdef WITH_UNICODE
@@ -1050,7 +1055,7 @@ int dbd_db_disconnect(SV *dbh, imp_dbh_t *imp_dbh)
       dbd_error(dbh, rc, "db_disconnect/SQLDisconnect");
       /* if disconnect fails, fall through. Probably not disconnected */
    }
-   if (DBIc_TRACE(imp_dbh, 0x04000000, 0, 0))
+   if (DBIc_TRACE(imp_dbh, CONNECTION_TRACING, 0, 0))
        TRACE1(imp_dbh, "SQLDisconnect=%d\n", rc);
 
    SQLFreeHandle(SQL_HANDLE_DBC, imp_dbh->hdbc);
@@ -1132,7 +1137,7 @@ void dbd_error2(
    struct imp_dbh_st *imp_dbh = NULL;
    struct imp_sth_st *imp_sth = NULL;
 
-   if (DBIc_TRACE(imp_xxh, 0, 0, 4)) {
+   if (DBIc_TRACE(imp_xxh, 0, 0, 4) && (err_rc != SQL_SUCCESS)) {
        PerlIO_printf(
            DBIc_LOGPIO(imp_xxh),
            "    !!dbd_error2(err_rc=%d, what=%s, handles=(%p,%p,%p)\n",
@@ -1790,7 +1795,7 @@ int odbc_st_prepare_sv(
            STRLEN wsql_len;
            SV *sql_copy;
 
-           if (DBIc_TRACE(imp_dbh, 0x02000000, 0, 0))
+           if (DBIc_TRACE(imp_dbh, UNICODE_TRACING, 0, 0)) /* odbcunicode */
                TRACE0(imp_dbh, "    Processing utf8 sql in unicode mode\n");
 
            sql_copy = sv_newmortal();
@@ -1806,14 +1811,14 @@ int odbc_st_prepare_sv(
 
            rc = SQLPrepareW(imp_sth->hstmt, wsql, wsql_len / sizeof(SQLWCHAR));
        } else {
-           if (DBIc_TRACE(imp_dbh, 0x02000000, 0, 0))
+           if (DBIc_TRACE(imp_dbh, UNICODE_TRACING, 0, 0)) /* odbcunicode */
                TRACE0(imp_dbh, "    Processing non-utf8 sql in unicode mode\n");
 
            rc = SQLPrepare(imp_sth->hstmt, imp_sth->statement, SQL_NTS);
        }
 
 #else  /* !WITH_UNICODE */
-       if (DBIc_TRACE(imp_dbh, 0x02000000, 0, 0))
+       if (DBIc_TRACE(imp_dbh, UNICODE_TRACING, 0, 0)) /* odbcunicode */
            TRACE0(imp_dbh, "    Processing sql in non-unicode mode\n");
 
        rc = SQLPrepare(imp_sth->hstmt, imp_sth->statement, SQL_NTS);
@@ -2791,9 +2796,9 @@ AV *dbd_st_fetch(SV *sth, imp_sth_t *imp_sth)
       }
    }
 
-
    if (imp_sth->RowCount == -1)
       imp_sth->RowCount = 0;
+
    imp_sth->RowCount++;
 
    av = DBIc_DBISTATE(imp_sth)->get_fbav(imp_sth);
@@ -2869,11 +2874,32 @@ AV *dbd_st_fetch(SV *sth, imp_sth_t *imp_sth)
                    fbh->datalen > 0)
                {
                    SQLWCHAR *p = (SQLWCHAR*)fbh->data;
-                   while(fbh->datalen && p[fbh->datalen-1]==L' ') {
+                   SQLWCHAR blank = 0x20;
+                   SQLLEN orig_len = fbh->datalen;
+
+                   while(fbh->datalen && p[fbh->datalen/sizeof(SQLWCHAR)-1] == blank) {
                        --fbh->datalen;
                    }
+                   if (DBIc_TRACE(imp_sth, UNICODE_TRACING, 0, 0)) /* odbcunicode */
+                       TRACE2(imp_sth, "    Unicode ChopBlanks orig len=%ld, new len=%ld\n",
+                              orig_len, fbh->datalen);
                }
                sv_setwvn(sv,(SQLWCHAR*)fbh->data,fbh->datalen/sizeof(SQLWCHAR));
+               if (DBIc_TRACE(imp_sth, UNICODE_TRACING, 0, 0)) { /* odbcunicode */
+                   /* unsigned char dlog[256]; */
+                   /* unsigned char *src; */
+                   /* char *dst = dlog; */
+                   /* unsigned int n; */
+                   /* STRLEN len; */
+
+                   /* src = SvPV(sv, len); */
+                   /* dst += sprintf(dst, "0x"); */
+                   /* for (n = 0; (n < 126) && (n < len); n++, src++) { */
+                   /*     dst += sprintf(dst, "%2.2x", *src); */
+                   /* } */
+                   /*TRACE1(imp_sth, "    SQL_C_WCHAR data = %s\n", dlog);*/
+                   TRACE1(imp_sth, "    SQL_C_WCHAR data = %.100s\n", neatsvpv(sv, 100));
+               }
                break;
 #endif /* WITH_UNICODE */
              default:
@@ -2885,12 +2911,16 @@ AV *dbd_st_fetch(SV *sth, imp_sth_t *imp_sth)
                }
                sv_setpvn(sv, (char*)fbh->data, fbh->datalen);
                if (imp_sth->odbc_utf8_on && fbh->ftype != SQL_C_BINARY ) {
+                   if (DBIc_TRACE(imp_sth, UNICODE_TRACING, 0, 0)) /* odbcunicode */
+                       TRACE0(imp_sth, "    odbc_utf8 - decoding UTF-8");
 #ifdef sv_utf8_decode
                    sv_utf8_decode(sv);
 #else
                    SvUTF8_on(sv);
 #endif
                }
+               if (DBIc_TRACE(imp_sth, 0, 0, 4))
+                   TRACE1(imp_sth, "    %s\n", neatsvpv(sv, fbh->datalen));
            }
        }
    }
@@ -3245,8 +3275,8 @@ static int rebind_param(
     if (DBIc_TRACE(imp_sth, 0, 0, 4)) {
         PerlIO_printf(
             DBIc_LOGPIO(imp_dbh),
-            "      bind %s '%.100s' value_len=%d maxlen=%ld null=%d)\n",
-            phs->name, SvOK(phs->sv) ? phs->sv_buf : "(null)",
+            "      bind %s %.100s value_len=%d maxlen=%ld null=%d)\n",
+            phs->name, neatsvpv(phs->sv, value_len),
             value_len,(long)phs->maxlen, SvOK(phs->sv) ? 0 : 1);
     }
 
@@ -5562,7 +5592,7 @@ static int post_connect(
    SWORD dbvlen;
    UWORD supported;
 
-   if (DBIc_TRACE(imp_dbh, 0x04000000, 0, 0))
+   if (DBIc_TRACE(imp_dbh, CONNECTION_TRACING, 0, 0))
        TRACE0(imp_dbh, "Turning autocommit on\n");
 
    /* DBI spec requires AutoCommit on */
@@ -5587,7 +5617,7 @@ static int post_connect(
       dbd_error(dbh, rc, "post_connect/SQLGetInfo(DRIVER_ODBC_VER)");
       strcpy(imp_dbh->odbc_ver, "01.00");
    }
-   if (DBIc_TRACE(imp_dbh, 0x04000000, 0, 0))
+   if (DBIc_TRACE(imp_dbh, CONNECTION_TRACING, 0, 0))
        TRACE1(imp_dbh, "DRIVER_ODBC_VER = %s\n", imp_dbh->odbc_ver);
 
    /* get ODBC driver name and version */
@@ -5614,7 +5644,7 @@ static int post_connect(
        }
    }
 
-   if (DBIc_TRACE(imp_dbh, 0x04000000, 0, 0))
+   if (DBIc_TRACE(imp_dbh, CONNECTION_TRACING, 0, 0))
        TRACE1(imp_dbh, "DRIVER_NAME = %s\n", imp_dbh->odbc_driver_name);
 
    rc = SQLGetInfo(imp_dbh->hdbc, SQL_DRIVER_VER,
@@ -5624,7 +5654,7 @@ static int post_connect(
        dbd_error(dbh, rc, "post_connect/SQLGetInfo(DRIVER_VERSION)");
        strcpy(imp_dbh->odbc_driver_name, "unknown");
    }
-   if (DBIc_TRACE(imp_dbh, 0x04000000, 0, 0))
+   if (DBIc_TRACE(imp_dbh, CONNECTION_TRACING, 0, 0))
        TRACE1(imp_dbh, "DRIVER_VERSION = %s\n", imp_dbh->odbc_driver_version);
 
    rc = SQLGetInfo(imp_dbh->hdbc, SQL_DBMS_NAME, &imp_dbh->odbc_dbms_name,
@@ -5651,7 +5681,7 @@ static int post_connect(
    } else if (imp_dbh->max_column_name_len == 0) {
       imp_dbh->max_column_name_len = 256;
    } else {
-       if (DBIc_TRACE(imp_dbh, 0x04000000, 0, 0))
+       if (DBIc_TRACE(imp_dbh, CONNECTION_TRACING, 0, 0))
            TRACE1(imp_dbh, "MAX_COLUMN_NAME_LEN = %d\n",
                   imp_dbh->max_column_name_len);
    }
@@ -5675,7 +5705,7 @@ static int post_connect(
    imp_dbh->odbc_has_unicode = 0;
 #endif
 
-   if (DBIc_TRACE(imp_dbh, 0x04000000, 0, 0))
+   if (DBIc_TRACE(imp_dbh, CONNECTION_TRACING, 0, 0))
        TRACE1(imp_dbh, "DBD::ODBC is unicode built : %s\n",
               imp_dbh->odbc_has_unicode ? "YES" : "NO");
 
@@ -5705,19 +5735,19 @@ static int post_connect(
    imp_dbh->RowCacheSize = 1;	/* default value for now */
 
    if (!strcmp(imp_dbh->odbc_dbms_name, "Microsoft SQL Server")) {
-       if (DBIc_TRACE(imp_dbh, 0x04000000, 0, 0))
+       if (DBIc_TRACE(imp_dbh, CONNECTION_TRACING, 0, 0))
            TRACE0(imp_dbh, "Deferring Binding\n");
        imp_dbh->odbc_defer_binding = 0;
    }
    /* check to see if SQLMoreResults is supported */
    rc = SQLGetFunctions(imp_dbh->hdbc, SQL_API_SQLMORERESULTS, &supported);
    if (SQL_SUCCEEDED(rc)) {
-       if (DBIc_TRACE(imp_dbh, 0x04000000, 0, 0))
+       if (DBIc_TRACE(imp_dbh, CONNECTION_TRACING, 0, 0))
            TRACE1(imp_dbh, "SQLMoreResults supported: %d\n", supported);
        imp_dbh->odbc_sqlmoreresults_supported = supported ? 1 : 0;
    } else {
       imp_dbh->odbc_sqlmoreresults_supported = 0;
-      if (DBIc_TRACE(imp_dbh, 0x04000000, 0, 0))
+      if (DBIc_TRACE(imp_dbh, CONNECTION_TRACING, 0, 0))
           TRACE0(imp_dbh,
                  "    !!SQLGetFunctions(SQL_API_SQLMORERESULTS) failed:\n");
       AllODBCErrors(imp_dbh->henv, imp_dbh->hdbc, 0,
@@ -5730,18 +5760,18 @@ static int post_connect(
    /* check to see if SQLDescribeParam is supported */
    rc = SQLGetFunctions(imp_dbh->hdbc, SQL_API_SQLDESCRIBEPARAM, &supported);
    if (SQL_SUCCEEDED(rc)) {
-       if (DBIc_TRACE(imp_dbh, 0x04000000, 0, 0))
+       if (DBIc_TRACE(imp_dbh, CONNECTION_TRACING, 0, 0))
            TRACE1(imp_dbh, "SQLDescribeParam supported: %d\n", supported);
        imp_dbh->odbc_sqldescribeparam_supported = supported ? 1 : 0;
    } else {
       imp_dbh->odbc_sqldescribeparam_supported = 0;
-       if (DBIc_TRACE(imp_dbh, 0x04000000, 0, 0))
+       if (DBIc_TRACE(imp_dbh, CONNECTION_TRACING, 0, 0))
            TRACE0(imp_dbh,
                  "    !!SQLGetFunctions(SQL_API_SQLDESCRIBEPARAM) failed:\n");
        AllODBCErrors(imp_dbh->henv, imp_dbh->hdbc, 0,
                      DBIc_TRACE(imp_dbh, 0, 0, 3), DBIc_LOGPIO(imp_dbh));
    }
-   if (DBIc_TRACE(imp_dbh, 0x04000000, 0, 0))
+   if (DBIc_TRACE(imp_dbh, CONNECTION_TRACING, 0, 0))
        TRACE1(imp_dbh, "SQLDescribeParam supported: %d\n",
               imp_dbh->odbc_sqldescribeparam_supported);
 
@@ -5753,7 +5783,7 @@ static int post_connect(
        DBD_ATTRIB_GET_IV(attr, "odbc_cursortype", 15,
                          svp, odbc_cursortype);
        if (svp && odbc_cursortype) {
-           if (DBIc_TRACE(imp_dbh, 0x04000000, 0, 0))
+           if (DBIc_TRACE(imp_dbh, CONNECTION_TRACING, 0, 0))
                TRACE1(imp_dbh,
                       "    Setting cursor type to: %"UVuf"\n", odbc_cursortype);
            /* delete odbc_cursortype so we don't see it again via STORE */
@@ -5763,7 +5793,7 @@ static int post_connect(
            rc = SQLSetConnectAttr(imp_dbh->hdbc,(SQLINTEGER)SQL_CURSOR_TYPE,
                                   (SQLPOINTER)odbc_cursortype,
                                   (SQLINTEGER)SQL_IS_INTEGER);
-           if (!SQL_SUCCEEDED(rc) && (DBIc_TRACE(imp_dbh, 0x04000000, 0, 0)))
+           if (!SQL_SUCCEEDED(rc) && (DBIc_TRACE(imp_dbh, CONNECTION_TRACING, 0, 0)))
                TRACE1(imp_dbh, "    !!Failed to set SQL_CURSORTYPE to %d\n",
                       (int)odbc_cursortype);
        }
@@ -5779,7 +5809,7 @@ static int post_connect(
            svp, odbc_timeout);
        if (svp && odbc_timeout) {
            imp_dbh->odbc_query_timeout = odbc_timeout;
-           if (DBIc_TRACE(imp_dbh, 0x04000000, 0, 0))
+           if (DBIc_TRACE(imp_dbh, CONNECTION_TRACING, 0, 0))
                TRACE1(imp_dbh, "    Setting DBH query timeout to %d\n",
                       (int)odbc_timeout);
            /* delete odbc_cursortype so we don't see it again via STORE */
@@ -5798,7 +5828,7 @@ static int post_connect(
            svp, putdata_start_value);
        if (svp) {
            imp_dbh->odbc_putdata_start = putdata_start_value;
-           if (DBIc_TRACE(imp_dbh, 0x04000000, 0, 0))
+           if (DBIc_TRACE(imp_dbh, CONNECTION_TRACING, 0, 0))
                TRACE1(imp_dbh, "    Setting DBH putdata_start to %d\n",
                       (int)putdata_start_value);
            /* delete odbc_putdata_start so we don't see it again via STORE */
@@ -5818,7 +5848,7 @@ static int post_connect(
            svp, column_display_size_value);
        if (svp) {
            imp_dbh->odbc_column_display_size = column_display_size_value;
-           if (DBIc_TRACE(imp_dbh, 0x04000000, 0, 0))
+           if (DBIc_TRACE(imp_dbh, CONNECTION_TRACING, 0, 0))
                TRACE1(imp_dbh,
 		      "    Setting DBH default column display size to %d\n",
                       (int)column_display_size_value);
@@ -5839,7 +5869,7 @@ static int post_connect(
            svp, column_display_size_value);
        if (svp) {
            imp_dbh->odbc_utf8_on = 0;
-           if (DBIc_TRACE(imp_dbh, 0x04000000, 0, 0))
+           if (DBIc_TRACE(imp_dbh, CONNECTION_TRACING, 0, 0))
                TRACE1(imp_dbh,
 		      "    Setting UTF8_ON to %d\n",
                       (int)column_display_size_value);

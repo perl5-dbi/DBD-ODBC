@@ -16,6 +16,21 @@ $Revision: 10667 $
   FETCH on any attribute passed to the connect method and sometimes
   driver managers error on SQL_ROWSET_SIZE in SQLGetConnectAttr.
 
+  ChopBlanks was not working on UCS-2 encoded data written into bound
+  columns and was also sometimes reading off the end of the bound
+  array.
+
+  Minor FAQ changes:
+    Added an additional way to read MS Access dbs from Unix
+    Clarified versions for MARS_Connection
+    updates to cancel_big_fetch.pl
+
+  Updated TO_DO with more stuff to do
+
+  Improved tracing output
+
+  Tidied up some of the examples
+
 =head2 Changes in DBD::ODBC  1.27 December 29, 2010
 
   Official release of the 1.26 development releases.
