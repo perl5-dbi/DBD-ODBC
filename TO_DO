@@ -46,3 +46,10 @@ $Revision: 10667 $
 
   Anywhere we are storing a value in an SV that we didn't create
     (and thus might have magic) should probably set magic.
+
+  Perhaps add a switch to pick iODBC or unixODBC driver managers
+
+  Work out how to use Unicode in freeTDS as it does not have SQLW functions
+    see examples/freetds_unicode.pl latest CVS trunk apparently has SQLW functions
+
+  Add a test for ChopBlanks and unicode data
