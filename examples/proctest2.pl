@@ -35,18 +35,18 @@ my $innerTestSth;
 sub innerTest($)
 {
    my ($outputTempate) = @_;
-	
+
    my %outputData;
    my $queryInputParameter1 = 2222;
    my $queryOutputParameter = $outputTempate;
-	
+
    if(!defined $innerTestSth) {
       $innerTestSth = $dbh2->prepare('{? = call PERL_DBD_TESTPRC(?) }');
    }
-	
+
    $innerTestSth->bind_param_inout(1, \$queryOutputParameter, 30, { TYPE => DBI::SQL_INTEGER });
    $innerTestSth->bind_param(2, $queryInputParameter1, { TYPE => DBI::SQL_INTEGER });
-					
+
 #	$sth->trace(1);#, 'DbiTest.txt');
    $innerTestSth->execute();
 
@@ -67,11 +67,11 @@ sub innerTest($)
 sub test($)
 {
    my ($outputTempate) = @_;
-	
+
    my $queryInputParameter1 = 2222;
    my $queryOutputParameter = $outputTempate;
    my $sth = $dbh->prepare('select ID from (select 1 as ID union select 2 as ID union select 3 as ID) tmp order by ID');
-					
+
    $sth->execute();
    do {
       for(my $rowRef = undef; $rowRef = $sth->fetchrow_hashref('NAME'); ) {
@@ -79,9 +79,9 @@ sub test($)
 	 innerTest($outputTempate);
       }
    } while($sth->{odbc_more_results});
-   
+
 }
-	
+
 
 
 

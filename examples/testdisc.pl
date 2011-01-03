@@ -6,7 +6,7 @@ use strict;
 
 use DBI;
 
-my $dbh = DBI->connect();
+my $dbh = DBI->connect() or die "connect";
 
 $dbh->disconnect;
 

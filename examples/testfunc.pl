@@ -8,14 +8,15 @@ use DBI qw(:sql_types);
 
 my (@row);
 
-my $dbh = DBI->connect('dbi:ODBC:PERL_TEST_SQLSERVER',{AutoCommit=>1, RaisError=>1})
+my $dbh = DBI->connect()
 	  or exit(0);
+$dbh->{RaiseError} = 1;
 # ------------------------------------------------------------
 
 # dumb, for now...
 # SQL_DRIVER_VER returns string
 # SQL_CURSOR_COMMIT_BEHAVIOR returns 16 bit value
-# SQL_ALTER_TABLE returns 32 bit value 
+# SQL_ALTER_TABLE returns 32 bit value
 # SQL_ACCESSIBLE_PROCEDURES returns short string (Y or N)
 
 my %InfoTests = (
@@ -51,7 +52,7 @@ my %TypeTests = (
 		 'SQL_WLONGVARCHAR' => SQL_WLONGVARCHAR,
 		);
 
-my $ret; 
+my $ret;
 print "\nInformation for DBI_DSN=$ENV{'DBI_DSN'}\n\n";
 my $SQLInfo;
 foreach $SQLInfo (sort keys %InfoTests) {
@@ -81,10 +82,10 @@ foreach $SQLInfo (sort keys %TypeTests) {
 	 # print "Col Attributes (NAME): ", &nullif($sname), "\n";
 	 push(@coldescs, $sname);
 	 # print "Desc Col: ", join(', ', &nullif($sth->func($i, DescribeCol))), "\n";
-      }	
+      }
       # print join(', ', @coldescs), "\n";
       while (@row = $sth->fetchrow()) {
-	 
+
 	 print "\t$row[0]\n",
 	 # &nullif($row[1]), ", " ,
 	 #&nullif($row[2]), ", " ,
@@ -98,7 +99,7 @@ foreach $SQLInfo (sort keys %TypeTests) {
       # no info on that type...
       print "no info for this type\n";
    }
-}	
+}
 
 my $SQL_XOPEN_CLI_YEAR = 10000;
 print "\nSQL_XOPEN_CLI_YEAR = ", $dbh->get_info($SQL_XOPEN_CLI_YEAR), "\n";

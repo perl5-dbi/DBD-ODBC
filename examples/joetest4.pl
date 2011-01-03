@@ -17,8 +17,8 @@ my $sth = $dbh->prepare ("INSERT INTO table1 (d) VALUES (?)");
 $sth->bind_param (1, undef, SQL_TYPE_TIMESTAMP);
 
 #$sth->bind_param (1, "2002-07-12 05:08:37.350", SQL_TYPE_TIMESTAMP);
-$sth->execute("2002-07-12 05:08:37.350");
-#$sth->bind_param (1, undef, SQL_TYPE_TIMESTAMP);
+#$sth->execute("2002-07-12 05:08:37.350");
+$sth->bind_param (1, undef, SQL_TYPE_TIMESTAMP);
 $sth->execute(undef);
 
 my @row;

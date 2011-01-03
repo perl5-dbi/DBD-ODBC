@@ -16,13 +16,13 @@ sub sql {
     my @param = @_;
 
     chomp $code; # No good reason to have a tailing \n
-    
+
     my $sth = $db->prepare_cached($code);
     if (!$sth) {
 	print "Unable to prepare: ".$DBI::errstr."\nSQL: $code\n";
 	return undef;
     }
-    
+
     my $res = $sth->execute(@param);
     if (!$res) {
 	my $par = '';
@@ -48,12 +48,12 @@ sub sql {
 sub conn() {
 #    print STDERR "Connecting (to $sid as $user/$passwd)...";
     my $db = DBI->connect_cached("dbi:SAP_DB:$sid", $user, $passwd,
-			  { 
+			  {
 			      AutoCommit=>0,
 			      LongReadLen=>10000,
 			  }
 			  );
-    
+
     unless ($db) {
 	die "Failed to connect to the database $sid as user $user with password $passwd: ".$DBI::errstr;
     }
@@ -102,7 +102,7 @@ for (my $i=10; $i<200; $i++) {
 #	print STDERR "Query $j leaked: ".($q2-$q1)." kB\n";
 
     }
-        
+
     $db->rollback;
 #    $db->disconnect;
     $db = undef;

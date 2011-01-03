@@ -1,6 +1,6 @@
 use DBI;
 # $Id$
-
+# For MS SQL Server temp tables are only visible if you create them with "do"
 
 my $dbh = DBI->connect($ENV{DBI_DSN}, $ENV{DBI_USER}, $ENV{DBI_PASS}, { RaiseError => 1});
 my $sth;

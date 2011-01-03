@@ -2,7 +2,7 @@
 # $Id$
 
 
-# use strict;
+use strict;
 use DBI qw(:sql_types);
 
 my (@row);
@@ -23,48 +23,70 @@ my %TypeTests = (
 		 'SQL_LONGVARBINARY' => SQL_LONGVARBINARY,
 		);
 
-my $ret; 
+my $ret;
 print "\nInformation for DBI_DSN=$ENV{'DBI_DSN'}\n\t", $dbh->get_info(17), "\n";
 my $SQLInfo;
 
 print "Listing all types\n";
 my $sql = "create table PERL_TEST (\n";
 my $icolno = 0;
-$sth = $dbh->func(0, GetTypeInfo);
+use constant {
+    gti_name => 0,
+    gti_type => 1,
+    gti_column_size => 2,
+    gti_prefix => 3,
+    gti_suffix => 4,
+    gti_create_params => 5,
+    gti_nullable => 6
+};
+
+my $sth = $dbh->func(0, 'GetTypeInfo');
 if ($sth) {
-   my $colcount = $sth->func(1, 0, ColAttributes); # 1 for col (unused) 0 for SQL_COLUMN_COUNT
+   my $colcount = $sth->func(1, 0, 'ColAttributes'); # 1 for col (unused) 0 for SQL_COLUMN_COUNT
    # print "Column count is $colcount\n";
    my $i;
    my @coldescs = ();
    # column 0 should be an error/blank
    for ($i = 0; $i <= $colcount; $i++) {
-      my $stype = $sth->func($i, 2, ColAttributes);
-      my $sname = $sth->func($i, 1, ColAttributes);
+      my $stype = $sth->func($i, 2, 'ColAttributes');
+      my $sname = $sth->func($i, 1, 'ColAttributes');
       push(@coldescs, $sname);
-   }	
-	
+   }
+
    my @cols = ();
+   my $seen_identity;
    while (@row = $sth->fetchrow()) {
-	if (!($row[0] =~ /auto/)) {
+       print "$row[gti_name]| ",
+           nullif($row[gti_type]), "| ",
+               nullif($row[gti_column_size]), "| ",
+                   nullif($row[gti_prefix]), "| ",
+                       nullif($row[gti_suffix]), "| ",
+                           nullif($row[gti_create_params]), "| ",
+                               nullif($row[gti_nullable]), "| ",
+                                   "\n";
+       if ($row[gti_name] =~ /identity/) {
+           next if $seen_identity; # you cannot have multiple identity columns
+           $seen_identity = 1;
+       }
+       if (!($row[gti_name] =~ /auto/)) {
+           my $tmp = " COL_$icolno $row[gti_name]";
 
-	  my $tmp = " COL_$icolno $row[0]";
-
-	  $tmp .= "($row[2])" if ($row[5] =~ /length/ );
-	  push(@cols, $tmp); 
-	}
-	 $icolno++;
-	 print "$row[0], ",
-	  &nullif($row[1]), ", ", 
-	  &nullif($row[2]), ", ", 
-	  &nullif($row[3]), ", ", 
-	  &nullif($row[4]), ", ", 
-	  &nullif($row[5]), ", ", 
-	  &nullif($row[6]), ", ", 
-	"\n";
+           if (defined($row[gti_create_params]) &&
+                   ($row[gti_create_params] =~ /length/ or
+                        $row[gti_create_params] =~ /precision/)) {
+               if ($row[gti_name] =~ /\(\)/) {
+                   $tmp =~ s/\(\)/($row[gti_column_size])/;
+               } else {
+                   $tmp .= "(10)"; #"($row[gti_column_size])"
+               }
+           }
+           push(@cols, $tmp);
+       }
+       $icolno++;
    }
    $sql .= join("\n , ", @cols) . ")\n";
    $sth->finish;
-}	
+}
 print $sql;
 eval {
 	$dbh->do("drop table PERL_TEST");
@@ -79,7 +101,7 @@ my ($catalog, $schema, $table) = split(/\./, $mtable[0]);
 $catalog =~ s/"//g;
 $schema =~ s/"//g;
 $table =~ s/"//g;
-$table="PERL_DBD_TEST";
+#$table="PERL_DBD_TEST";
 print "Getting column info for: $catalog, $schema, $table\n";
 my $sth = $dbh->column_info(undef, undef, $table, undef);
 my @row;
@@ -95,7 +117,7 @@ while (@row = $sth->fetchrow_array) {
 
 $dbh->disconnect();
 
-sub nullif ($) {
+sub nullif {
    my $val = shift;
    $val ? $val : "(null)";
 }

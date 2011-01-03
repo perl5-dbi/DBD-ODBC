@@ -5,7 +5,7 @@
 use strict;
 use DBI;
 
-my $dbh = DBI->connect("DBI:ODBC:PERL_TEST_SQLSERVER",,, {RaiseError => 1});
+my $dbh = DBI->connect();
 
 # create a temp table with an identity property on a column:
 my $sql = qq{CREATE TABLE #TEMP1 (MyCol INT NOT NULL IDENTITY)};

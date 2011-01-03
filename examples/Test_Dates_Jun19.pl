@@ -7,8 +7,8 @@ print "Program $0 now starting \n";
 ################### Build DSN Less MSSQL Connection Parameters  ####################################################
 # my $DSN = 'driver={SQL Server};Server=markchar; database=orders; uid=orderguy; pwd=element;';
 my $dbh = DBI->connect()
-                or die "Can't connect to databese ", DBI::errstr," \n"; 
-##################################################################################################               
+                or die "Can't connect to databese ", DBI::errstr," \n";
+##################################################################################################
 print "We have connected successfully to the Database \n";
 $dbh->{RaiseError} = 1;  # let DBI handle the call to die
 eval {
@@ -27,7 +27,7 @@ eval {
 	[ShipCity] [nvarchar] (15) COLLATE SQL_Latin1_General_CP1_CI_AS NULL ,
 	[ShipRegion] [nvarchar] (15) COLLATE SQL_Latin1_General_CP1_CI_AS NULL ,
 	[ShipPostalCode] [nvarchar] (10) COLLATE SQL_Latin1_General_CP1_CI_AS NULL ,
-	[ShipCountry] [nvarchar] (15) COLLATE SQL_Latin1_General_CP1_CI_AS NULL 
+	[ShipCountry] [nvarchar] (15) COLLATE SQL_Latin1_General_CP1_CI_AS NULL
    )");
 };
 
@@ -37,8 +37,8 @@ eval {
 
 #      May 18, 2003                  compatibility with older DBD::ODBC
 # $dbh->{odbc_default_bind_type} = 0; # **DEFAULT won't work here***
-# DBD::ODBC::st execute failed: [Microsoft][ODBC SQL Server Driver]Invalid character value for cast specification (SQL-22018)(DBD: st_execute/SQLExecute err=-1) 
-# DBD::ODBC::st execute failed: [Microsoft][ODBC SQL Server Driver]Invalid character value for cast specification (SQL-22018)(DBD: st_execute/SQLExecute err=-1) 
+# DBD::ODBC::st execute failed: [Microsoft][ODBC SQL Server Driver]Invalid character value for cast specification (SQL-22018)(DBD: st_execute/SQLExecute err=-1)
+# DBD::ODBC::st execute failed: [Microsoft][ODBC SQL Server Driver]Invalid character value for cast specification (SQL-22018)(DBD: st_execute/SQLExecute err=-1)
 #
 
 # # # # # # # #  Prepare the Insert into Order Table Statement # # # # # # # # # # #
@@ -65,10 +65,9 @@ my   $insert_order_stm = $dbh->prepare ( "
   $insert_order_stm->bind_param(10, "region");
   $insert_order_stm->bind_param(11, "999");
   $insert_order_stm->bind_param(12, "USA");
-  
+
   my $rc = $insert_order_stm->execute;
   print "Last SQL Return Code from insert to Order Table = $rc \n" ;
   print "Program $0 now ending \n";
 
   $dbh->disconnect;
-  

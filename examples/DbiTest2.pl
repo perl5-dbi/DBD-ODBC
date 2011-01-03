@@ -28,13 +28,13 @@ sub newDbh()
 	if(defined($options{DbSrcServer}) && defined($options{DbSrcLoginName}) && defined($options{DbSrcDatabase}))
 	{	my $dsn = "DRIVER={SQL Server};SERVER=$options{DbSrcServer};DATABASE=$options{DbSrcDatabase};NETWORK=dbmssocn;UID=$options{DbSrcLoginName};PWD=$options{DbSrcPassword}";
 #		print "DSN: $dsn\n\n";
-		
+
 		$dbh = DBI->connect("DBI:ODBC:$dsn") || die "DBI connect failed: $DBI::errstr\n";
 		$dbh->{AutoCommit} = 0;	# enable transactions, if possible
 		$dbh->{RaiseError} = 0;
 		$dbh->{PrintError} = 1;	# use RaiseError instead
 		$dbh->{ShowErrorStatement} = 1;
-		
+
 		push @dbhPool, $dbh;
 		return($dbh);
 	}
@@ -43,10 +43,10 @@ sub newDbh()
 
 sub test($)
 {	my ($outputTempate) = @_;
-	
+
 	my $dbh = newDbh();
 	my $sth = $dbh->prepare('select ID from (select 1 as ID union select 2 as ID union select 3 as ID) tmp order by ID');
-					
+
 	$sth->execute();
 
 #	print '$sth->{Active}: ', $sth->{Active}, "\n";
@@ -64,11 +64,11 @@ my $innerTestSth;
 
 sub innerTest($)
 {	my ($outputTempate) = @_;
-	
+
 	my %outputData;
 	my $queryInputParameter1 = 2222;
 	my $queryOutputParameter = $outputTempate;
-	
+
 	my $sth;
 
 	if(!defined $innerTestSth)
@@ -76,10 +76,10 @@ sub innerTest($)
 		$innerTestSth = $dbh->prepare('{? = call testPrc(?) }');
 	}
 	$sth = $innerTestSth;
-	
+
 	$sth->bind_param_inout(1, \$queryOutputParameter, 30, { TYPE => DBI::SQL_INTEGER });
 	$sth->bind_param(2, $queryInputParameter1, { TYPE => DBI::SQL_INTEGER });
-					
+
 #	$sth->trace(1);#, 'DbiTest.txt');
 	$sth->execute();
 
@@ -90,7 +90,7 @@ sub innerTest($)
 		}
 	} while($sth->{odbc_more_results});
 
-	print '$queryOutputParameter: \'', $queryOutputParameter, 
+	print '$queryOutputParameter: \'', $queryOutputParameter,
 		'\' expected: (', $queryInputParameter1 + 1, ")\n\n";
 }
 
@@ -117,5 +117,5 @@ foreach my $dbh (@dbhPool)
 }
 
 
-			
-		
+
+

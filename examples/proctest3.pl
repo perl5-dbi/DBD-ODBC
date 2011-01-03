@@ -24,7 +24,7 @@ AS
 sub test()
 {
    my $sth = $dbh->prepare("{call PERL_DBD_TESTPRC(?)}");
-	
+
    $sth->bind_param(1, -1, { TYPE => 4 });
    $sth->execute();
 
@@ -37,7 +37,7 @@ sub test()
    }
 }
 
-	
+
 
 ##########################################
 ### Test
