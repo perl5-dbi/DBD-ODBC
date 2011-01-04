@@ -6,6 +6,13 @@ As of $LastChangedDate$
 
 $Revision: 10667 $
 
+=head2 Changes in DBD::ODBC  1.28_2 January NN, 2011
+
+  Added -x argument to Makefile.PL saying you prefer unixODBC over iODBC
+  driver managers as a) we need to look for iODBC first on some platforms
+  to detect iODBC and b) some platforms (Debian/Ubuntu) people have both
+  binary packages installed but only unixODBC dev package.
+
 =head2 Changes in DBD::ODBC  1.28_1 December 29, 2010
 
   Rewrote documentation on odbc_SQL_ROWSET_SIZE and added loads of

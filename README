@@ -7,7 +7,7 @@ DBD::ODBC -- DBD module interfacing the ODBC databases.
    DBD::ODBC is Copyright (C) 1994,1995,1996,1997,1998  Tim Bunce
    portions Copyright (C) 1997,1998,1999,2000,2001,2002 Jeff Urlwin
    portions Copyright (C) 1997  Thomas K. Wenrich
-   portions Copyright (C) 2007,2008,2009, 2010 Martin J. Evans
+   portions Copyright (C) 2007,2008,2009,2010,2011 Martin J. Evans
 
 LICENSE INFORMATION:
 
@@ -27,20 +27,18 @@ LICENSE INFORMATION:
    it is provided “as is” and without any express or implied
    warranties.
 
-PLEASE READ THE ENTIRE README FILE CAREFULLY !
+PLEASE READ THE ENTIRE README FILE CAREFULLY
 
 *BEFORE* BUILDING, TESTING AND INSTALLING this you will need to:
 
     Build, test and install Perl 5 (as per DBI specifications/compatibility)
-    It is very important to TEST it and INSTALL it!
+    It is very important to TEST it and INSTALL it.
 
-    Build, test and install the DBI module (at least DBI 1.201).
-    It is very important to TEST it and INSTALL it!
-
-    Remember to *read* the DBI README file!
+    Build, test and install the DBI module (at least DBI 1.609).
+    It is very important to TEST it and INSTALL it.
 
     Remember to *read* the DBD::ODBC.pm POD documentation and the
-    DBD::ODBC::Changes.pm POD documentation!!!
+    DBD::ODBC::Changes.pm POD documentation.
 
 BUILDING:
 
@@ -55,9 +53,15 @@ BUILDING:
   to Makefile.PL. If you don't want UNICODE support on Windows specify
   the -nou switch to Makefile.PL.
 
+  If the Makefile.PL finds iODBC and you would prefer to build with
+  unixODBC you can use the -x switch to favor unixODBC. This only happens
+  in rare case where you have binary packages of both installed but you
+  can only have development packages on one installed and DBD::ODBC
+  locates iODBC first.
+
   perl Makefile.PL
-  make                (or nmake, if VC++ on Win32)
-  make test           (or nmake, if VC++ on Win32)
+  make                (or nmake/dmake, if VC++ on Win32)
+  make test           (or nmake/dmake, if VC++ on Win32)
 
 TESTING
 
@@ -66,7 +70,7 @@ TESTING
   make install               (if the tests look okay)
 
   Note that the tests currently all pass when using the Microsoft SQL
-  server driver up to SQL Server 2008 any many other ODBC drivers on
+  server driver up to SQL Server 2008 and many other ODBC drivers on
   Windows and UNIX (too numerous to mention here).
 
   If the tests from t/09bind.t fail, that is an indication of lack of
@@ -146,6 +150,7 @@ DBI 'home page': http://dbi.perl.org
 perldoc DBI
 perldoc DBD::ODBC	(which will include the DBD::ODBC FAQ list)
 perldoc DBD::ODBC::Changes
+perldoc DBD::ODBC::FAQ
 
 Win32 ODBC drivers:
 http://www.microsoft.com/support/products/backoffice/odbc/
