@@ -655,7 +655,7 @@ AS
    $dbh->disconnect;
 
    my $dsn = $ENV{DBI_DSN};
-   if ($dsn !~ /^dbi:ODBC:DSN=/) {
+   if ($dsn !~ /^dbi:ODBC:DSN=/ && $dsn !~ /DRIVER=/i) {
        my @a = split(q/:/, $ENV{DBI_DSN});
        $dsn = join(q/:/, @a[0..($#a - 1)]) . ":DSN=" . $a[-1];
    }
