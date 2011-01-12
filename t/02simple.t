@@ -256,7 +256,9 @@ $rc = ODBCTEST::tab_delete($dbh);
 # data_sources is unsupported.
 my @data_sources = DBI->data_sources('ODBC');
 #diag("Data sources:\n\t", join("\n\t",@data_sources),"\n\n");
-cmp_ok($#data_sources, '>=', 0, "data sources test");
+# NOTE: data_sources may return 0 data sources if there are none
+# and we are using a DSN-less connection string
+cmp_ok($#data_sources, '>=', -1, "data sources test");
 
 
 ok($dbh->ping, "test ping method");

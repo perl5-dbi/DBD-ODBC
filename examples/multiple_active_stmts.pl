@@ -8,7 +8,6 @@ use Data::Dumper;
 
 my $attrs = { RaiseError => 1, PrintError => 0, AutoCommit => 1 };
 
-my @x = map { $ENV{"DBICTEST_MSSQL_ODBC_$_"} } (qw/DSN USER PASS/);
 my %connect_args = (DSN => 'dbi:ODBC:DSN=baugi',
                     USER => 'sa',
                     PASS => undef);

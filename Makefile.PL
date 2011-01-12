@@ -327,11 +327,12 @@ EOT
     # if we haven't got odbchome set try and find a driver, driver manager.
     if (!$odbchome) {
         if ($ENV{WINDIR} && $OSNAME eq 'cygwin') {
-            # per patches from Teun Burgers
-            my $tmp_odbchome = $ENV{WINDIR};
-            $tmp_odbchome =~ s/^([A-Za-z]):*$/\/\/$1/;
-            $tmp_odbchome =~ s/\\/\//g;
-            $odbchome = $tmp_odbchome if (-e "$tmp_odbchome/odbc.ini")
+            ## per patches from Teun Burgers
+            #my $tmp_odbchome = $ENV{WINDIR};
+            #$tmp_odbchome =~ s/^([A-Za-z]):*$/\/\/$1/;
+            #$tmp_odbchome =~ s/\\/\//g;
+            #$odbchome = $tmp_odbchome if (-e "$tmp_odbchome/odbc.ini")
+            chomp($odbchome = `cygpath \$WINDIR`);
         } elsif (-f '/opt/sapdb/interfaces/odbc/lib/libsqlod.a') {
             $odbchome = '/opt/sapdb/interfaces/odbc/';
         }

@@ -13,6 +13,11 @@ $Revision: 10667 $
   to detect iODBC and b) some platforms (Debian/Ubuntu) people have both
   binary packages installed but only unixODBC dev package.
 
+  Patch from Caelum for better Cygwin handling.
+
+  Minor change to data sources test to cope with someone having not
+  data sources and using a DSN-less connection for testing.
+
 =head2 Changes in DBD::ODBC  1.28_1 December 29, 2010
 
   Rewrote documentation on odbc_SQL_ROWSET_SIZE and added loads of
