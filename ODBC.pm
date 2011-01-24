@@ -1760,18 +1760,8 @@ other people like you may look at the test reports to see how
 successful they are before choosing the version of a module to
 install.
 
-CPAN::Reporter is easy to install and configure like this:
-
-  perl -MCPAN -e shell
-  cpan> install CPAN::Reporter
-  cpan> reload cpan
-  cpan> o conf init test_report
-
-Simply answer the questions to configure CPAN::Reporter.
-
-You can find the CPAN testers wiki at L<http://wiki.cpantesters.org/>
-and the installation guide for CPAN::Reporter at
-L<http://wiki.cpantesters.org/wiki/CPANInstall>.
+See this guide on how to get started with sending test reports:
+L<http://wiki.cpantesters.org/wiki/QuickStart>.
 
 =head2 Others/todo?
 
@@ -1851,6 +1841,10 @@ L<http://www.easysoft.com/developer/languages/perl/sql_server_unix_tutorial.html
 Perl DBI - Put Your Data On The Web:
 
 L<http://www.easysoft.com/developer/languages/perl/tutorial_data_web.html>
+
+Multiple Active Statements (MAS) and DBD::ODBC
+
+L<http://www.easysoft.com/developer/languages/perl/multiple-active-statements.html>
 
 =head2 Frequently Asked Questions
 

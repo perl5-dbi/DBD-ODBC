@@ -237,7 +237,7 @@ statements if any of them were select statements. You could get around
 this (with caution) by changing to a dynamic cursor. There is a "hack"
 in DBD::ODBC which can be used to enable MAS but you have to fully
 understand the implications of doing so(see
-L<DBD/ODBC/odbc_SQL_ROWSET_SIZE> and L<DBD/ODBC/odbc_cursortype>).
+L<DBD::ODBC/odbc_SQL_ROWSET_SIZE> and L<DBD::ODBC/odbc_cursortype>).
 
 In MS SQL Server 2005, there is a new thing called MARS (Multiple
 Active Result Sets) which allows multiple active select statements but
@@ -260,6 +260,8 @@ it.
 
 If anyone wants to report success with a particular driver and
 multiple active statements I will collect them here.
+
+Also see L<http://www.easysoft.com/developer/languages/perl/multiple-active-statements.html>
 
 =head2 Why do I get "Datetime field overflow" when attempting to insert a
 date into Oracle?
@@ -327,13 +329,13 @@ L<http://technet.microsoft.com/en-US/library/ms131667.aspx> which
 basically says I<Prepared statements cannot be used to create
 temporary objects on SQL Server 2000 or later...>. The proper way to
 avoid this is to use the C<do> method but if you cannot do that then
-you need to add the L<DBD/ODBC/odbc_exec_direct> attribute to your prepare as
+you need to add the L<DBD::ODBC/odbc_exec_direct> attribute to your prepare as
 follows:
 
   my $s = $h->prepare('select * into #tmp from mytable',
                       { odbc_exec_direct => 1});
 
-See L<DBD/ODBC/odbc_exec_direct>.
+See L<DBD::ODBC/odbc_exec_direct>.
 
 =head2 Why cannot I connect to my data source on Windows 64?
 

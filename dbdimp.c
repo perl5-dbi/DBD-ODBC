@@ -2591,7 +2591,11 @@ int dbd_st_execute(
        SQLSMALLINT flds = 0;
        SQLRETURN sts;
 
-       sts = SQLNumResultCols(imp_sth->hstmt, &flds);
+       if (!SQL_SUCCEEDED(sts = SQLNumResultCols(imp_sth->hstmt, &flds))) {
+           dbd_error(sth, sts, "dbd_describe/SQLNumResultCols");
+           return -2;
+       }
+
        if (flds == 0) {                         /* not a result-set */
            if (DBIc_TRACE(imp_sth, 0, 0, 4))
                TRACE2(imp_dbh, "    nflds=(%d,%d), resetting done_desc\n",
@@ -4411,7 +4415,7 @@ SV *dbd_db_FETCH_attrib(SV *dbh, imp_dbh_t *imp_dbh, SV *keysv)
              imp_dbh->hdbc, pars->fOption, &vParam, SQL_IS_UINTEGER, 0);
          if (pars->fOption != SQL_ROWSET_SIZE)
              dbd_error(dbh, rc, "db_FETCH/SQLGetConnectAttr");
-         
+
 	 if (!SQL_SUCCEEDED(rc)) {
              if (DBIc_TRACE(imp_dbh, 0, 0, 3))
                  TRACE1(imp_dbh,
@@ -4549,8 +4553,8 @@ SV *dbd_st_FETCH_attrib(SV *sth, imp_sth_t *imp_sth, SV *keysv)
                   "but failed\n", par->str);
       }
       if (DBIc_WARN(imp_sth)) {
-	 warn("Describe failed during %s->FETCH(%s,%d)",
-              SvPV(sth,PL_na), key,imp_sth->done_desc);
+          warn("Describe failed during %s->FETCH(%s,%d)",
+               SvPV(sth,PL_na), key,imp_sth->done_desc);
       }
       return &PL_sv_undef;
    }

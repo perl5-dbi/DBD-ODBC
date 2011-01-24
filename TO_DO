@@ -55,3 +55,10 @@ $Revision: 10667 $
   Write a document on MARS_CONNECTION
 
   Add a link or documentation on server cursors
+
+  Add some private SQLGetInfo values for whether SQL_ROWSET_SIZE hack
+  works etc. How can you tell a driver supports MARS_CONNECTION.
+
+  Might be able to detect MARS capable with SS_COPT_MARS_ENABLED
+
+SQL_COPT_SS_MARS_ENABLED
