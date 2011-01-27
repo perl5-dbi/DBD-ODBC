@@ -14,8 +14,8 @@ META.yml
 test_results.txt
 examples/backup_restore.pl
 examples/big_result.pl
-examples/cancel_bug_fetch.pl
-examples/columninfo.pl
+examples/cancel_big_fetch.pl
+examples/column_info.pl
 examples/DbiTest.pl
 examples/DbiTest2.pl
 examples/getinfo.pl

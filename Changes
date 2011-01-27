@@ -6,12 +6,24 @@ As of $LastChangedDate$
 
 $Revision: 10667 $
 
+=head2 Changes in DBD::ODBC  1.28_3 January 24, 2011
+
+  Fixed MANIFEST which named 2 files incorrectly.
+
+  Fixed use of PREREQ_PRINT in versions of ExtUtils::MakeMaker which
+  don't support it.
+
+  Added Perl and ExtUtils::MakeMaker version output to build process.
+
+  Fixed a check on LD_LIBRARY_PATH for unixODBC.
+
 =head2 Changes in DBD::ODBC  1.28_2 January 24, 2011
 
-  Added -x argument to Makefile.PL saying you prefer unixODBC over iODBC
-  driver managers as a) we need to look for iODBC first on some platforms
-  to detect iODBC and b) some platforms (Debian/Ubuntu) people have both
-  binary packages installed but only unixODBC dev package.
+  Added -x argument to Makefile.PL saying you prefer unixODBC over
+  iODBC driver managers as a) we need to look for iODBC first on some
+  platforms to detect iODBC and b) some platforms (Debian/Ubuntu)
+  people have both binary packages installed but only unixODBC dev
+  package.
 
   Patch from Rafael Kitover (Caelum) for better Cygwin handling.
 
