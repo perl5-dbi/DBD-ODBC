@@ -8,14 +8,30 @@ $Revision: 10667 $
 
 =head2 Changes in DBD::ODBC  1.28_3 January 24, 2011
 
-  Fixed MANIFEST which named 2 files incorrectly.
+  [BUG FIXES]
 
-  Fixed use of PREREQ_PRINT in versions of ExtUtils::MakeMaker which
-  don't support it.
+  * Fixed MANIFEST in 1.28_2 which named 2 files incorrectly.
 
-  Added Perl and ExtUtils::MakeMaker version output to build process.
+  * Fixed use of PREREQ_PRINT in versions of ExtUtils::MakeMaker which
+    don't support it.
 
-  Fixed a check on LD_LIBRARY_PATH for unixODBC.
+  * Fixed a check on LD_LIBRARY_PATH for unixODBC which could report
+    you've not set LD_LIBRARY_PATH correctly.
+
+  [ENHANCEMENTS]
+
+  * Added Perl and ExtUtils::MakeMaker version output to build process.
+
+  [OTHER]
+
+  * From now on I'm changing the way the Changes file is written as
+    per article at
+    http://blog.urth.org/2011/01/changes-file-how-and-how-not-to.html
+
+  * Some broken drivers (freeTDS in this case) can return SQL_ERROR
+    from an ODBC API function and then SQLError does not return
+    error details. In this case set a generic error saying an error
+    occurred but we could not retrieve it.
 
 =head2 Changes in DBD::ODBC  1.28_2 January 24, 2011
 
@@ -36,12 +52,13 @@ $Revision: 10667 $
   pod patch for "CPAN Testers Reporting" to point at cpan testers wiki
   from Rafael Kitover (Caelum).
 
-  Fixed some links in the FAQ.
+  Fixed some broken links in the FAQ.
 
   Add a multiple active statement document link to randon links and
   the FAQ entry.
 
   A call to SQLNumResultCols was not checked to test it succeeded.
+  Not seen anyone run into this as yet.
 
 =head2 Changes in DBD::ODBC  1.28_1 December 29, 2010
 

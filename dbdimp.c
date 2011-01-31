@@ -1127,140 +1127,149 @@ void dbd_error2(
     HDBC hdbc,
     HSTMT hstmt)
 {
-   D_imp_xxh(h);
+    D_imp_xxh(h);
+    int error_found = 0;
 
-   /*
-    * It's a shame to have to add all this stuff with imp_dbh and
-    * imp_sth, but imp_dbh is needed to get the odbc_err_handler
-    * and imp_sth is needed to get imp_dbh.
-    */
-   struct imp_dbh_st *imp_dbh = NULL;
-   struct imp_sth_st *imp_sth = NULL;
+    /*
+     * It's a shame to have to add all this stuff with imp_dbh and
+     * imp_sth, but imp_dbh is needed to get the odbc_err_handler
+     * and imp_sth is needed to get imp_dbh.
+     */
+    struct imp_dbh_st *imp_dbh = NULL;
+    struct imp_sth_st *imp_sth = NULL;
 
-   if (DBIc_TRACE(imp_xxh, 0, 0, 4) && (err_rc != SQL_SUCCESS)) {
-       PerlIO_printf(
-           DBIc_LOGPIO(imp_xxh),
-           "    !!dbd_error2(err_rc=%d, what=%s, handles=(%p,%p,%p)\n",
-           err_rc, (what ? what : "null"), henv, hdbc, hstmt);
-   }
+    if (DBIc_TRACE(imp_xxh, 0, 0, 4) && (err_rc != SQL_SUCCESS)) {
+        PerlIO_printf(
+            DBIc_LOGPIO(imp_xxh),
+            "    !!dbd_error2(err_rc=%d, what=%s, handles=(%p,%p,%p)\n",
+            err_rc, (what ? what : "null"), henv, hdbc, hstmt);
+    }
 
-   switch(DBIc_TYPE(imp_xxh)) {
+    switch(DBIc_TYPE(imp_xxh)) {
       case DBIt_ST:
-	 imp_sth = (struct imp_sth_st *)(imp_xxh);
-	 imp_dbh = (struct imp_dbh_st *)(DBIc_PARENT_COM(imp_sth));
-	 break;
+        imp_sth = (struct imp_sth_st *)(imp_xxh);
+        imp_dbh = (struct imp_dbh_st *)(DBIc_PARENT_COM(imp_sth));
+        break;
       case DBIt_DB:
-	 imp_dbh = (struct imp_dbh_st *)(imp_xxh);
-	 break;
+        imp_dbh = (struct imp_dbh_st *)(imp_xxh);
+        break;
       default:
-	 croak("panic: dbd_error2 on bad handle type");
-   }
+        croak("panic: dbd_error2 on bad handle type");
+    }
 
-   while(henv != SQL_NULL_HENV) {
-      UCHAR sqlstate[SQL_SQLSTATE_SIZE+1];
-      /*
-       *  ODBC spec says ErrorMsg must not be greater than
-       *  SQL_MAX_MESSAGE_LENGTH but we concatenate a little
-       *  on the end later (e.g. sql state) so make room for more.
-       */
-      SQLCHAR ErrorMsg[SQL_MAX_MESSAGE_LENGTH+512];
-      SQLSMALLINT ErrorMsgLen;
-      SQLINTEGER NativeError;
-      RETCODE rc = 0;
+    while(henv != SQL_NULL_HENV) {
+        UCHAR sqlstate[SQL_SQLSTATE_SIZE+1];
+        /*
+         *  ODBC spec says ErrorMsg must not be greater than
+         *  SQL_MAX_MESSAGE_LENGTH but we concatenate a little
+         *  on the end later (e.g. sql state) so make room for more.
+         */
+        SQLCHAR ErrorMsg[SQL_MAX_MESSAGE_LENGTH+512];
+        SQLSMALLINT ErrorMsgLen;
+        SQLINTEGER NativeError;
+        RETCODE rc = 0;
 
-      /* TBD: 3.0 update */
-      while(SQL_SUCCEEDED(rc=SQLError(
-                              henv, hdbc, hstmt,
-                              sqlstate, &NativeError,
-                              ErrorMsg, sizeof(ErrorMsg)-1, &ErrorMsgLen))) {
+        /* TBD: 3.0 update */
+        while(SQL_SUCCEEDED(rc=SQLError(
+                                henv, hdbc, hstmt,
+                                sqlstate, &NativeError,
+                                ErrorMsg, sizeof(ErrorMsg)-1, &ErrorMsgLen))) {
+            error_found = 1;
 
-         ErrorMsg[ErrorMsgLen] = '\0';
-         sqlstate[SQL_SQLSTATE_SIZE] = '\0';
+            ErrorMsg[ErrorMsgLen] = '\0';
+            sqlstate[SQL_SQLSTATE_SIZE] = '\0';
 
-         if (DBIc_TRACE(imp_dbh, 0, 0, 3)) {
-             PerlIO_printf(DBIc_LOGPIO(imp_dbh),
-                           "    !SQLError(%p,%p,%p) = "
-                           "(%s, %ld, %s)\n",
-                           henv, hdbc, hstmt, sqlstate, NativeError, ErrorMsg);
-         }
-
-         /*
-	  * If there's an error handler, run it and see what it returns...
-	  * (lifted from DBD:Sybase 0.21)
-	  */
-	 if(imp_dbh->odbc_err_handler) {
-	    dSP;
-	    int retval, count;
-
-	    ENTER;
-	    SAVETMPS;
-	    PUSHMARK(sp);
-
-	    if (DBIc_TRACE(imp_dbh, 0, 0, 3))
-                TRACE0(imp_dbh, "    Calling error handler\n");
-
-	    /*
-	     * Here are the args to the error handler routine:
-	     *    1. sqlstate (string)
-	     *    2. ErrorMsg (string)
-	     *    3. NativeError (integer)
-	     * That's it for now...
-	     */
-	    XPUSHs(sv_2mortal(newSVpv(sqlstate, 0)));
-	    XPUSHs(sv_2mortal(newSVpv(ErrorMsg, 0)));
-	    XPUSHs(sv_2mortal(newSViv(NativeError)));
-
-	    PUTBACK;
-	    if((count = call_sv(imp_dbh->odbc_err_handler, G_SCALAR)) != 1)
-	       croak("An error handler can't return a LIST.");
-	    SPAGAIN;
-	    retval = POPi;
-
-	    PUTBACK;
-	    FREETMPS;
-	    LEAVE;
-
-	    /* If the called sub returns 0 then ignore this error */
-	    if(retval == 0) {
-                if (DBIc_TRACE(imp_dbh, 0, 0, 3))
-                    TRACE0(imp_dbh,
-                           "    Handler caused error to be ignored\n");
-                continue;
+            if (DBIc_TRACE(imp_dbh, 0, 0, 3)) {
+                PerlIO_printf(DBIc_LOGPIO(imp_dbh),
+                              "    !SQLError(%p,%p,%p) = "
+                              "(%s, %ld, %s)\n",
+                              henv, hdbc, hstmt, sqlstate, NativeError, ErrorMsg);
             }
-	 }
-	 strcat(ErrorMsg, " (SQL-");
-	 strcat(ErrorMsg, sqlstate);
-	 strcat(ErrorMsg, ")");
-	 /* maybe bad way to add hint about invalid transaction
-	  * state upon disconnect...
-	  */
-	 if (what && !strcmp(sqlstate, "25000") &&
-             !strcmp(what, "db_disconnect/SQLDisconnect")) {
-             strcat(ErrorMsg, " You need to commit before disconnecting! ");
-	 }
 
-         if (SQL_SUCCEEDED(err_rc)) {
-             DBIh_SET_ERR_CHAR(h, imp_xxh, "" /* information state */,
-                               1, ErrorMsg, sqlstate, Nullch);
-         } else {
-             DBIh_SET_ERR_CHAR(h, imp_xxh, Nullch, 1, ErrorMsg,
-                               sqlstate, Nullch);
-         }
-         continue;
-      }
-      if (rc != SQL_NO_DATA_FOUND) {	/* should never happen */
-          if (DBIc_TRACE(imp_xxh, 0, 0, 3))
-              TRACE1(imp_dbh,
-                  "    !!SQLError returned %d unexpectedly.\n", rc);
-          DBIh_SET_ERR_CHAR(
-              h, imp_xxh, Nullch, 1,
-              "Unable to fetch information about the error", "IM008", Nullch);
-      }
-      /* climb up the tree each time round the loop		*/
-      if      (hstmt != SQL_NULL_HSTMT) hstmt = SQL_NULL_HSTMT;
-      else if (hdbc  != SQL_NULL_HDBC)  hdbc  = SQL_NULL_HDBC;
-      else henv = SQL_NULL_HENV;	/* done the top		*/
-   }
+            /*
+             * If there's an error handler, run it and see what it returns...
+             * (lifted from DBD:Sybase 0.21)
+             */
+            if(imp_dbh->odbc_err_handler) {
+                dSP;
+                int retval, count;
+
+                ENTER;
+                SAVETMPS;
+                PUSHMARK(sp);
+
+                if (DBIc_TRACE(imp_dbh, 0, 0, 3))
+                    TRACE0(imp_dbh, "    Calling error handler\n");
+
+                /*
+                 * Here are the args to the error handler routine:
+                 *    1. sqlstate (string)
+                 *    2. ErrorMsg (string)
+                 *    3. NativeError (integer)
+                 * That's it for now...
+                 */
+                XPUSHs(sv_2mortal(newSVpv(sqlstate, 0)));
+                XPUSHs(sv_2mortal(newSVpv(ErrorMsg, 0)));
+                XPUSHs(sv_2mortal(newSViv(NativeError)));
+
+                PUTBACK;
+                if((count = call_sv(imp_dbh->odbc_err_handler, G_SCALAR)) != 1)
+                    croak("An error handler can't return a LIST.");
+                SPAGAIN;
+                retval = POPi;
+
+                PUTBACK;
+                FREETMPS;
+                LEAVE;
+
+                /* If the called sub returns 0 then ignore this error */
+                if(retval == 0) {
+                    if (DBIc_TRACE(imp_dbh, 0, 0, 3))
+                        TRACE0(imp_dbh,
+                               "    Handler caused error to be ignored\n");
+                    continue;
+                }
+            }
+            strcat(ErrorMsg, " (SQL-");
+            strcat(ErrorMsg, sqlstate);
+            strcat(ErrorMsg, ")");
+            /* maybe bad way to add hint about invalid transaction
+             * state upon disconnect...
+             */
+            if (what && !strcmp(sqlstate, "25000") &&
+                !strcmp(what, "db_disconnect/SQLDisconnect")) {
+                strcat(ErrorMsg, " You need to commit before disconnecting! ");
+            }
+
+            if (SQL_SUCCEEDED(err_rc)) {
+                DBIh_SET_ERR_CHAR(h, imp_xxh, "" /* information state */,
+                                  1, ErrorMsg, sqlstate, Nullch);
+            } else {
+                DBIh_SET_ERR_CHAR(h, imp_xxh, Nullch, 1, ErrorMsg,
+                                  sqlstate, Nullch);
+            }
+            continue;
+        }
+        if (rc != SQL_NO_DATA_FOUND) {	/* should never happen */
+            if (DBIc_TRACE(imp_xxh, 0, 0, 3))
+                TRACE1(imp_dbh,
+                       "    !!SQLError returned %d unexpectedly.\n", rc);
+            DBIh_SET_ERR_CHAR(
+                h, imp_xxh, Nullch, 1,
+                "Unable to fetch information about the error", "IM008", Nullch);
+        }
+        /* climb up the tree each time round the loop		*/
+        if (hstmt != SQL_NULL_HSTMT) hstmt = SQL_NULL_HSTMT;
+        else if (hdbc  != SQL_NULL_HDBC)  hdbc  = SQL_NULL_HDBC;
+        else henv = SQL_NULL_HENV;	/* done the top		*/
+    }
+    /* some broken drivers may return an error and then not provide an
+       error message */
+    if (!error_found) {
+        DBIh_SET_ERR_CHAR(
+            h, imp_xxh, Nullch, 1,
+            "Unable to fetch information about the error", "IM008", Nullch);
+    }
 }
 
 
