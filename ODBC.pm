@@ -1325,6 +1325,13 @@ of DBI 1.604, the only trace flag defined which is relevant to
 DBD::ODBC is 'SQL' which DBD::ODBC supports by outputting the SQL
 strings (after modification) passed to the prepare and do methods.
 
+From DBI 1.617 DBI also defines ENC (encoding), CON (connection) and
+DBD (DBD only) trace flags. DBI ENC and CON trace flags are synonomous
+with DBD::ODBC's odbcunicode and odbcconnection trace flags though I
+may remove the DBD::ODBC ones in the future. DBI's DBD trace flag
+allows output of only DBD::ODBC trace messages without DBI's trace
+messages.
+
 Currently DBD::ODBC supports two private trace flags. The
 'odbcunicode' flag traces some unicode operations and the
 odbcconnection traces the connect process.
@@ -1348,6 +1355,14 @@ or
 
   use DBD::ODBC;
   DBI->trace(DBD::ODBC->parse_trace_flags('odbcconnection|odbcunicode'));
+
+or
+
+  DBI_TRACE=odbcconnection|odbcunicode perl myscript.pl
+
+From DBI 1.617 you can output only DBD::ODBC trace messages using
+
+  DBI_TRACE=DBD perl myscript.pl
 
 DBD::ODBC outputs tracing at levels 3 and above (as levels 1 and 2 are
 reserved for DBI).
