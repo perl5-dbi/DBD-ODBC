@@ -903,6 +903,21 @@ From DBD::ODBC 1.26_1 a requirement is DBI 1.609 so this should not be
 an issue but the 1.24 and 1.25 series DBD::ODBC did not have this
 requirement.
 
+=head2 Why can I appear to insert more than 255 chrs into a MS Access text column but when I read them back I only get 255 chrs?
+
+The simple answer is that MS Access only supports 255 characters in a
+text column. You can see this if you create a table with a text column
+then examine the PRECISION attribute (see DBI) and it returns 255.
+
+Unfortunately some versions of the MS Access ODBC driver silently
+truncate the data instead of issuing a data truncation error so you
+are not aware of the truncation until you read it back.
+
+Someone pointed out you can insert more than 255 characters into a MS
+Access text column with DBD::ADO but I believe if you look at the
+column types after creating the table with DBD::ADO the text column is
+really a memo column.
+
 =head1 AUTHOR
 
 Parts of this document were written by Tim Bunce,
