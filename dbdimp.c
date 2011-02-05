@@ -1155,6 +1155,8 @@ void dbd_error2(
     struct imp_dbh_st *imp_dbh = NULL;
     struct imp_sth_st *imp_sth = NULL;
 
+    if (err_rc == SQL_SUCCESS) return;
+    
     if (DBIc_TRACE(imp_xxh, DBD_TRACING, 0, 4) && (err_rc != SQL_SUCCESS)) {
         PerlIO_printf(
             DBIc_LOGPIO(imp_xxh),
@@ -1282,7 +1284,9 @@ void dbd_error2(
     }
     /* some broken drivers may return an error and then not provide an
        error message */
-    if (!error_found) {
+    if (!error_found &&
+        (err_rc != SQL_SUCCESS_WITH_INFO) &&
+        (err_rc != SQL_NO_DATA_FOUND)) {
         DBIh_SET_ERR_CHAR(
             h, imp_xxh, Nullch, 1,
             "Unable to fetch information about the error", "IM008", Nullch);
