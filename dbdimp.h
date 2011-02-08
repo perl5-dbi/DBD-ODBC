@@ -1,6 +1,5 @@
 /*
  * $Id$
- * portions Copyright (c) 2007-2008 Martin J. Evans
  * Copyright (c) 1997-2001 Jeff Urlwin
  * portions Copyright (c) 1997  Thomas K. Wenrich
  * portions Copyright (c) 1994,1995,1996  Tim Bunce
