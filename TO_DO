@@ -62,3 +62,7 @@ $Revision: 10667 $
   Might be able to detect MARS capable with SS_COPT_MARS_ENABLED
 
 SQL_COPT_SS_MARS_ENABLED
+
+  Bump requirement to Test::Simple 0.96 so we can use subtest which
+  is really cool and reorganise tests to use it. 0.96, because it seems
+  to be the first really stable version of subtest.
