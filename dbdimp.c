@@ -50,6 +50,7 @@
 #endif
 
 /* DBI defines the following but not until 1.617 so we replicate here for now */
+/* will remove when DBD::ODBC requires 1.617 or above */
 #ifndef DBIf_TRACE_SQL
 # define DBIf_TRACE_SQL 0x00000100
 #endif
@@ -62,12 +63,17 @@
 #ifndef DBIf_TRACE_DBD
 # define DBIf_TRACE_DBD 0x00000800
 #endif
+#ifndef DBIf_TRACE_TXN
+# define DBIf_TRACE_DBD 0x000001000
+#endif
 
 /* combined DBI trace connection and encoding flags with DBD::ODBC ones */
-/* Historicall DBD::ODBC had 2 flags before they were made DBI ones */
+/* Historically DBD::ODBC had 2 flags before they were made DBI ones */
 #define UNICODE_TRACING (0x02000000|DBIf_TRACE_ENC|DBIf_TRACE_DBD)
 #define CONNECTION_TRACING (0x04000000|DBIf_TRACE_CON|DBIf_TRACE_DBD)
 #define DBD_TRACING DBIf_TRACE_DBD
+#define TRANSACTION_TRACING (DBIf_TRACE_TXN|DBIf_TRACE_DBD)
+#define SQL_TRACING (DBIf_TRACE_SQL|DBIf_TRACE_DBD)
 
 #define TRACE0(a,b) PerlIO_printf(DBIc_LOGPIO(a), (b))
 #define TRACE1(a,b,c) PerlIO_printf(DBIc_LOGPIO(a), (b), (c))
@@ -408,7 +414,7 @@ int dbd_db_execdirect(SV *dbh,
       /* don't fail if the query timeout can't be set. */
    }
 
-   if (DBIc_TRACE(imp_dbh, DBIf_TRACE_SQL, 0, 3)) {
+   if (DBIc_TRACE(imp_dbh, SQL_TRACING, 0, 3)) {
        TRACE1(imp_dbh, "    SQLExecDirect %s\n", SvPV_nolen(statement));
    }
 
@@ -1058,7 +1064,7 @@ int dbd_db_disconnect(SV *dbh, imp_dbh_t *imp_dbh)
    else {
       if (SQL_AUTOCOMMIT_OFF == autoCommit) {
 	 rc = dbd_db_rollback(dbh, imp_dbh);
-	 if (DBIc_TRACE(imp_dbh, DBD_TRACING, 0, 3)) {
+	 if (DBIc_TRACE(imp_dbh, TRANSACTION_TRACING, 0, 3)) {
              TRACE1(imp_dbh,
                  "** auto-rollback due to disconnect without commit"
                  " returned %d\n", rc);
@@ -1275,7 +1281,8 @@ void dbd_error2(
                        "    !!SQLError returned %d unexpectedly.\n", rc);
             DBIh_SET_ERR_CHAR(
                 h, imp_xxh, Nullch, 1,
-                "Unable to fetch information about the error", "IM008", Nullch);
+                "    Unable to fetch information about the error",
+                "IM008", Nullch);
         }
         /* climb up the tree each time round the loop		*/
         if (hstmt != SQL_NULL_HSTMT) hstmt = SQL_NULL_HSTMT;
@@ -1284,13 +1291,15 @@ void dbd_error2(
     }
     /* some broken drivers may return an error and then not provide an
        error message */
-    if (!error_found &&
-        (err_rc != SQL_SUCCESS_WITH_INFO) &&
-        (err_rc != SQL_NO_DATA_FOUND)) {
+
+    if (!error_found && (err_rc != SQL_NO_DATA_FOUND)) {
+        if (DBIc_TRACE(imp_xxh, DBD_TRACING, 0, 3))
+            TRACE0(imp_dbh, "    ** No error found **");
         DBIh_SET_ERR_CHAR(
             h, imp_xxh, Nullch, 1,
-            "Unable to fetch information about the error", "IM008", Nullch);
+            "    Unable to fetch information about the error", "IM008", Nullch);
     }
+
 }
 
 
@@ -1816,7 +1825,7 @@ int odbc_st_prepare_sv(
 
    /* Hold this statement for subsequent call of dbd_execute */
    if (!imp_sth->odbc_exec_direct) {
-       if (DBIc_TRACE(imp_dbh, DBIf_TRACE_SQL, 0, 3)) {
+       if (DBIc_TRACE(imp_dbh, SQL_TRACING, 0, 3)) {
            TRACE1(imp_dbh, "    SQLPrepare %s\n", imp_sth->statement);
        }
 #ifdef WITH_UNICODE
@@ -2115,6 +2124,8 @@ int dbd_describe(SV *h, imp_sth_t *imp_sth, int more)
         cur_col_name[fbh->ColNameLen] = '\0';   /* should not be necessary */
 #endif
         if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 8))
+            /* TO_DO the following print for column name won't work well
+               for UCS2 strings when SQLDescribeW above called */
             PerlIO_printf(DBIc_LOGPIO(imp_dbh),
                           "   DescribeCol column = %d, name = %s, "
                           "namelen = %d, type = %s(%d), "
@@ -2408,293 +2419,300 @@ static SQLRETURN bind_columns(
 int dbd_st_execute(
     SV *sth, imp_sth_t *imp_sth)
 {
-   RETCODE rc;
-   D_imp_dbh_from_sth;
-   int outparams = 0;
-   int ret;
+    RETCODE rc;
+    D_imp_dbh_from_sth;
+    int outparams = 0;
+    int ret;
 
-   if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 3))
-       TRACE1(imp_dbh, "+dbd_st_execute(%p)\n", sth);
+    if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 3))
+        TRACE1(imp_dbh, "    +dbd_st_execute(%p)\n", sth);
 
-   /*
-    * if the handle is active, we need to finish it here.
-    * Note that dbd_st_finish already checks to see if it's active.
-    */
-   dbd_st_finish(sth, imp_sth);;
+    /*
+     * if the handle is active, we need to finish it here.
+     * Note that dbd_st_finish already checks to see if it's active.
+     */
+    dbd_st_finish(sth, imp_sth);;
 
-   /*
-    * bind_param_inout support
-    */
-   outparams = (imp_sth->out_params_av) ? AvFILL(imp_sth->out_params_av)+1 : 0;
-   if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 4)) {
-       TRACE1(imp_dbh, "    outparams = %d\n", outparams);
-   }
+    /*
+     * bind_param_inout support
+     */
+    outparams = (imp_sth->out_params_av) ? AvFILL(imp_sth->out_params_av)+1 : 0;
+    if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 4)) {
+        TRACE1(imp_dbh, "    outparams = %d\n", outparams);
+    }
 
-   if (imp_dbh->odbc_defer_binding) {
-      rc = SQLFreeStmt(imp_sth->hstmt, SQL_RESET_PARAMS);
-      /* check bind input parameters */
-      if (imp_sth->all_params_hv) {
-	 HV *hv = imp_sth->all_params_hv;
-	 SV *sv;
-	 char *key;
-	 I32 retlen;
-	 hv_iterinit(hv);
-	 while( (sv = hv_iternextsv(hv, &key, &retlen)) != NULL ) {
-	    if (sv != &PL_sv_undef) {
-	       phs_t *phs = (phs_t*)(void*)SvPVX(sv);
-	       if (!rebind_param(sth, imp_sth, phs)) return -2;
-	       if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 8)) {
-		  if (SvOK(phs->sv) && (phs->value_type == SQL_C_CHAR)) {
-                      char sbuf[256];
-                      unsigned int i = 0;
+    if (imp_dbh->odbc_defer_binding) {
+        rc = SQLFreeStmt(imp_sth->hstmt, SQL_RESET_PARAMS);
+        /* check bind input parameters */
+        if (imp_sth->all_params_hv) {
+            HV *hv = imp_sth->all_params_hv;
+            SV *sv;
+            char *key;
+            I32 retlen;
+            hv_iterinit(hv);
+            while( (sv = hv_iternextsv(hv, &key, &retlen)) != NULL ) {
+                if (sv != &PL_sv_undef) {
+                    phs_t *phs = (phs_t*)(void*)SvPVX(sv);
+                    if (!rebind_param(sth, imp_sth, phs)) return -2;
+                    if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 8)) {
+                        if (SvOK(phs->sv) && (phs->value_type == SQL_C_CHAR)) {
+                            char sbuf[256];
+                            unsigned int i = 0;
 
-                      while((phs->sv_buf[i] != 0) && (i < (sizeof(sbuf) - 6))) {
-                          sbuf[i] = phs->sv_buf[i];
-                          i++;
-                      }
-                      strcpy(&sbuf[i], "...");
+                            while((phs->sv_buf[i] != 0) && (i < (sizeof(sbuf) - 6))) {
+                                sbuf[i] = phs->sv_buf[i];
+                                i++;
+                            }
+                            strcpy(&sbuf[i], "...");
 
-                      TRACE2(imp_dbh,
-                             "    rebind check char Param %d (%s)\n",
-                             phs->idx, sbuf);
-		  }
-	       }
-	    }
-	 }
-      }
-   }
+                            TRACE2(imp_dbh,
+                                   "    rebind check char Param %d (%s)\n",
+                                   phs->idx, sbuf);
+                        }
+                    }
+                }
+            }
+        }
+    }
 
-   if (outparams) {    /* check validity of bind_param_inout SV's      */
-      int i = outparams;
-      while(--i >= 0) {
-	 phs_t *phs = (phs_t*)(void*)SvPVX(AvARRAY(imp_sth->out_params_av)[i]);
-	 /* Make sure we have the value in string format. Typically a number */
-	 /* will be converted back into a string using the same bound buffer */
-	 /* so the sv_buf test below will not trip.                   */
+    if (outparams) {    /* check validity of bind_param_inout SV's      */
+        int i = outparams;
+        while(--i >= 0) {
+            phs_t *phs = (phs_t*)(void*)SvPVX(AvARRAY(imp_sth->out_params_av)[i]);
+            /* Make sure we have the value in string format. Typically a number */
+            /* will be converted back into a string using the same bound buffer */
+            /* so the sv_buf test below will not trip.                   */
 
-	 /* mutation check */
-	 if (SvTYPE(phs->sv) != phs->sv_type /* has the type changed? */
-	     || (SvOK(phs->sv) && !SvPOK(phs->sv)) /* is there still a string? */
-	     || SvPVX(phs->sv) != phs->sv_buf /* has the string buffer moved? */
-	      ) {
-	    if (!rebind_param(sth, imp_sth, phs))
-	       croak("Can't rebind placeholder %s", phs->name);
-	 } else {
-	    /* no mutation found */
-	 }
-      }
-   }
+            /* mutation check */
+            if (SvTYPE(phs->sv) != phs->sv_type /* has the type changed? */
+                || (SvOK(phs->sv) && !SvPOK(phs->sv)) /* is there still a string? */
+                || SvPVX(phs->sv) != phs->sv_buf /* has the string buffer moved? */
+                ) {
+                if (!rebind_param(sth, imp_sth, phs))
+                    croak("Can't rebind placeholder %s", phs->name);
+            } else {
+                /* no mutation found */
+            }
+        }
+    }
 
 
-   if (imp_sth->odbc_exec_direct) {
-       /* statement ready for SQLExecDirect */
-       if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 5)) {
-           TRACE0(imp_dbh,
-                  "    odbc_exec_direct=1, using SQLExecDirect\n");
-       }
-       rc = SQLExecDirect(imp_sth->hstmt, imp_sth->statement, SQL_NTS);
-   } else {
-      rc = SQLExecute(imp_sth->hstmt);
-   }
+    if (imp_sth->odbc_exec_direct) {
+        /* statement ready for SQLExecDirect */
+        if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 5)) {
+            TRACE0(imp_dbh,
+                   "    odbc_exec_direct=1, using SQLExecDirect\n");
+        }
+        rc = SQLExecDirect(imp_sth->hstmt, imp_sth->statement, SQL_NTS);
+    } else {
+        rc = SQLExecute(imp_sth->hstmt);
+    }
 
-   if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 8))
-       TRACE2(imp_dbh, "    SQLExecute/SQLExecDirect(%p)=%d\n",
-              imp_sth->hstmt, rc);
-   /*
-    * If asynchronous execution has been enabled, SQLExecute will
-    * return SQL_STILL_EXECUTING until it has finished.
-    * Grab whatever messages occur during execution...
-    */
-   while (rc == SQL_STILL_EXECUTING){
-      dbd_error(sth, rc, "st_execute/SQLExecute");
+    if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 8))
+        TRACE2(imp_dbh, "    SQLExecute/SQLExecDirect(%p)=%d\n",
+               imp_sth->hstmt, rc);
+    /*
+     * If asynchronous execution has been enabled, SQLExecute will
+     * return SQL_STILL_EXECUTING until it has finished.
+     * Grab whatever messages occur during execution...
+     */
+    while (rc == SQL_STILL_EXECUTING){
+        dbd_error(sth, rc, "st_execute/SQLExecute");
 
-      /*
-       * Wait a second so we don't loop too fast and bring the machine
-       * to its knees
-       */
-      if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 5))
-          TRACE1(imp_dbh, "    SQLExecute(%p) still executing", imp_sth->hstmt);
-      sleep(1);
-      rc = SQLExecute(imp_sth->hstmt);
-   }
-   /* patches to handle blobs better, via Jochen Wiedmann */
-   while (rc == SQL_NEED_DATA) {
-      phs_t* phs;
-      STRLEN len;
-      UCHAR* ptr;
+        /*
+         * Wait a second so we don't loop too fast and bring the machine
+         * to its knees
+         */
+        if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 5))
+            TRACE1(imp_dbh, "    SQLExecute(%p) still executing", imp_sth->hstmt);
+        sleep(1);
+        rc = SQLExecute(imp_sth->hstmt);
+    }
+    /* patches to handle blobs better, via Jochen Wiedmann */
+    while (rc == SQL_NEED_DATA) {
+        phs_t* phs;
+        STRLEN len;
+        UCHAR* ptr;
 
-      if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 5))
-          TRACE1(imp_dbh, "    NEED DATA\n", imp_sth->hstmt);
+        if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 5))
+            TRACE1(imp_dbh, "    NEED DATA\n", imp_sth->hstmt);
 
-      while ((rc = SQLParamData(imp_sth->hstmt, (PTR*) &phs)) ==
-              SQL_STILL_EXECUTING) {
-          if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 5))
-              TRACE1(imp_dbh, "    SQLParamData(%p) still executing",
-                     imp_sth->hstmt);
-          /*
-           * wait a while to avoid looping too fast waiting for SQLParamData
-           * to complete.
-           */
-          sleep(1);
-      }
-      if (rc !=  SQL_NEED_DATA) {
-	 break;
-      }
+        while ((rc = SQLParamData(imp_sth->hstmt, (PTR*) &phs)) ==
+               SQL_STILL_EXECUTING) {
+            if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 5))
+                TRACE1(imp_dbh, "    SQLParamData(%p) still executing",
+                       imp_sth->hstmt);
+            /*
+             * wait a while to avoid looping too fast waiting for SQLParamData
+             * to complete.
+             */
+            sleep(1);
+        }
+        if (rc !=  SQL_NEED_DATA) {
+            if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 5))
+                TRACE1(imp_dbh, "    SQLParamData=%d\n", rc);
+            break;
+        }
 
-      /* phs->sv is already upgraded to a PV in rebind_param.
-       * It is not NULL, because we otherwise won't be called here
-       * (value_len = 0).
-       */
-      ptr = SvPV(phs->sv, len);
-      rc = SQLPutData(imp_sth->hstmt, ptr, len);
-      if (!SQL_SUCCEEDED(rc)) {
-	 break;
-      }
-      rc = SQL_NEED_DATA;  /*  So the loop continues ...  */
-   }
+        /* phs->sv is already upgraded to a PV in rebind_param.
+         * It is not NULL, because we otherwise won't be called here
+         * (value_len = 0).
+         */
+        if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 5))
+            TRACE2(imp_dbh, "    SQLParamData needs phs %p, sending %i bytes\n",
+                   phs, len);
+        ptr = SvPV(phs->sv, len);
+        rc = SQLPutData(imp_sth->hstmt, ptr, len);
+        if (!SQL_SUCCEEDED(rc)) {
+            if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 5))
+                TRACE1(imp_dbh, "    SQLPutData=%d\n", rc);
+            break;
+        }
+        rc = SQL_NEED_DATA;  /*  So the loop continues ...  */
+    }
 
-   /*
-    * Call dbd_error regardless of the value of rc so we can
-    * get any status messages that are desired.
-    */
-   dbd_error(sth, rc, "st_execute/SQLExecute");
-   if (!SQL_SUCCEEDED(rc) && rc != SQL_NO_DATA) {
-      /* dbd_error(sth, rc, "st_execute/SQLExecute"); */
-       if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 3))
-           TRACE1(imp_dbh, "-dbd_st_execute(%p)=-2\n", sth);
-      return -2;
-   }
+    /*
+     * Call dbd_error regardless of the value of rc so we can
+     * get any status messages that are desired.
+     */
+    dbd_error(sth, rc, "st_execute/SQLExecute");
+    if (!SQL_SUCCEEDED(rc) && rc != SQL_NO_DATA) {
+        /* dbd_error(sth, rc, "st_execute/SQLExecute"); */
+        if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 3))
+            TRACE1(imp_dbh, "    -dbd_st_execute(%p)=-2\n", sth);
+        return -2;
+    }
 
-   if (rc != SQL_NO_DATA) {
+    if (rc != SQL_NO_DATA) {
 
-      /* SWORD num_fields; */
-      RETCODE rc2;
-      rc2 = SQLRowCount(imp_sth->hstmt, &imp_sth->RowCount);
-      if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 7))
-          TRACE2(imp_dbh, "    SQLRowCount=%d (rows=%ld)\n",
-                 rc2,
-                 (long)(SQL_SUCCEEDED(rc2) ? imp_sth->RowCount : (SQLLEN)-1));
-      if (!SQL_SUCCEEDED(rc2)) {
-	 dbd_error(sth, rc2, "st_execute/SQLRowCount");	/* XXX ? */
-	 imp_sth->RowCount = -1;
-      }
+        /* SWORD num_fields; */
+        RETCODE rc2;
+        rc2 = SQLRowCount(imp_sth->hstmt, &imp_sth->RowCount);
+        if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 7))
+            TRACE2(imp_dbh, "    SQLRowCount=%d (rows=%ld)\n",
+                   rc2,
+                   (long)(SQL_SUCCEEDED(rc2) ? imp_sth->RowCount : (SQLLEN)-1));
+        if (!SQL_SUCCEEDED(rc2)) {
+            dbd_error(sth, rc2, "st_execute/SQLRowCount");	/* XXX ? */
+            imp_sth->RowCount = -1;
+        }
 
-      /* sanity check for strange circumstances and multiple types of
-       * result sets.  Crazy that it can happen, but it can with
-       * multiple result sets and stored procedures which return
-       * result sets.
-       * This seems to slow things down a bit and is rarely needed.
-       *
-       * This can happen in Sql Server in strange cases where stored
-       * procs have multiple result sets.  Sometimes, if there is an
-       * select then an insert, etc.  Maybe this should be a special
-       * attribute to force a re-describe after every execute? */
-      if (imp_sth->odbc_force_rebind) {
-	 /* force calling dbd_describe after each execute */
-	 odbc_clear_result_set(sth, imp_sth);
-      }
-   } else {
-      /* SQL_NO_DATA returned, must have no rows :) */
-      /* seem to need to reset the done_desc, but not sure if this is
-       * what we want yet */
-      if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 7))
-          TRACE0(imp_dbh,
-                 "    SQL_NO_DATA...resetting done_desc!\n");
-      imp_sth->done_desc = 0;
-      imp_sth->RowCount = 0;
-   }
+        /* sanity check for strange circumstances and multiple types of
+         * result sets.  Crazy that it can happen, but it can with
+         * multiple result sets and stored procedures which return
+         * result sets.
+         * This seems to slow things down a bit and is rarely needed.
+         *
+         * This can happen in Sql Server in strange cases where stored
+         * procs have multiple result sets.  Sometimes, if there is an
+         * select then an insert, etc.  Maybe this should be a special
+         * attribute to force a re-describe after every execute? */
+        if (imp_sth->odbc_force_rebind) {
+            /* force calling dbd_describe after each execute */
+            odbc_clear_result_set(sth, imp_sth);
+        }
+    } else {
+        /* SQL_NO_DATA returned, must have no rows :) */
+        /* seem to need to reset the done_desc, but not sure if this is
+         * what we want yet */
+        if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 7))
+            TRACE0(imp_dbh,
+                   "    SQL_NO_DATA...resetting done_desc!\n");
+        imp_sth->done_desc = 0;
+        imp_sth->RowCount = 0;
+    }
 
-   /*
-    *  MS SQL Server is very picky wrt to completing a procedure i.e.,
-    *  it says the output bound parameters are not available until the procedure
-    *  is complete and the procedure is not complete until you have called
-    *  SQLMoreResults and it has returned SQL_NO_DATA. So, if you call a
-    *  procedure multiple times in the same statement (e.g., by just calling
-    *  execute) DBD::ODBC will call dbd_describe to describe the first
-    *  execute, discover there is no result-set and call SQLMoreResults - ok,
-    *  but after that, the dbd_describe is done and SQLMoreResults will not
-    *  get called. The following is a kludge to get around this until
-    *  a) DBD::ODBC can be changed to stop skipping over non-result-set
-    *  generating statements and b) the SQLMoreResults calls move out of
-    *  dbd_describe.
-    */
-   {
-       SQLSMALLINT flds = 0;
-       SQLRETURN sts;
+    /*
+     *  MS SQL Server is very picky wrt to completing a procedure i.e.,
+     *  it says the output bound parameters are not available until the procedure
+     *  is complete and the procedure is not complete until you have called
+     *  SQLMoreResults and it has returned SQL_NO_DATA. So, if you call a
+     *  procedure multiple times in the same statement (e.g., by just calling
+     *  execute) DBD::ODBC will call dbd_describe to describe the first
+     *  execute, discover there is no result-set and call SQLMoreResults - ok,
+     *  but after that, the dbd_describe is done and SQLMoreResults will not
+     *  get called. The following is a kludge to get around this until
+     *  a) DBD::ODBC can be changed to stop skipping over non-result-set
+     *  generating statements and b) the SQLMoreResults calls move out of
+     *  dbd_describe.
+     */
+    {
+        SQLSMALLINT flds = 0;
+        SQLRETURN sts;
 
-       if (!SQL_SUCCEEDED(sts = SQLNumResultCols(imp_sth->hstmt, &flds))) {
-           dbd_error(sth, sts, "dbd_describe/SQLNumResultCols");
-           return -2;
-       }
+        if (!SQL_SUCCEEDED(sts = SQLNumResultCols(imp_sth->hstmt, &flds))) {
+            dbd_error(sth, sts, "dbd_describe/SQLNumResultCols");
+            return -2;
+        }
 
-       if (flds == 0) {                         /* not a result-set */
-           if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 4))
-               TRACE2(imp_dbh, "    nflds=(%d,%d), resetting done_desc\n",
-                      flds, DBIc_NUM_FIELDS(imp_sth));
-           imp_sth->done_desc = 0;
-       }
-   }
+        if (flds == 0) {                         /* not a result-set */
+            if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 4))
+                TRACE2(imp_dbh, "    nflds=(%d,%d), resetting done_desc\n",
+                       flds, DBIc_NUM_FIELDS(imp_sth));
+            imp_sth->done_desc = 0;
+        }
+    }
 
-   if (!imp_sth->done_desc) {
-      /* This needs to be done after SQLExecute for some drivers!	*/
-      /* Especially for order by and join queries.			*/
-      /* See Microsoft Knowledge Base article (#Q124899)		*/
-      /* describe and allocate storage for results (if any needed)	*/
-      if (!dbd_describe(sth, imp_sth, 0)) {
-          if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 3)) {
-              TRACE0(imp_sth,
-                     "    !!dbd_describe failed, dbd_st_execute #1...!\n");
-          }
-          if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 3))
-              TRACE1(imp_dbh, "-dbd_st_execute(%p)=-2\n", sth);
-          return -2; /* dbd_describe already called dbd_error()	*/
-      }
-   }
+    if (!imp_sth->done_desc) {
+        /* This needs to be done after SQLExecute for some drivers!	*/
+        /* Especially for order by and join queries.			*/
+        /* See Microsoft Knowledge Base article (#Q124899)		*/
+        /* describe and allocate storage for results (if any needed)	*/
+        if (!dbd_describe(sth, imp_sth, 0)) {
+            if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 3)) {
+                TRACE0(imp_sth,
+                       "    !!dbd_describe failed, dbd_st_execute #1...!\n");
+            }
+            if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 3))
+                TRACE1(imp_dbh, "    -dbd_st_execute(%p)=-2\n", sth);
+            return -2; /* dbd_describe already called dbd_error()	*/
+        }
+    }
 
-   if (DBIc_NUM_FIELDS(imp_sth) > 0) {
-      DBIc_ACTIVE_on(imp_sth);	/* only set for select (?)	*/
-      if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 4)) {
-          TRACE1(imp_sth, "    have %d fields\n",
-                 DBIc_NUM_FIELDS(imp_sth));
-      }
+    if (DBIc_NUM_FIELDS(imp_sth) > 0) {
+        DBIc_ACTIVE_on(imp_sth);	/* only set for select (?)	*/
+        if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 4)) {
+            TRACE1(imp_sth, "    have %d fields\n",
+                   DBIc_NUM_FIELDS(imp_sth));
+        }
 
-   } else {
-      if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 4)) {
-          TRACE0(imp_dbh, "    got no rows: resetting ACTIVE, moreResults\n");
-      }
-      imp_sth->moreResults = 0;
-      /* flag that we've done the describe to avoid a problem
-       * where calling describe after execute returned no rows
-       * caused SQLServer to provide a description of a query
-       * that didn't quite apply. */
+    } else {
+        if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 4)) {
+            TRACE0(imp_dbh, "    got no rows: resetting ACTIVE, moreResults\n");
+        }
+        imp_sth->moreResults = 0;
+        /* flag that we've done the describe to avoid a problem
+         * where calling describe after execute returned no rows
+         * caused SQLServer to provide a description of a query
+         * that didn't quite apply. */
 
-      /* imp_sth->done_desc = 1;  */
-      DBIc_ACTIVE_off(imp_sth);
-   }
+        /* imp_sth->done_desc = 1;  */
+        DBIc_ACTIVE_off(imp_sth);
+    }
 
-   if (outparams) {	/* check validity of bound output SV's	*/
-       odbc_handle_outparams(imp_sth, DBIc_TRACE_LEVEL(imp_sth));
-   }
+    if (outparams) {	/* check validity of bound output SV's	*/
+        odbc_handle_outparams(imp_sth, DBIc_TRACE_LEVEL(imp_sth));
+    }
 
-   /*
-    * JLU: Jon Smirl had:
-    *      return (imp_sth->RowCount == -1 ? -1 : abs(imp_sth->RowCount));
-    * why?  Why do you need the abs() of the rowcount?  Special reason?
-    * The e-mail that accompanied the change indicated that Sybase would return
-    * a negative value for an estimate.  Wouldn't you WANT that to stay
-    * negative?
-    *
-    * dgood: JLU had:
-    *      return imp_sth->RowCount;
-    * Because you return -2 on errors so if you don't abs() it, a perfectly
-    * valid return value will get flagged as an error...
-    */
-   ret = (imp_sth->RowCount == -1 ? -1 : abs(imp_sth->RowCount));
+    /*
+     * JLU: Jon Smirl had:
+     *      return (imp_sth->RowCount == -1 ? -1 : abs(imp_sth->RowCount));
+     * why?  Why do you need the abs() of the rowcount?  Special reason?
+     * The e-mail that accompanied the change indicated that Sybase would return
+     * a negative value for an estimate.  Wouldn't you WANT that to stay
+     * negative?
+     *
+     * dgood: JLU had:
+     *      return imp_sth->RowCount;
+     * Because you return -2 on errors so if you don't abs() it, a perfectly
+     * valid return value will get flagged as an error...
+     */
+    ret = (imp_sth->RowCount == -1 ? -1 : abs(imp_sth->RowCount));
 
-   if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 3))
-       TRACE2(imp_dbh, "-dbd_st_execute(%p)=%d\n", sth, ret);
-   return ret;
-   /* return imp_sth->RowCount; */
+    if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 3))
+        TRACE2(imp_dbh, "    -dbd_st_execute(%p)=%d\n", sth, ret);
+    return ret;
+    /* return imp_sth->RowCount; */
 }
 
 
@@ -3654,9 +3672,12 @@ static int rebind_param(
             PerlIO_printf(
                 DBIc_LOGPIO(imp_dbh),
                 "    SQLBindParameter: idx=%d: io_type=%d, name=%s, "
-                "value_type=%d, SQLType=%d, column_size=%lu, d_digits=%d, "
-                "value_ptr=%p, buffer_length=%ld, ind=%ld, param_size=%lu\n",
-                phs->idx, param_io_type, phs->name, value_type, phs->sql_type,
+                "value_type=%d (%s), SQLType=%d (%s), column_size=%lu, "
+                "d_digits=%d, value_ptr=%p, buffer_length=%ld, ind=%ld, "
+                "param_size=%lu\n",
+                phs->idx, param_io_type, phs->name,
+                value_type, S_SqlCTypeToString(value_type),
+                phs->sql_type, S_SqlTypeToString(phs->sql_type),
                 (unsigned long)column_size, d_digits, value_ptr,
                 (long)buffer_length, (long)strlen_or_ind,
                 (unsigned long)phs->param_size);
@@ -3791,9 +3812,9 @@ int dbd_bind_ph(
    if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 4)) {
        PerlIO_printf(
            DBIc_LOGPIO(imp_dbh),
-           "+dbd_bind_ph(%p, name=%s, value='%.200s', attribs=%s, "
+           "    +dbd_bind_ph(%p, name=%s, value='%.200s', attribs=%s, "
            "sql_type=%d(%s), is_inout=%d, maxlen=%ld\n",
-           sth, name, SvOK(newvalue) ? SvPV_nolen(newvalue) : "undef",
+           sth, name, SvOK(newvalue) ? neatsvpv(newvalue, 0) : "undef",
            attribs ? SvPV_nolen(attribs) : "", sql_type,
            S_SqlTypeToString(sql_type), is_inout, maxlen);
    }
@@ -3876,13 +3897,13 @@ int dbd_bind_ph(
       get_param_type(sth, imp_sth, phs);
 
       if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 4))
-          TRACE0(imp_dbh, "-dbd_bind_ph=1\n");
+          TRACE0(imp_dbh, "    -dbd_bind_ph=1\n");
       return 1;
    }
    /* fall through for "immediate" binding */
 
    if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 4))
-       TRACE0(imp_dbh, "-dbd_bind_ph=rebind_param\n");
+       TRACE0(imp_dbh, "    -dbd_bind_ph=rebind_param\n");
    return rebind_param(sth, imp_sth, phs);
 }
 
@@ -5810,9 +5831,6 @@ static int post_connect(
                      DBIc_TRACE(imp_dbh, DBD_TRACING, 0, 3),
                      DBIc_LOGPIO(imp_dbh));
    }
-   if (DBIc_TRACE(imp_dbh, CONNECTION_TRACING, 0, 0))
-       TRACE1(imp_dbh, "SQLDescribeParam supported: %d\n",
-              imp_dbh->odbc_sqldescribeparam_supported);
 
    /* odbc_cursortype */
    {
