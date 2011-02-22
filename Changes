@@ -22,11 +22,11 @@ $Revision: 10667 $
 
   * Added Perl and ExtUtils::MakeMaker version output to build process.
 
-  * Added support for DBI's new trace flags ENC, CON and DBD. From DBI
-    1.617 you should be able to use: DBI_TRACE=DBD to ONLY get
-    DBD::ODBC tracing without DBI tracing ENC and CON DBI flags are
-    synonomous with DBD::ODBC's odbcconnection and odbcunicode trace
-    flags which you can still use for now.
+  * Added support for DBI's new trace flags ENC, CON, TXN and
+    DBD. From DBI 1.617 you should be able to use: DBI_TRACE=DBD to
+    ONLY get DBD::ODBC tracing without DBI tracing ENC and CON DBI
+    flags are synonomous with DBD::ODBC's odbcconnection and
+    odbcunicode trace flags which you can still use for now.
 
   [OTHER]
 

@@ -513,6 +513,44 @@ $DBD::ODBC::VERSION = '1.28_3';
 	my $tmp = _Cancel($sth);
 	return $tmp;
     }
+
+# Just in case someone comes along and wants to add this
+#    sub execute_for_fetch {
+#        my ($sth, $fetch_tuple_sub, $tuple_status) = @_;
+#        print "execute_for_fetch\n";
+#        my $row_count = 0;
+#        my $tuple_count="0E0";
+#        my $tuple_batch_status;
+#
+#        if (defined($tuple_status)) {
+#            @$tuple_status = ();
+#            $tuple_batch_status = [ ];
+#        }
+#        while (1) {
+#            my @tuple_batch;
+#            for (my $i = 0; $i < $batch_size; $i++) {
+#                push @tuple_batch, [ @{$fetch_tuple_sub->() || last} ];
+#            }
+#            last unless @tuple_batch;
+#            my $res = odbc_execute_array($sth,
+#                                         \@tuple_batch,
+#                                         scalar(@tuple_batch),
+#                                         $tuple_batch_status);
+#            if (defined($res) && defined($row_count)) {
+#                $row_count += $res;
+#            } else {
+#                $row_count = undef;
+#            }
+#            $tuple_count+=@$tuple_batch_status;
+#            push @$tuple_status, @$tuple_batch_status
+#                if defined($tuple_status);
+#        }
+#        if (!wantarray) {
+#            return undef if !defined $row_count;
+#            return $tuple_count;
+#        }
+#        return (defined $row_count ? $tuple_count : undef, $row_count);
+#    }
 }
 
 1;
@@ -1325,12 +1363,12 @@ of DBI 1.604, the only trace flag defined which is relevant to
 DBD::ODBC is 'SQL' which DBD::ODBC supports by outputting the SQL
 strings (after modification) passed to the prepare and do methods.
 
-From DBI 1.617 DBI also defines ENC (encoding), CON (connection) and
-DBD (DBD only) trace flags. DBI ENC and CON trace flags are synonomous
-with DBD::ODBC's odbcunicode and odbcconnection trace flags though I
-may remove the DBD::ODBC ones in the future. DBI's DBD trace flag
-allows output of only DBD::ODBC trace messages without DBI's trace
-messages.
+From DBI 1.617 DBI also defines ENC (encoding), CON (connection) TXN
+(transaction) and DBD (DBD only) trace flags. DBI's ENC and CON trace
+flags are synonomous with DBD::ODBC's odbcunicode and odbcconnection
+trace flags though I may remove the DBD::ODBC ones in the
+future. DBI's DBD trace flag allows output of only DBD::ODBC trace
+messages without DBI's trace messages.
 
 Currently DBD::ODBC supports two private trace flags. The
 'odbcunicode' flag traces some unicode operations and the
