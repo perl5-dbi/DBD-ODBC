@@ -49,14 +49,14 @@ sub create_table
     my $dbh = shift;
 
     eval {
-        $dbh->do(qq/create table $table (a int primary key, b char(20))/);
+        $dbh->do(qq/create table $table (a integer primary key, b char(20))/);
     };
     if ($@) {
         diag("Failed to create test table $table - $@");
         return 0;
     }
     eval {
-        $dbh->do(qq/create table $table2 (a int primary key, b char(20))/);
+        $dbh->do(qq/create table $table2 (a integer primary key, b char(20))/);
     };
     if ($@) {
         diag("Failed to create test table $table2 - $@");
@@ -333,7 +333,7 @@ sub error
 sub fetch_sub
 {
     note("fetch_sub $fetch_row");
-    if ($fetch_row == $#p1) {
+    if ($fetch_row == @p1) {
         note('returning undef');
         $fetch_row = 0;
         return;
@@ -349,7 +349,9 @@ sub row_wise
 
     note("row_size via execute_for_fetch");
 
-    $fetch_row = 0;
+    # Populate the first table via a ArrayTupleFetch which points to a sub
+    # returning rows
+    $fetch_row = 0;             # reset fetch_sub to start with first row
     clear_table($dbh, $table);
     my $sth = $dbh->prepare(qq/insert into $table values(?,?)/);
     insert($dbh, $sth,
@@ -357,11 +359,15 @@ sub row_wise
             tuple => [1, 1, 1, 1, 1], %$ref,
             fetch => \&fetch_sub});
 
-    # NOTE: I'd like to do the following test but it requires Multiple
-    # Active Statements and although I can find ODBC drivers which do this
-    # it is not easy (if at all possible) to know if an ODBC driver can
-    # handle MAS or not. If it errors the driver probably does not have MAS
-    # so the error is ignored and a diagnostic is output.
+    # NOTE: The following test requires Multiple Active Statements. Although
+    # I can find ODBC drivers which do this it is not easy (if at all possible)
+    # to know if an ODBC driver can handle MAS or not. If it errors the
+    # driver probably does not have MAS so the error is ignored and a
+    # diagnostic is output. Exceptions are DBD::Oracle which definitely does
+    # support MAS.
+    # The data pushed into the first table is retrieved via ArrayTupleFetch
+    # from the second table by passing an executed select statement handle into
+    # execute_array.
     note("row_size via select");
     clear_table($dbh, $table);
     $sth = $dbh->prepare(qq/insert into $table values(?,?)/);
@@ -374,17 +380,17 @@ sub row_wise
             fetch => $sth2, requires_mas => 1});
     return if $res && $res eq 'mas'; # aborted , does not seem to support MAS
     check_data($dbh, \@p1, \@p2);
-    #my $res = $dbh->selectall_arrayref("select * from $table2");
-    #print Dumper($res);
 }
 
 # test updates
+# updates are special as you can update more rows than there are parameter rows
 sub update
 {
     my ($dbh, $ref) = @_;
 
     note("update test");
 
+    # populate the first table with the default 5 rows using a ArrayTupleFetch
     $fetch_row = 0;
     clear_table($dbh, $table);
     my $sth = $dbh->prepare(qq/insert into $table values(?,?)/);
@@ -394,6 +400,7 @@ sub update
             fetch => \&fetch_sub});
     check_data($dbh, \@p1, \@p2);
 
+    # update all rows b column to 'fred' checking rows affected is 5
     $sth = $dbh->prepare(qq/update $table set b = ? where a = ?/);
     # NOTE, this also checks you can pass a scalar to bind_param_array
     $sth->bind_param_array(1, 'fred');
@@ -403,6 +410,7 @@ sub update
             tuple => [1, 1, 1, 1, 1], %$ref});
     check_data($dbh, \@p1, [qw(fred fred fred fred fred)]);
 
+    # update 4 rows column b to 'dave' checking rows affected is 4
     $sth = $dbh->prepare(qq/update $table set b = ? where a = ?/);
     # NOTE, this also checks you can pass a scalar to bind_param_array
     $sth->bind_param_array(1, 'dave');
@@ -413,6 +421,19 @@ sub update
            {commit => 0, error => 0, sts => 5, affected => 4,
             tuple => [1, 1, 1, 1, '0E0'], %$ref});
     check_data($dbh, \@p1, [qw(dave dave dave dave fred)]);
+
+    # now change all rows b column to 'pete' - this will change all 5
+    # rows even though we have 2 rows of parameters so we can see if
+    # the rows affected is > parameter rows
+    $sth = $dbh->prepare(qq/update $table set b = ? where b like ?/);
+    # NOTE, this also checks you can pass a scalar to bind_param_array
+    $sth->bind_param_array(1, 'pete');
+    $sth->bind_param_array(2, ['dave%', 'fred%']);
+    insert($dbh, $sth,
+           {commit => 0, error => 0, sts => 2, affected => 5,
+            tuple => [1, 1], %$ref});
+    check_data($dbh, \@p1, [qw(pete pete pete pete pete)]);
+
 
 }
 

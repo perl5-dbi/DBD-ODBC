@@ -41,6 +41,8 @@ $Revision: 10667 $
 
   * Added FAQ entry on MS Access and text columns limited to 255 chrs.
 
+  * Added 70execute_array.t test.
+
 =head2 Changes in DBD::ODBC  1.28_2 January 24, 2011
 
   Added -x argument to Makefile.PL saying you prefer unixODBC over
