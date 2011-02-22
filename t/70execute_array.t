@@ -431,7 +431,7 @@ sub update
     $sth->bind_param_array(2, ['dave%', 'fred%']);
     insert($dbh, $sth,
            {commit => 0, error => 0, sts => 2, affected => 5,
-            tuple => [1, 1], %$ref});
+            tuple => [4, 1], %$ref});
     check_data($dbh, \@p1, [qw(pete pete pete pete pete)]);
 
 
