@@ -128,6 +128,8 @@ if ($eumm >= 5.43) {
     $opts{AUTHOR} = 'Tim Bunce, Jeff Urlwin, Martin J. Evans mailto:dbi-users@perl.org';
     $opts{ABSTRACT} = 'ODBC driver for the DBI module.';
     $opts{CAPI} = 'TRUE' if $Config{archname} =~ /-object\b/i;
+    # Never set PREREQ_FATAL to true - it is flawed
+    # - see http://wiki.cpantesters.org/wiki/CPANAuthorNotes
     #$opts{PREREQ_FATAL} = 1;
     # See
     # http://www.mail-archive.com/cpan-testers-discuss%40perl.org/msg00076.html
