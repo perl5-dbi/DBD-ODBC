@@ -464,3 +464,4 @@ error($dbh, {array_context => 0, raise => 0});
 row_wise($dbh, {array_context => 1, raise => 1});
 
 update($dbh, {array_context => 1, raise => 1});
+$dbh->disconnect;

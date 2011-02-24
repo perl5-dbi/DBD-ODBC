@@ -6,6 +6,14 @@ As of $LastChangedDate$
 
 $Revision: 10667 $
 
+=head2 Changes in DBD::ODBC  1.28_4 February 24, 2011
+
+  [BUG FIXES]
+
+  * Fixed compilation problems with DBIf_TRACE_TXN
+
+  * Added missing diconnect call to 70execute_array.t
+
 =head2 Changes in DBD::ODBC  1.28_3 February 22, 2011
 
   [BUG FIXES]
@@ -25,7 +33,7 @@ $Revision: 10667 $
   * Added support for DBI's new trace flags ENC, CON, TXN and
     DBD. From DBI 1.617 you should be able to use: DBI_TRACE=DBD to
     ONLY get DBD::ODBC tracing without DBI tracing ENC and CON DBI
-    flags are synonomous with DBD::ODBC's odbcconnection and
+    flags are synonymous with DBD::ODBC's odbcconnection and
     odbcunicode trace flags which you can still use for now.
 
   [OTHER]
@@ -64,7 +72,7 @@ $Revision: 10667 $
 
   Fixed some broken links in the FAQ.
 
-  Add a multiple active statement document link to randon links and
+  Add a multiple active statement document link to random links and
   the FAQ entry.
 
   A call to SQLNumResultCols was not checked to test it succeeded.
