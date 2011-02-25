@@ -52,8 +52,6 @@ $Revision: 10667 $
 
   Add a test for ChopBlanks and unicode data
 
-  Write a document on MARS_CONNECTION
-
   Add a link or documentation on server cursors
 
   Add some private SQLGetInfo values for whether SQL_ROWSET_SIZE hack
