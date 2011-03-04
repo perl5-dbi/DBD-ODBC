@@ -18,7 +18,7 @@ examples/cancel_big_fetch.pl
 examples/column_info.pl
 examples/DbiTest.pl
 examples/DbiTest2.pl
-examples/dma_counts.pl
+examples/dml_counts.pl
 examples/getinfo.pl
 examples/identity.pl
 examples/joetest7.pl
