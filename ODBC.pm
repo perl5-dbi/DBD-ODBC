@@ -19,7 +19,7 @@ require 5.006;
 # see discussion on dbi-users at
 # http://www.nntp.perl.org/group/perl.dbi.dev/2010/07/msg6096.html and
 # http://www.dagolden.com/index.php/369/version-numbers-should-be-boring/
-$DBD::ODBC::VERSION = '1.28_4';
+$DBD::ODBC::VERSION = '1.29';
 
 {
     ## no critic (ProhibitMagicNumbers ProhibitExplicitISA)
@@ -562,7 +562,7 @@ DBD::ODBC - ODBC Driver for DBI
 
 =head1 VERSION
 
-This documentation refers to DBD::ODBC version 1.28_4.
+This documentation refers to DBD::ODBC version 1.29.
 
 =head1 SYNOPSIS
 
@@ -1168,7 +1168,7 @@ available.  SQL Server supports this feature.  Use this as follows:
   } while ($sth->{odbc_more_results});
 
 Note that with multiple result sets and output parameters (i.e,. using
-bind_param_inout, don't expect output parameters to be bound until ALL
+bind_param_inout), don't expect output parameters to be bound until ALL
 result sets have been retrieved.
 
 =head2 Private DBD::ODBC Functions

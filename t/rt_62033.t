@@ -85,12 +85,40 @@ sub doit
     eval {$s->execute(@_)};
     #diag "sql errors $@\n" if $@;
 
+    if (!$expect) {
+        ok($@, 'Error for constraint');
+    } else {
+        ok(!$@, 'Execute ok');
+    }
+
+    # Some drivers won't like us calling SQLMoreResults/SQLDescribe etc
+    # after the above if it errors. When we call odbc_more_results it actually
+    # ends up doing a SQLDescribe. For most drivers I've tested they
+    # are ok with this but a few (freeTDS) are not. The problem with freeTDS
+    # is that if you then omit the SQLMoreResults and continue with this test
+    # you'll get an SQL_ERROR from the next execute without an error msg
+    # so it would seem there is no way to make this work in freeTDS as it
+    # stands.
+    #
+    # Some drivers (basically all those I've tested except freeTDS) need you
+    # to call SQLMoreResults even if the above fails or you'll get invalid
+    # cursor state on the next statement (MS SQL Server and MS native client
+    # driver).
+
     my $x = $s->{odbc_more_results};
-    my $identity;
-    ($identity) = $s->fetchrow_array;
-    #diag("identity = ", DBI::neat($identity), "\n");
-    is($identity, $expect, "Identity");
-    ($identity) = $s->fetchrow_array;
+    if ($expect) {
+
+        # for the error case where we attempt to insert a NULL into column b
+        # we'd expect odbc_more_results to return 0/false - there are no more
+        # results
+        my $identity;
+        ($identity) = $s->fetchrow_array;
+        #diag("identity = ", DBI::neat($identity), "\n");
+        is($identity, $expect, "Identity");
+        ($identity) = $s->fetchrow_array;
+    } else {
+        $s->finish;
+    }
 }
 
 doit($dbh, undef, undef);

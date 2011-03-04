@@ -6,6 +6,24 @@ As of $LastChangedDate$
 
 $Revision: 10667 $
 
+=head2 Changes in DBD::ODBC 1.29 March 3, 2011
+
+  Full release of the 1.28 development releases.
+
+  [REQUIREMENTS]
+
+  * Now needs Test::Simple 0.90.
+
+  [OTHER]
+
+  * Added dml_counts.pl example
+
+  * worked around a problem in freeTDS in the 20SqlServer.t test
+    provided by Ralph Doncaster.
+
+  * Changed test rt_62033.t to try and make it work with freeTDS - I
+    failed. It now skips attempts to fetch when the insert fails.
+
 =head2 Changes in DBD::ODBC  1.28_4 February 24, 2011
 
   [BUG FIXES]
