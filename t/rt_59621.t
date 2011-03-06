@@ -35,7 +35,7 @@ END {
             $dbh->do(q/drop table PERL_DBD_RT_59621/);
         };
     }
-    Test::NoWarnings::had_no_warnings()
+    Test::NoWarnings::had_no_warnings() # 12
           if ($has_test_nowarnings);
 }
 
@@ -58,8 +58,8 @@ ok($driver_version, "got DRIVER version $driver_version"); # 5
 my ($ev, $sth);
 
 SKIP: {
-    skip "not SQL Server", ($tests-5) if $dbms_name !~ /Microsoft SQL Server/;
-    skip "Easysoft OOB", ($tests-5) if $driver_name =~ /esoobclient/;
+    skip "not SQL Server", 6 if $dbms_name !~ /Microsoft SQL Server/;
+    skip "Easysoft OOB", 6 if $driver_name =~ /esoobclient/;
 
     eval {
         local $dbh->{PrintWarn} = 0;
@@ -77,7 +77,7 @@ SKIP: {
 
   SKIP: {
         skip "Failed to create test table with XML type - server too old and perhaps does not support XML column type ($ev)",
-            7 if $ev;
+            6 if $ev;
         pass('created test table'); # 6
         eval {
             $sth = $dbh->prepare('INSERT into PERL_DBD_RT_59621 VALUES (?,?)');
