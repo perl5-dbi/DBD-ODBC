@@ -162,29 +162,29 @@ sub tab_select {
 		or return undef;
     my $bind_val;
     foreach (@data) {
-	$bind_val = $_->[0];
-	$sth->bind_param(1, $bind_val, SQL_INTEGER);
-	$sth->execute;
-	while (@row = $sth->fetchrow()) {
-	    # print "$row[0]|$row[1]|$row[2]|\n";
-	    if ($row[0] != $bind_val) {
-		print "Bind value failed! bind value = $bind_val, returned value = $row[0]\n";
-		return undef;
-	    }
-	    if (!defined($row[2]) && !defined($_->[2])) {
-	       # ok...
-	    } else {
-	       if (!defined($row[2] && $dbname =~ /Oracle/)) {
-		  # Oracle typically treats empty blanks as NULL in varchar, so that's what we should
-		  # expect!
-		  $row[2] = "";
-	       }
-	       if ($row[2] ne $_->[2]) {
-		  print "Column C value failed! bind value = $bind_val, returned values = $row[0]|$row[1]|$row[2]|$row[3]\n";
-		  return undef;
-	       }
-	    }
-	}
+        $bind_val = $_->[0];
+        $sth->bind_param(1, $bind_val, SQL_INTEGER);
+        $sth->execute;
+        while (@row = $sth->fetchrow()) {
+            # print "$row[0]|$row[1]|$row[2]|\n";
+            if ($row[0] != $bind_val) {
+                print "Bind value failed! bind value = $bind_val, returned value = $row[0]\n";
+                return undef;
+            }
+            if (!defined($row[2]) && !defined($_->[2])) {
+                # ok...
+            } else {
+                if (!defined($row[2] && $dbname =~ /Oracle/)) {
+                    # Oracle typically treats empty blanks as NULL in varchar, so that's what we should
+                    # expect!
+                    $row[2] = "";
+                }
+                if ($row[2] ne $_->[2]) {
+                    print "Column C value failed! bind value = $bind_val, returned values = $row[0]|$row[1]|$row[2]|$row[3]\n";
+                    return undef;
+                }
+            }
+        }
     }
     return 1;
 }
