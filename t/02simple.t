@@ -84,6 +84,8 @@ SKIP: {
     my $drv = $dbh->get_info(17);
     if ($drv =~ /Oracle/i) {
         $sql = q/select 1 from dual/;
+    } elsif ($drv =~ /Firebird/i) {
+        $sql = q/select 1 from rdb$database/;
     } else {
         $sql = q/select 1/;
     }
