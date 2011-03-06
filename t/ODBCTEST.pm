@@ -1,4 +1,6 @@
 #
+# $Id$
+#
 # Package ODBCTEST
 #
 # This package is a common set of routines for the DBD::ODBC tests.
@@ -74,34 +76,43 @@ require 5.004;
       return @row;
    }
    sub tab_create {
-      my $dbh = shift;
-      $dbh->{PrintError} = 0;
-      eval {
-	 $dbh->do("DROP TABLE $table_name");
-      };
-      $dbh->{PrintError} = 1;
+       my $dbh = shift;
+       $dbh->{PrintError} = 0;
+       eval {
+           $dbh->do("DROP TABLE $table_name");
+       };
+       $dbh->{PrintError} = 1;
+       my $drvname = $dbh->get_info(6); # driver name
 
-      # trying to use ODBC to tell us what type of data to use
-      my $fields = undef;
-      my $f;
-      foreach $f (sort keys %TestFieldInfo) {
-	    # print "$f: $TestFieldInfo{$f}\n";
-	 $fields .= ", " unless !$fields;
-	 $fields .= "$f ";
-	    # print "-- $fields\n";
-	 my @row = get_type_for_column($dbh, $f);
-	 $fields .= $row[0];
-	 if ($row[5]) {
-	    $fields .= "($row[2])"	 if ($row[5] =~ /LENGTH/i);
-	    $fields .= "($row[2],0)" if ($row[5] =~ /PRECISION,SCALE/i);
-	 }
-	 if ($f eq 'COL_A') {
-	    $fields .= " NOT NULL PRIMARY KEY ";
-	 }
-	    # print "-- $fields\n";
-      }
-      # diag("Using fields: $fields\n");
-      $dbh->do("CREATE TABLE $table_name ($fields)");
+       # trying to use ODBC to tell us what type of data to use
+       my $fields = undef;
+       my $f;
+       foreach $f (sort keys %TestFieldInfo) {
+           # print "$f: $TestFieldInfo{$f}\n";
+           $fields .= ", " unless !$fields;
+           $fields .= "$f ";
+           # print "-- $fields\n";
+           my @row = get_type_for_column($dbh, $f);
+           $fields .= $row[0];
+           if ($row[5]) {
+               if ($drvname =~ /OdbcFb/i) {
+                   # Firebird ODBC driver seems to be badly broken - for
+                   # varchars it reports max size of 32765 when it is 4000
+                   if ($row[0] eq 'VARCHAR') {
+                       $fields .= "(4000)";
+                   }
+               } else {
+                   $fields .= "($row[2])"	 if ($row[5] =~ /LENGTH/i);
+                   $fields .= "($row[2],0)" if ($row[5] =~ /PRECISION,SCALE/i);
+               }
+           }
+           if ($f eq 'COL_A') {
+               $fields .= " NOT NULL PRIMARY KEY ";
+           }
+           # print "-- $fields\n";
+       }
+       # diag("Using fields: $fields\n");
+       $dbh->do("CREATE TABLE $table_name ($fields)");
    }
 
 
