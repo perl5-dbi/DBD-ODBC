@@ -112,7 +112,8 @@ require 5.004;
            # print "-- $fields\n";
        }
        # diag("Using fields: $fields\n");
-       $dbh->do("CREATE TABLE $table_name ($fields)");
+       $dbh->do("CREATE TABLE $table_name ($fields)") or
+           diag("Failed to create table - ", $dbh->errstr);
    }
 
 
