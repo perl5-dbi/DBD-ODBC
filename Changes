@@ -6,9 +6,26 @@ As of $LastChangedDate$
 
 $Revision: 10667 $
 
-=head2 Changes in DBD::ODBC 1.29 March 3, 2011
+=head2 Changes in DBD::ODBC 1.28_5 March 6, 2011
 
   Full release of the 1.28 development releases.
+
+  [BUG FIXES]
+
+  * rt_59621.t had wrong skip count
+
+  * Fixed missing SQL_MAX_TABLE_NAME_LEN defintion from test.
+
+  * Fixed problem with some drivers which batch "insert;select" where
+    SQLMoreResults is not required and an extra describe is done.
+
+  * Fixed "select 1" in 02simple.t for Firebird ODBC Driver.
+
+  * disconnect call added to 70execute_array.t was in the wrong place.
+
+  * In non-unicode mode we bind strings as SQL_CHAR but the driver may
+    have described them as SQL_WCHAR and we were not doing ChopBlanks
+    processing in that case.
 
   [REQUIREMENTS]
 
@@ -24,13 +41,25 @@ $Revision: 10667 $
   * Changed test rt_62033.t to try and make it work with freeTDS - I
     failed. It now skips attempts to fetch when the insert fails.
 
+  * Worked around problem in Firebird ODBC driver which reports
+    timestamps have a display size of 24 characters but then can
+    return 29 which could lead to data truncation errors.
+    See http://tracker.firebirdsql.org/browse/ODBC-112
+
+  * Worked around problem in Firebird ODBC driver which reports
+    VARCHARs have a maximum length of 32765 but in fact it is 4000.
+    See http://tracker.firebirdsql.org/browse/ODBC-111
+
+  * Improvements in tracing to take account of DBI's neatsvpv lops 5
+    characters off maxsize on a string.
+
 =head2 Changes in DBD::ODBC  1.28_4 February 24, 2011
 
   [BUG FIXES]
 
   * Fixed compilation problems with DBIf_TRACE_TXN
 
-  * Added missing diconnect call to 70execute_array.t
+  * Added missing disconnect call to 70execute_array.t
 
 =head2 Changes in DBD::ODBC  1.28_3 February 22, 2011
 
