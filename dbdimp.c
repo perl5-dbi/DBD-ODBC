@@ -1162,7 +1162,7 @@ void dbd_error2(
     struct imp_sth_st *imp_sth = NULL;
 
     if (err_rc == SQL_SUCCESS) return;
-    
+
     if (DBIc_TRACE(imp_xxh, DBD_TRACING, 0, 4) && (err_rc != SQL_SUCCESS)) {
         PerlIO_printf(
             DBIc_LOGPIO(imp_xxh),
@@ -2172,6 +2172,14 @@ int dbd_describe(SV *h, imp_sth_t *imp_sth, int more)
         fbh->ColDisplaySize = imp_sth->odbc_column_display_size;
 #endif  /* SQL_COLUMN_DISPLAY_SIZE */
 
+        /* Workaround bug in Firebird driver that reports timestamps are
+           display size 24 when in fact it can return the longer
+           e.g., 1998-05-15 00:01:00.100000000 */
+        if ((imp_dbh->driver_type == DT_FIREBIRD) &&
+            (fbh->ColSqlType == SQL_TYPE_TIMESTAMP)) {
+            fbh->ColDisplaySize = 30;
+        }
+
 #ifdef SQL_DESC_LENGTH
         rc = SQLColAttribute(imp_sth->hstmt,(SQLSMALLINT)(column_n + 1),
                              SQL_DESC_LENGTH,
@@ -2583,6 +2591,11 @@ int dbd_st_execute(
         return -2;
     }
 
+    /*
+     * If SQLExecute executes a searched update, insert, or delete statement
+     * that does not affect any rows at the data source, the call to
+     * SQLExecute returns SQL_NO_DATA.
+     */
     if (rc != SQL_NO_DATA) {
 
         /* SWORD num_fields; */
@@ -2624,11 +2637,11 @@ int dbd_st_execute(
 
     /*
      *  MS SQL Server is very picky wrt to completing a procedure i.e.,
-     *  it says the output bound parameters are not available until the procedure
-     *  is complete and the procedure is not complete until you have called
-     *  SQLMoreResults and it has returned SQL_NO_DATA. So, if you call a
-     *  procedure multiple times in the same statement (e.g., by just calling
-     *  execute) DBD::ODBC will call dbd_describe to describe the first
+     *  it says the output bound parameters are not available until the
+     *  procedure is complete and the procedure is not complete until you
+     *  have called SQLMoreResults and it has returned SQL_NO_DATA. So, if you
+     *  call a procedure multiple times in the same statement (e.g., by just
+     *  calling execute) DBD::ODBC will call dbd_describe to describe the first
      *  execute, discover there is no result-set and call SQLMoreResults - ok,
      *  but after that, the dbd_describe is done and SQLMoreResults will not
      *  get called. The following is a kludge to get around this until
@@ -2644,10 +2657,12 @@ int dbd_st_execute(
             dbd_error(sth, sts, "dbd_describe/SQLNumResultCols");
             return -2;
         }
-
+        if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 4))
+            TRACE1(imp_dbh, "    SQLNumResultCols=0 (flds=%d)\n", flds);
         if (flds == 0) {                         /* not a result-set */
             if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 4))
-                TRACE2(imp_dbh, "    nflds=(%d,%d), resetting done_desc\n",
+                TRACE2(imp_dbh,
+                       "    Not a result-set nflds=(%d,%d), resetting done_desc\n",
                        flds, DBIc_NUM_FIELDS(imp_sth));
             imp_sth->done_desc = 0;
         }
@@ -2913,6 +2928,9 @@ AV *dbd_st_fetch(SV *sth, imp_sth_t *imp_sth)
              {
                  TIMESTAMP_STRUCT *ts;
                  ts = (TIMESTAMP_STRUCT *)fbh->data;
+
+                 if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 4))
+                     TRACE0(imp_dbh, "    adjusting timestamp\n");
                  my_snprintf(cvbuf, sizeof(cvbuf),
                              "%04d-%02d-%02d %02d:%02d:%02d",
                              ts->year, ts->month, ts->day,
@@ -2956,8 +2974,13 @@ AV *dbd_st_fetch(SV *sth, imp_sth_t *imp_sth)
                break;
 #endif /* WITH_UNICODE */
              default:
-               if (ChopBlanks && fbh->ColSqlType == SQL_CHAR &&
-                   fbh->datalen > 0) {
+               if (ChopBlanks && fbh->datalen > 0 &&
+                   ((fbh->ColSqlType == SQL_CHAR) ||
+                    (fbh->ColSqlType == SQL_WCHAR))) {
+
+                   if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 5))
+                       TRACE0(imp_sth, "    chopping blanks\n");
+
                    char *p = (char*)fbh->data;
                    while(fbh->datalen && p[fbh->datalen - 1]==' ')
                        --fbh->datalen;
@@ -2973,7 +2996,8 @@ AV *dbd_st_fetch(SV *sth, imp_sth_t *imp_sth)
 #endif
                }
                if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 4))
-                   TRACE1(imp_sth, "    %s\n", neatsvpv(sv, fbh->datalen));
+                   TRACE2(imp_sth, "    %s(%ld)\n", neatsvpv(sv, fbh->datalen+5),
+                          fbh->datalen);
            }
        }
    }
@@ -4712,6 +4736,8 @@ SV *dbd_st_FETCH_attrib(SV *sth, imp_sth_t *imp_sth, SV *keysv)
 	    if (outparams) {
 	       odbc_handle_outparams(imp_sth, DBIc_TRACE_LEVEL(imp_sth));
 	    }
+        imp_sth->done_desc = 0;                 /* redo describe */
+
 	       /* XXX need to 'finish' here */
 	    dbd_st_finish(sth, imp_sth);
 	 } else {
@@ -5698,6 +5724,8 @@ static int post_connect(
            imp_dbh->driver_type = DT_MS_ACCESS_ACE;
        } else if (strcmp(imp_dbh->odbc_driver_name, "esoobclient") == 0) {
            imp_dbh->driver_type = DT_ES_OOB;
+       } else if (strcmp(imp_dbh->odbc_driver_name, "OdbcFb") == 0) {
+           imp_dbh->driver_type = DT_FIREBIRD;
        } else {
            imp_dbh->driver_type = DT_DONT_CARE;
        }

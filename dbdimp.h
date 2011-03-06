@@ -100,7 +100,8 @@ struct imp_dbh_st {
         DT_SQL_SERVER_NATIVE_CLIENT,    /* sqlncli10.dll | SQLNCLI.DLL */
         DT_MS_ACCESS_JET,                          /* odbcjt32.dll */
         DT_MS_ACCESS_ACE,                          /* ACEODBC.DLL */
-        DT_ES_OOB                                  /* Easysoft OOB */
+        DT_ES_OOB,                                 /* Easysoft OOB */
+        DT_FIREBIRD                                /* Firebird OdbcFb */
     } driver_type;
     char odbc_driver_name[80];
     char odbc_driver_version[20];
