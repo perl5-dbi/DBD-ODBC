@@ -105,7 +105,9 @@ sub doit
     # cursor state on the next statement (MS SQL Server and MS native client
     # driver).
 
-    my $x = $s->{odbc_more_results};
+    if ($s->{NUM_OF_FIELDS} == 0) {
+        my $x = $s->{odbc_more_results};
+    }
     if ($expect) {
 
         # for the error case where we attempt to insert a NULL into column b
