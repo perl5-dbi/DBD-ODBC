@@ -1294,7 +1294,7 @@ void dbd_error2(
 
     if (!error_found && (err_rc != SQL_NO_DATA_FOUND)) {
         if (DBIc_TRACE(imp_xxh, DBD_TRACING, 0, 3))
-            TRACE0(imp_dbh, "    ** No error found **");
+            TRACE1(imp_dbh, "    ** No error found %d **\n", err_rc);
         DBIh_SET_ERR_CHAR(
             h, imp_xxh, Nullch, 1,
             "    Unable to fetch information about the error", "IM008", Nullch);
