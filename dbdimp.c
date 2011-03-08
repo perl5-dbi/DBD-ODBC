@@ -2977,11 +2977,11 @@ AV *dbd_st_fetch(SV *sth, imp_sth_t *imp_sth)
                if (ChopBlanks && fbh->datalen > 0 &&
                    ((fbh->ColSqlType == SQL_CHAR) ||
                     (fbh->ColSqlType == SQL_WCHAR))) {
+                   char *p = (char*)fbh->data;
 
                    if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 5))
                        TRACE0(imp_sth, "    chopping blanks\n");
 
-                   char *p = (char*)fbh->data;
                    while(fbh->datalen && p[fbh->datalen - 1]==' ')
                        --fbh->datalen;
                }
