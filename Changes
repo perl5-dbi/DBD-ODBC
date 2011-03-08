@@ -6,15 +6,28 @@ As of $LastChangedDate$
 
 $Revision: 10667 $
 
-=head2 Changes in DBD::ODBC 1.28_5 March 6, 2011
+=head2 Changes in DBD::ODBC 1.29 March 8, 2011
 
-  Full release of the 1.28 development releases.
+  * An official release of the 1.28 development releases.
+
+  [NOTE]
+
+  * The 1.28 development releases made a change which causes a generic
+    error to be reported when an ODBC call fails but an error message
+    is not retrieved from the ODBC Driver. It appears this has caught
+    out a few ODBC drivers - notably freeTDS and Firebird. You now may
+    see errors that were missed before e.g., DBIx::Class's tests for
+    Firebird now errors test 21 "outer txn rolled back" (and others)
+    because SQLRowCount returns an error after "ROLLBACK TO SAVEPOINT
+    savepoint_0"; before this error was missed.
+
+=head2 Changes in DBD::ODBC 1.28_5 March 6, 2011
 
   [BUG FIXES]
 
   * rt_59621.t had wrong skip count
 
-  * Fixed missing SQL_MAX_TABLE_NAME_LEN defintion from test.
+  * Fixed missing SQL_MAX_TABLE_NAME_LEN definition from test.
 
   * Fixed problem with some drivers which batch "insert;select" where
     SQLMoreResults is not required and an extra describe is done.
