@@ -94,7 +94,7 @@ sub check_data
 {
     my ($dbh, $c1, $c2) = @_;
 
-    my $data = $dbh->selectall_arrayref(qq/select * from $table/);
+    my $data = $dbh->selectall_arrayref(qq/select * from $table order by a/);
     my $row = 0;
     foreach (@$data) {
         is($_->[0], $c1->[$row], "row $row p1 data");
