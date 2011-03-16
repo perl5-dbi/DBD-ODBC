@@ -135,7 +135,7 @@ SV *        dbh
 SV *        stmt
 CODE:
 {
-   STRLEN lna;
+   /*STRLEN lna;*/
    /*char *pstmt = SvOK(stmt) ? SvPV(stmt,lna) : "";*/
    ST(0) = sv_2mortal(newSViv( (IV)dbd_db_execdirect( dbh, stmt ) ) );
 }
