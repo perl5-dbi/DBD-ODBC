@@ -38,5 +38,9 @@ void dbd_error _((SV *h, RETCODE err_rc, char *what));
 void dbd_error2 _((SV *h, RETCODE err_rc, char *what, HENV henv, HDBC hdbc, HSTMT hstmt));
 int dbd_db_execdirect _(( SV *dbh, SV *statement ));
 IV odbc_st_lob_read(SV *sth, int colno, SV *data, UV length, IV type);
+int dbd_st_statistics(SV *dbh, SV *sth, char *catalog, char *schema,
+                      char *table, int unique, int quick);
+int dbd_st_bind_col(SV *sth, imp_sth_t *imp_sth, SV *col, SV *ref,
+                    IV type, SV *attribs);
 
 /* end of ODBC.h */
