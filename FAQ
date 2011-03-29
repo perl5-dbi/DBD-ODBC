@@ -296,7 +296,7 @@ I'd love to hear from you. The technical details are:
   create table rtcpan28821 (a date)
   insert into rtcpan28821 values('23-MAR-62') fails
 
-Looking at the ODBC trace, SQLDescribeParam returns:
+Looking at the ODBC trace, C<SQLDescribeParam> returns:
 
   data type: 93, SQL_TYPE_TIMESTAMP
   size: 19
@@ -423,116 +423,13 @@ Example (using MSSQL Server):
 
 =head2 Why do I get data truncated error from SQL Server when inserting with parameters?
 
-DBD::ODBC attempts to use the ODBC API C<SQLDescribeParam> to obtain
-information about parameters in parameterised SQL. e.g.,
-
-  insert into mytable (column1) values(?)
-
-The C<?> is a parameter marker. You supply the parameter value (in
-this case parameter 1) with a call to the C<bind_param> method or by
-adding the parameter to the C<execute> method call. When DBD::ODBC
-sees the parameter marker in the SQL it will call C<SQLDescribeParam>
-to obtain information about the parameter size and type etc (assuming
-your ODBC driver supports C<SQLDescribeParam>).
-
-When you call C<SQLDescribeParam> in the MS SQL Server ODBC driver the
-driver will scan your SQL attempting to discover the columns in your
-database the parameters align with. e.g., in the above case the
-parameter to be bound is linked with "column1" so C<SQLDescribeParam>
-should return information about "column1". The SQL Server ODBC driver
-finds information about "column1" (in this example) by creating SQL such
-as:
-
-  select column1 from mytable where 1 = 2
-
-then looking at the column details. Unfortunately, some SQL confuses
-SQL Server and it will generate SQL to find out about your parameters
-which examines the wrong columns and on rare occasions it may even
-generate totally incorrect SQL. The test case F<t/rt_39841.t>
-domonstrates a couple of these.
-
-The upshot of this is that DBD::ODBC is sometimes lied to about
-parameters and will then bind your parameters incorrectly. This can lead
-to later errors when C<execute> is called. This happens most commonly
-when using parameters in SQL with sub-selects. For example:
-
-  create table one (a1 integer, a2 varchar(10))
-  create table two (b1 varchar(10), b2 varchar(20))
-
-  insert into one values(1, 'aaaaaaaaaa')
-  insert into two values('aaaaaaaaaa','bbbbbbbbbbbbbbbbbbbb')
-
-  select b1, (select a2 from one where a2 = b1) from two where b2 = ?
-
-  param 1 bound as 'bbbbbbbbbbbbbbbbbbbb'
-
-Clearly in this example, the one and only parameter is for two.b2 which
-is a varchar(20) but when SQL Server rearranges your SQL to describe
-the parameter it issues:
-
-  select a2 from one where 1 = 0
-
-and DBD::ODBC is told the parameter is a VARCHAR(10). In DBD::ODBC
-1.17 this would then lead to a data truncation error because parameter
-1 would be bound as 'bbbbbbbbbbbbbbbbbbbb' but with a column size of
-10 as that is what SQLDescribeParam returned. DBD::ODBC 1.17_1 (and
-later) works around this problem for VARCHAR columns because it is
-obvious a VARCHAR parameter of length 20 cannot have a column size of
-10 so the column size is increased to the length of the parameter.
-
-However, a more difficult error can occur when SQL Server describes
-the parameter as totally the wrong type. The first example in
-F<t/rt_39841.t> demonstrates this. SQL Server describes a VARCHAR
-parameter as an integer which DBD::ODBC has little choice to believe
-but when something like 'bbbbbbbbbb' is bound as an integer, SQL
-Server will then return an error like "invalid value for cast
-specification". The only way around this is to specifically name the
-parameter type. e.g.,
-
-  create table one (a1 integer, a2 varchar(20))
-  create table two (b1 double precision, b2 varchar(8))
-
-  insert into one values(1, 'aaaaaaaaaa')
-  insert into two values(1, 'bbbbbbbb')
-
-  select b1, ( select a2 from one where a1 = b1 ) from two where b2 = ?
-
-  param 1 bound as 'bbbbbbbbbb'
-
-Clearly parameter 1 is a varchar(8) but SQL Server rearranges the SQL to:
-
-  select a1 from one where 1 = 2
-
-when it should have run
-
-  select b2 from two where 1 = 2
-
-As a result parameter 1 is described as an integer and this leads to the
-problem. To workaround this problem you would need to bind parameter 1
-naming the SQL type of the parameter using something like:
-
-  use DBI qw(:sql_types);
-
-  bind_param(1, 'bbbbbbbbbb', SQL_VARCHAR);
-
-as omitting SQL_VARCHAR will cause DBD::ODBC to use the type
-C<SQLDescribeParam> returned.
-
-See https://connect.microsoft.com/SQLServer/feedback/details/527188/paramater-datatype-lookup-returns-incorrectly and rt ticket 50852.
+Please see "Why am I getting errors with bound parameters" below which
+collects all parameter issues together in one FAQ item.
 
 =head2 Why do I get invalid value for cast specification (22018) from SQL Server when inserting with parameters?
 
-See L<http://support.microsoft.com/kb/269011> on the microsoft web site for
-a bug you may have hit.
-
-In Perl the most common reason for this is that you have bound column
-data in SQL which does not match the column type in the database and
-the ODBC driver cannot perform the necessary conversion. DBD::ODBC
-mostly binds all column data as strings and lets the ODBC driver
-convert the string to the right column type. If you supply a string
-which cannot be converted to the native column type you will get this
-error e.g., if you attempt to bind a non-datetime string to a datetime
-column or a non-numeric string to a numeric column.
+Please see "Why am I getting errors with bound parameters" below which
+collects all parameter issues together in one FAQ item.
 
 =head2 Why do I get strange results with SQL Server and named parameters?
 
@@ -561,8 +458,8 @@ The reason for this is that all SQL Server drivers we have seen
 describe procedures parameters in the order they are declared and
 ignore the order they are used in the SQL. If you specify them out of
 order DBD::ODBC will get details on p1 which are really for p2
-etc. This can lead to data truncation errors and all sort of other
-problems it is impossible for DBD::ODBC spot or workaround.
+etc. This can lead to data truncation errors and all sorts of other
+problems it is impossible for DBD::ODBC to spot or workaround.
 
 =head2 Why do I get "Numeric value out of range" when binding dates in Oracle?
 
@@ -917,6 +814,341 @@ Someone pointed out you can insert more than 255 characters into a MS
 Access text column with DBD::ADO but I believe if you look at the
 column types after creating the table with DBD::ADO the text column is
 really a memo column.
+
+=head2 Why am I getting errors with bound parameters?
+
+There are various problems with parameter binding in ODBC Drivers most
+of them down to bugs in the ODBC drivers. I created this FAQ to try
+and bring them all together in one place and other FAQ entries point
+at this one as a number of them boil down to a single problem.
+
+DBD::ODBC used to (many many versions ago) bind all parameters as
+SQL_VARCHAR and this mostly works because a SQL_VARCHAR can almost
+always be converted to any other SQL type. However, because of bugs in
+some ODBC drivers, additional SQL types which work in mysterious ways
+(like varchar(max) in MS SQL Server) and dates, DBD::ODBC was changed
+to ask the ODBC Driver (C<SQLDescribeParam>) about parameters before
+binding them.
+
+There are a few things to note first:
+
+=over
+
+=item default bind type
+
+Some ODBC Drivers do not support C<SQLDescribeParam> (e.g. freeTDS) and
+in those cases DBD::ODBC reverts to its old behaviour of binding
+everything as a SQL_VARCHAR or SQL_WVARCHAR (UNICODE build). In some
+rare cases the default bind type might not be what you want.
+
+In addition, if C<SQLDescribeParam> is supported but fails the default
+bind type is used.
+
+=item overriding the default bind type
+
+You can always override the default bind type used when
+C<SQLDescribeParam> is not supported using odbc_default_bind_type.
+
+=item forcing a bind type
+
+Sometimes the ODBC Driver can support C<SQLDescribeParam> but get the
+answer wrong e.g., "select myfunc(?) where 1 = 1)" often causes a
+problem because the parameter does not correspond to a real column in
+a table. In these cases you can use odbc_force_bind_type to stop
+DBD::ODBC calling C<SQLDescribeParam> and use the specified type
+instead. However, adding TYPE => xxx to the bind_param call is nearly
+always better (as it is more specific) and always overrides
+odbc_force_bind_type.
+
+=item specifying a bind type on the bind_param call
+
+In all cases this overrides anything else that DBD::ODBC might do
+and bare in mind parameter bind types set in this way are "sticky" (see
+DBI). This is usually the best method unless you prefer to use a
+cast in your SQL.
+
+=back
+
+Now to the specific problems:
+
+=over
+
+=item data truncated error
+
+DBD::ODBC attempts to use the ODBC API C<SQLDescribeParam> to obtain
+information about parameters in parameterised SQL. e.g.,
+
+  insert into mytable (column1) values(?)
+
+The C<?> is a parameter marker. You supply the parameter value (in
+this case parameter 1) with a call to the C<bind_param> method or by
+adding the parameter to the C<execute> method call. When DBD::ODBC
+sees the parameter marker in the SQL it will call C<SQLDescribeParam>
+to obtain information about the parameter size and type etc (assuming
+your ODBC driver supports C<SQLDescribeParam>).
+
+When you call C<SQLDescribeParam> in the MS SQL Server ODBC driver the
+driver will scan your SQL attempting to discover the columns in your
+database the parameters align with. e.g., in the above case the
+parameter to be bound is linked with "column1" so C<SQLDescribeParam>
+should return information about "column1". The SQL Server ODBC driver
+finds information about "column1" (in this example) by creating SQL such
+as:
+
+  select column1 from mytable where 1 = 2
+
+then looking at the column details. Unfortunately, some SQL confuses
+SQL Server and it will generate SQL to find out about your parameters
+which examines the wrong columns and on rare occasions it may even
+generate totally incorrect SQL. The test case F<t/rt_39841.t>
+demonstrates a couple of these.
+
+The upshot of this is that DBD::ODBC is sometimes lied to about
+parameters and will then bind your parameters incorrectly. This can lead
+to later errors when C<execute> is called. This happens most commonly
+when using parameters in SQL with sub-selects. For example:
+
+  create table one (a1 integer, a2 varchar(10))
+  create table two (b1 varchar(10), b2 varchar(20))
+
+  insert into one values(1, 'aaaaaaaaaa')
+  insert into two values('aaaaaaaaaa','bbbbbbbbbbbbbbbbbbbb')
+
+  select b1, (select a2 from one where a2 = b1) from two where b2 = ?
+
+  param 1 bound as 'bbbbbbbbbbbbbbbbbbbb'
+
+Clearly in this example, the one and only parameter is for two.b2 which
+is a varchar(20) but when SQL Server rearranges your SQL to describe
+the parameter it issues:
+
+  select a2 from one where 1 = 0
+
+and DBD::ODBC is told the parameter is a VARCHAR(10). In DBD::ODBC
+1.17 this would then lead to a data truncation error because parameter
+1 would be bound as 'bbbbbbbbbbbbbbbbbbbb' but with a column size of
+10 as that is what C<SQLDescribeParam> returned. DBD::ODBC 1.17_1 (and
+later) works around this problem for VARCHAR columns because it is
+obvious a VARCHAR parameter of length 20 cannot have a column size of
+10 so the column size is increased to the length of the parameter.
+
+=item invalid value for the cast specification (22018)
+
+See the previous item as this follows on from that.
+
+See L<http://support.microsoft.com/kb/269011> on the microsoft web
+site for a bug you may have hit.
+
+In Perl the most common reason for this is that you have bound column
+data in SQL which does not match the column type in the database and
+the ODBC driver cannot perform the necessary conversion. DBD::ODBC
+mostly binds all column data as strings and lets the ODBC driver
+convert the string to the right column type. If you supply a string
+which cannot be converted to the native column type you will get this
+error e.g., if you attempt to bind a non-datetime string to a datetime
+column or a non-numeric string to a numeric column.
+
+A more difficult error (from that above in the previous item) can
+occur when SQL Server describes the parameter as totally the wrong
+type. The first example in F<t/rt_39841.t> demonstrates this. SQL
+Server describes a VARCHAR parameter as an integer which DBD::ODBC has
+little choice to believe but when something like 'bbbbbbbbbb' is bound
+as an integer, SQL Server will then return an error like "invalid
+value for cast specification". The only way around this is to
+specifically name the parameter type. e.g.,
+
+  create table one (a1 integer, a2 varchar(20))
+  create table two (b1 double precision, b2 varchar(8))
+
+  insert into one values(1, 'aaaaaaaaaa')
+  insert into two values(1, 'bbbbbbbb')
+
+  select b1, ( select a2 from one where a1 = b1 ) from two where b2 = ?
+
+  param 1 bound as 'bbbbbbbbbb'
+
+Clearly parameter 1 is a varchar(8) but SQL Server rearranges the SQL to:
+
+  select a1 from one where 1 = 2
+
+when it should have run
+
+  select b2 from two where 1 = 2
+
+As a result parameter 1 is described as an integer and this leads to the
+problem. To workaround this problem you would need to bind parameter 1
+naming the SQL type of the parameter using something like:
+
+  use DBI qw(:sql_types);
+
+  bind_param(1, 'bbbbbbbbbb', SQL_VARCHAR);
+
+as omitting SQL_VARCHAR will cause DBD::ODBC to use the type
+C<SQLDescribeParam> returned.
+
+See https://connect.microsoft.com/SQLServer/feedback/details/527188/paramater-datatype-lookup-returns-incorrectly and rt ticket 50852.
+
+=item problems with named parameters
+
+If you are using a MS SQL Server driver and named parameters to
+procedures be very careful to use then in the same order they are
+defined in the procedure. i.e., if you have a procedure like this:
+
+  create procedure test
+        @param1 varchar(50),
+        @param2 smallint
+  as
+  begin
+  ..
+  end
+
+then ensure if you call it using named parameters you specify them in
+the same order they are declared:
+
+  exec test @param1=?,@param2=?
+
+and not
+
+  exec test @param2=?,@param1=?
+
+The reason for this is that all SQL Server drivers we have seen
+describe procedures parameters in the order they are declared and
+ignore the order they are used in the SQL. If you specify them out of
+order DBD::ODBC will get details on p1 which are really for p2
+etc. This can lead to data truncation errors and all sorts of other
+problems it is impossible for DBD::ODBC to spot or workaround.
+
+=item Argument data type varchar is invalid for argument N of xxx function
+
+e.g.,
+
+  [SQL Server]Argument data type varchar is invalid for argument 2 of dateadd function.
+
+Some functions need specific argument types and as explained above
+some drivers have a lot of difficulties working out parameter types in
+function calls.
+
+In this example (also from the DBIx::Class test code) the SQL was like:
+
+  SELECT DATEADD(hour, ?, me.date_created) FROM mytable me where me.id = ?
+
+The second argument to datadd needs to be an integer. There are 2 ways
+around this:
+
+=over
+
+=item bind parameter 1 as an SQL_INTEGER
+
+=item  CAST(? as integer)
+
+=back
+
+=item other bugs in ODBC Drivers with parameter support
+
+See the question "Why do I get data truncated error from SQL Server
+when inserting with parameters?" above. These errors are often because
+of bugs in the MS SQL Server ODBC driver in its SQLBindParameter
+implementation and can be worked around by specifying a type at bind
+time.
+
+e.g.,
+
+Instead of:
+
+
+  my $s = prepare(q/some sql with parameters/);
+  $s->execute($param1, $param2);
+
+try:
+
+  my $s = prepare(q/some sql with parameters/);
+  $s->bind_param(1, $param1, {TYPE => SQL_VARCHAR});
+  $s->bind_param(2, $param2, {TYPE => SQL_VARCHAR});
+  $s->execute;
+
+See https://connect.microsoft.com/SQLServer/feedback/details/527188/paramater-datatype-lookup-returns-incorrectly and rt ticket 50852.
+
+=item example of where overriding parameter type is required
+
+Here is an example sent to me from someone (wesm) using DBIx::Class
+illustrating a problem with bound parameters in a complex bit of SQL
+and date columns:
+
+    use DBI qw(:sql_types);
+    use strict;
+    use warnings;
+    my $h = DBI->connect();
+    
+    eval{ $h->do(q/DROP TABLE odbctest/) };
+    
+    $h->do(q/CREATE TABLE odbctest (
+       id integer NOT NULL IDENTITY (1,1),
+       name nvarchar(50) NULL,
+       adate date NULL )/);
+    
+    my $s = $h->prepare(q/
+    set identity_insert odbctest on;
+    insert into odbctest
+       (id, name, adate)
+       values (?,?,?);
+    
+    set identity_insert odbctest off;
+    select scope_identity();
+    /);
+    
+    my $bug
+       = undef;        # fails
+       #= '2011-03-21'; # works
+    my @values = (
+       [ 1000,     2000, ],
+       [ 'frew',   'wes', ],
+       [ $bug,    '2009-08-10', ],
+    );
+
+    my $i = 1; my $tuple_status;
+    $s->bind_param_array($i++, $_) for @values;
+    $s->execute_array({ArrayTupleStatus => $tuple_status});
+    
+    $s = $h->prepare(q/select * from odbctest where id = ?/);
+    foreach (1000, 2000) {
+        $s->execute($_);
+        print DBI::dump_results($s);
+    }
+
+When I first ran this with SQL Server native client (pre native client 10)
+on Windows I got 
+
+    DBD::ODBC::st execute_array failed: [Microsoft][SQL Native Client]Syntax error,  permission violation, or other nonspecific error (SQL-42000) [err was 1 now 2000
+
+The call to C<SQLDescribeParam> fails because the driver cannot rearrange
+the SQL into a select allowing it to identify the column. DBD::ODBC
+then falls back on the default parameter bind type and it still
+fails. When you switch to the native client 10 driver (newer) it fails
+with optional feature not implemented. Now I'm only guessing here but
+the date column type was added in SQL Server 2008 and I'm guessing
+when it was added they forgot to add something in the driver for full
+date support.
+
+If you use native client 10 and change the insert code to:
+
+    my @values = (
+       [ 1000,     2000, ],
+       [ 'frew',   'wes', ],
+       [ $bug,    '2009-08-10', ],
+    );
+    my @types = (
+    	SQL_VARCHAR, SQL_VARCHAR, SQL_DATE);
+    
+    my $i = 1; my $tuple_status;
+    $s->bind_param_array($i++, $_, {TYPE => $types[$i-2]}) for @values;
+    $s->execute_array({ArrayTupleStatus => $tuple_status});
+
+you workaround the problem.
+
+It is possible when you read this now that DBIx::Class has worked
+around this problem.
+
+=back
 
 =head1 AUTHOR
 
