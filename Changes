@@ -6,6 +6,24 @@ As of $LastChangedDate$
 
 $Revision: 10667 $
 
+=head2 Changes in DBD::ODBC 1.30_1 XXX N, 2011
+
+  [BUG FIXES]
+
+  Added missing order by in 70execute_array.t for drivers which don't
+  guarantee rorder or returned rows matches insert order (most
+  although most do actually work).
+
+  [OTHER]
+
+  Reorganised FAQ for bound parameter issues and added a lot on
+  bound parameter problems.
+
+  Removed some unused variables and added some missing function
+  prototypes
+
+  Added -w option to Makefile.PL to add -Wall.
+
 =head2 Changes in DBD::ODBC 1.29 March 8, 2011
 
   * An official release of the 1.28 development releases.
