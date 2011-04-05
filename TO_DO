@@ -63,3 +63,6 @@ $Revision: 10667 $
 
   Change SQLError to SQLGetDiagRec and perhaps SQLGetDiagField to get
   further details on the error.
+
+  Add more Oracle-specific tests - like calling functions/procedures
+  and in/out params.
