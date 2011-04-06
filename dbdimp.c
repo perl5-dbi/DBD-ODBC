@@ -206,13 +206,12 @@ static void odbc_clear_result_set(SV *sth, imp_sth_t *imp_sth)
 	  strncmp(key, "TYPE", 4) == 0 ||
 	  strncmp(key, "PRECISION", 9) == 0 ||
 	  strncmp(key, "SCALE", 5) == 0 ||
-	  strncmp(key, "NULLABLE", 8) == 0
-	   ) {
-	 hv_delete((HV*)SvRV(sth), key, keylen, G_DISCARD);
-	 if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 4)) {
-             TRACE2(imp_sth, "    ODBC_CLEAR_RESULTS '%s' => %s\n",
-                    key, neatsvpv(value,0));
-	 }
+	  strncmp(key, "NULLABLE", 8) == 0) {
+          (void)hv_delete((HV*)SvRV(sth), key, keylen, G_DISCARD);
+          if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 4)) {
+              TRACE2(imp_sth, "    ODBC_CLEAR_RESULTS '%s' => %s\n",
+                     key, neatsvpv(value,0));
+          }
       }
    }
 
@@ -300,7 +299,7 @@ static void odbc_handle_outparams(imp_sth_t *imp_sth, int debug)
                           "    outparam %s = '%s'\t(len %ld), is numeric end"
                           " of buffer = %d\n",
                           phs->name, SvPV(sv,PL_na), (long)phs->strlen_or_ind,
-                          phs->sql_type, p - pstart);
+                          p - pstart);
                   }
                   SvCUR_set(sv, p - pstart);
               }
@@ -1042,6 +1041,7 @@ int dbd_db_login6(
 int dbd_db_disconnect(SV *dbh, imp_dbh_t *imp_dbh)
 {
    RETCODE rc;
+   D_imp_xxh(dbh);
    D_imp_drh_from_dbh;
    SQLUINTEGER autoCommit = SQL_AUTOCOMMIT_OFF;
 
@@ -1061,22 +1061,28 @@ int dbd_db_disconnect(SV *dbh, imp_dbh_t *imp_dbh)
                      DBIc_TRACE(imp_dbh, DBD_TRACING, 0, 4),
                      DBIc_LOGPIO(imp_dbh));
    }
-   else {
-      if (SQL_AUTOCOMMIT_OFF == autoCommit) {
-	 rc = dbd_db_rollback(dbh, imp_dbh);
-	 if (DBIc_TRACE(imp_dbh, TRANSACTION_TRACING, 0, 3)) {
-             TRACE1(imp_dbh,
-                 "** auto-rollback due to disconnect without commit"
-                 " returned %d\n", rc);
-	 }
-      }
-   }
    rc = SQLDisconnect(imp_dbh->hdbc);
    if (!SQL_SUCCEEDED(rc)) {
-       /* don't change string below without looking elsewhere
-          - it is relied upon */
-      dbd_error(dbh, rc, "db_disconnect/SQLDisconnect");
-      /* if disconnect fails, fall through. Probably not disconnected */
+       char state[SQL_SQLSTATE_SIZE+1];
+       SQLRETURN r;
+
+       r = SQLGetDiagField(SQL_HANDLE_DBC, imp_dbh->hdbc, 1, SQL_DIAG_SQLSTATE,
+                           (SQLCHAR *)state, sizeof(state), NULL);
+       if (strcmp(state, "25000") == 0) {
+           if (DBIc_TRACE(imp_dbh, TRANSACTION_TRACING, 0, 3))
+               TRACE0(imp_dbh, "SQLDisconnect, Transaction in progress\n");
+
+           DBIh_SET_ERR_CHAR(
+               dbh, imp_xxh, "0" /* warning state */, 1,
+               "Disconnect with transaction in progress - rolling back",
+               state, Nullch);
+           r = dbd_db_rollback(dbh, imp_dbh);
+           rc = SQLDisconnect(imp_dbh->hdbc);
+       }
+       if (!SQL_SUCCEEDED(rc)) {
+           dbd_error(dbh, rc, "db_disconnect/SQLDisconnect");
+           /* if disconnect fails, fall through. Probably not disconnected */
+       }
    }
    if (DBIc_TRACE(imp_dbh, CONNECTION_TRACING, 0, 0))
        TRACE1(imp_dbh, "SQLDisconnect=%d\n", rc);
@@ -1183,7 +1189,7 @@ void dbd_error2(
     }
 
     while(henv != SQL_NULL_HENV) {
-        UCHAR sqlstate[SQL_SQLSTATE_SIZE+1];
+        SQLCHAR sqlstate[SQL_SQLSTATE_SIZE+1];
         /*
          *  ODBC spec says ErrorMsg must not be greater than
          *  SQL_MAX_MESSAGE_LENGTH but we concatenate a little
@@ -1258,14 +1264,6 @@ void dbd_error2(
             strcat(ErrorMsg, " (SQL-");
             strcat(ErrorMsg, sqlstate);
             strcat(ErrorMsg, ")");
-            /* maybe bad way to add hint about invalid transaction
-             * state upon disconnect...
-             */
-            if (what && !strcmp(sqlstate, "25000") &&
-                !strcmp(what, "db_disconnect/SQLDisconnect")) {
-                strcat(ErrorMsg, " You need to commit before disconnecting! ");
-            }
-
             if (SQL_SUCCEEDED(err_rc)) {
                 DBIh_SET_ERR_CHAR(h, imp_xxh, "" /* information state */,
                                   1, ErrorMsg, sqlstate, Nullch);
@@ -2543,7 +2541,7 @@ int dbd_st_execute(
         UCHAR* ptr;
 
         if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 5))
-            TRACE1(imp_dbh, "    NEED DATA\n", imp_sth->hstmt);
+            TRACE1(imp_dbh, "    NEED DATA %p\n", imp_sth->hstmt);
 
         while ((rc = SQLParamData(imp_sth->hstmt, (PTR*) &phs)) ==
                SQL_STILL_EXECUTING) {
@@ -3165,12 +3163,20 @@ static void get_param_type(SV *sth, imp_sth_t *imp_sth, phs_t *phs)
        phs->describe_param_called = 1;
        phs->describe_param_status = rc;
        if (!SQL_SUCCEEDED(rc)) {
+           if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 4))
+               TRACE1(imp_dbh, "      Parameter %d\n", phs->idx);
+
            phs->sql_type = default_parameter_type(
                "SQLDescribeParam failed", imp_sth, phs);
            /* show any odbc errors in log */
            AllODBCErrors(imp_sth->henv, imp_sth->hdbc, imp_sth->hstmt,
                          DBIc_TRACE(imp_sth, DBD_TRACING, 0, 3),
                          DBIc_LOGPIO(imp_sth));
+       } else if (phs->described_sql_type == 0) { /* unknown SQL type */
+           /* pretend it failed */
+           phs->describe_param_status = SQL_ERROR;
+           phs->sql_type = default_parameter_type(
+               "SQLDescribeParam returned unknown SQL type", imp_sth, phs);
        } else {
            if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 5))
                PerlIO_printf(DBIc_LOGPIO(imp_dbh),
@@ -3265,12 +3271,12 @@ static int rebind_param(
     SQLLEN strlen_or_ind;      /* parameter length or indicator */
 
     if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 4)) {
-        char *text = neatsvpv(phs->sv, value_len);
         PerlIO_printf(
             DBIc_LOGPIO(imp_dbh),
-            "    +rebind_param %s '%.100s' (size svCUR=%d/SvLEN=%d/max=%ld) "
+            "    +rebind_param %s %.100s (size svCUR=%d/SvLEN=%d/max=%ld) "
             "svtype %u, value type:%d sql type:%d\n",
-            phs->name, text, SvOK(phs->sv) ? SvCUR(phs->sv) : -1,
+            phs->name, neatsvpv(phs->sv, 0),
+            SvOK(phs->sv) ? SvCUR(phs->sv) : -1,
             SvOK(phs->sv) ? SvLEN(phs->sv) : -1 ,phs->maxlen,
             SvTYPE(phs->sv), phs->value_type, phs->sql_type);
     }
@@ -3289,8 +3295,8 @@ static int rebind_param(
         /* ensure room for result, 28 is magic number (see sv_2pv)      */
 #if defined(WITH_UNICODE)
         SvGROW(phs->sv,
-               (phs->maxlen+sizeof(SQLWCHAR) < 28) ?
-               28 : phs->maxlen+sizeof(SQLWCHAR));
+               (phs->maxlen + sizeof(SQLWCHAR) < 28) ?
+               28 : phs->maxlen + sizeof(SQLWCHAR));
 #else
         SvGROW(phs->sv, (phs->maxlen < 28) ? 28 : phs->maxlen+1);
 #endif /* WITH_UNICODE */
@@ -3347,6 +3353,7 @@ static int rebind_param(
 #else  /* !WITH_UNICODE */
     /* value_len has current value length now */
     phs->sv_type = SvTYPE(phs->sv);        /* part of mutation check */
+
     phs->maxlen  = SvLEN(phs->sv) - 1;         /* avail buffer space */
 #endif /* WITH_UNICODE */
 
@@ -3395,8 +3402,10 @@ static int rebind_param(
         (SQL_SUCCEEDED(phs->describe_param_status)) &&
         (phs->requested_type == 0)) {            /* type not overriden */
         default_column_size = phs->param_size;
+    } else if (phs->is_inout) {
+        default_column_size = phs->maxlen;
     } else {
-        if ((phs->sql_type == SQL_VARCHAR) && !phs->is_inout) {
+        if (phs->sql_type == SQL_VARCHAR) {
             default_column_size = phs->biggestparam;
         } else {
             default_column_size = value_len;
@@ -3687,11 +3696,11 @@ static int rebind_param(
     if ((param_io_type == SQL_PARAM_INPUT_OUTPUT) ||
         (!phs->bp_value_ptr) ||                 /* not bound before */
         ((param_io_type == SQL_PARAM_INPUT) &&    /* input parameter */
-         (value_ptr != phs->bp_value_ptr) ||
-         (value_type != phs->value_type) ||
-         (column_size != phs->bp_column_size) ||
-         (d_digits != phs->bp_d_digits) ||
-         (buffer_length != phs->bp_buffer_length))) {
+         ((value_ptr != phs->bp_value_ptr) ||
+          (value_type != phs->value_type) ||
+          (column_size != phs->bp_column_size) ||
+          (d_digits != phs->bp_d_digits) ||
+          (buffer_length != phs->bp_buffer_length)))) {
         if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 5)) {
             PerlIO_printf(
                 DBIc_LOGPIO(imp_dbh),
@@ -3836,7 +3845,7 @@ int dbd_bind_ph(
    if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 4)) {
        PerlIO_printf(
            DBIc_LOGPIO(imp_dbh),
-           "    +dbd_bind_ph(%p, name=%s, value='%.200s', attribs=%s, "
+           "    +dbd_bind_ph(%p, name=%s, value=%.200s, attribs=%s, "
            "sql_type=%d(%s), is_inout=%d, maxlen=%ld\n",
            sth, name, SvOK(newvalue) ? neatsvpv(newvalue, 0) : "undef",
            attribs ? SvPV_nolen(attribs) : "", sql_type,
@@ -3869,51 +3878,40 @@ int dbd_bind_ph(
    if (phs->sv == &PL_sv_undef) { /* first bind for this placeholder */
       phs->value_type = SQL_C_CHAR;             /* default */
       phs->requested_type = sql_type;           /* save type requested */
-
       phs->maxlen = maxlen;                     /* 0 if not inout */
       phs->is_inout = is_inout;
       if (is_inout) {
-	 phs->sv = SvREFCNT_inc(newvalue);  /* point to live var */
-	 ++imp_sth->has_inout_params;
-	 /* build array of phs's so we can deal with out vars fast */
-	 if (!imp_sth->out_params_av)
-	    imp_sth->out_params_av = newAV();
-	 av_push(imp_sth->out_params_av, SvREFCNT_inc(*phs_svp));
+          phs->sv = SvREFCNT_inc(newvalue);  /* point to live var */
+          imp_sth->has_inout_params++;
+          /* build array of phs's so we can deal with out vars fast */
+          if (!imp_sth->out_params_av)
+              imp_sth->out_params_av = newAV();
+          av_push(imp_sth->out_params_av, SvREFCNT_inc(*phs_svp));
       }
    } else if (sql_type) {
        /* parameter attributes are supposed to be sticky until overriden
           so only replace requested_type if sql_type specified.
           See https://rt.cpan.org/Ticket/Display.html?id=46597 */
-      phs->requested_type = sql_type;           /* save type requested */
-   }
-
-
-   /* check later rebinds for any changes */
-   /*
-    * else if (is_inout || phs->is_inout) {
-    * croak("Can't rebind or change param %s in/out mode after first bind", phs->name);
-    * }
-    * */
-   else if (is_inout != phs->is_inout) {
-      croak("Can't rebind or change param %s in/out mode after first bind "
-	    "(%d => %d)", phs->name, phs->is_inout, is_inout);
-   }
-   else if (maxlen && maxlen > phs->maxlen) {
+       phs->requested_type = sql_type;           /* save type requested */
+   } else if (is_inout != phs->is_inout) {
+       croak("Can't rebind or change param %s in/out mode after first bind "
+             "(%d => %d)", phs->name, phs->is_inout, is_inout);
+   } else if (maxlen && maxlen > phs->maxlen) {
        if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 4))
            PerlIO_printf(DBIc_LOGPIO(imp_dbh),
-                         "!attempt to change param %s maxlen (%ld->$ld)\n",
+                         "!attempt to change param %s maxlen (%ld->%ld)\n",
                          phs->name, phs->maxlen, maxlen);
        croak("Can't change param %s maxlen (%ld->%ld) after first bind",
              phs->name, phs->maxlen, maxlen);
    }
 
    if (!is_inout) {    /* normal bind to take a (new) copy of current value */
-      if (phs->sv == &PL_sv_undef)             /* (first time bind) */
-	 phs->sv = newSV(0);
-      sv_setsv(phs->sv, newvalue);
+       if (phs->sv == &PL_sv_undef)             /* (first time bind) */
+           phs->sv = newSV(0);
+       sv_setsv(phs->sv, newvalue);
    } else if (newvalue != phs->sv) {
       if (phs->sv)
-	 SvREFCNT_dec(phs->sv);
+          SvREFCNT_dec(phs->sv);
       phs->sv = SvREFCNT_inc(newvalue);       /* point to live var */
    }
 
@@ -4111,7 +4109,6 @@ static const db_params *
 /*======================================================================*/
 int dbd_db_STORE_attrib(SV *dbh, imp_dbh_t *imp_dbh, SV *keysv, SV *valuesv)
 {
-   D_imp_drh_from_dbh;
    RETCODE rc;
    STRLEN kl;
    STRLEN plen;
@@ -4374,7 +4371,6 @@ int dbd_db_STORE_attrib(SV *dbh, imp_dbh_t *imp_dbh, SV *keysv, SV *valuesv)
 /*======================================================================*/
 SV *dbd_db_FETCH_attrib(SV *dbh, imp_dbh_t *imp_dbh, SV *keysv)
 {
-   D_imp_drh_from_dbh;
    RETCODE rc;
    STRLEN kl;
    char *key = SvPV(keysv,kl);
@@ -4761,8 +4757,8 @@ SV *dbd_st_FETCH_attrib(SV *sth, imp_sth_t *imp_sth, SV *keysv)
 	    while( (sv = hv_iternextsv(hv, &key, &retlen)) != NULL ) {
 	       if (sv != &PL_sv_undef) {
 		  phs_t *phs = (phs_t*)(void*)SvPVX(sv);
-		  hv_store(paramvalues, phs->name, (I32)strlen(phs->name),
-                           newSVsv(phs->sv), 0);
+		  (void)hv_store(paramvalues, phs->name, (I32)strlen(phs->name),
+                         newSVsv(phs->sv), 0);
 	       }
 	    }
 	 }
@@ -4811,9 +4807,9 @@ SV *dbd_st_FETCH_attrib(SV *sth, imp_sth_t *imp_sth, SV *keysv)
                    HV *subh = newHV();
 
                    phs_t *phs = (phs_t*)(void*)SvPVX(sv);
-                   hv_store(subh, "TYPE", 4, newSViv(phs->sql_type), 0);
-                   hv_store(paramtypes, phs->name, (I32)strlen(phs->name),
-                            newRV_noinc((SV *)subh), 0);
+                   (void)hv_store(subh, "TYPE", 4, newSViv(phs->sql_type), 0);
+                   (void)hv_store(paramtypes, phs->name, (I32)strlen(phs->name),
+                                  newRV_noinc((SV *)subh), 0);
 	       }
 	    }
 	 }
@@ -4843,11 +4839,8 @@ SV *dbd_st_FETCH_attrib(SV *sth, imp_sth_t *imp_sth, SV *keysv)
 /*======================================================================*/
 int dbd_st_STORE_attrib(SV *sth, imp_sth_t *imp_sth, SV *keysv, SV *valuesv)
 {
-   D_imp_dbh_from_sth;
    STRLEN kl;
-   STRLEN vl;
    char *key = SvPV(keysv,kl);
-   char *value = SvPV(valuesv, vl);
    T_st_params *par;
 
    for (par = S_st_store_params; par->len > 0; par++)
@@ -5260,7 +5253,7 @@ IV odbc_st_lob_read(
     SQLRETURN rc;
     imp_fbh_t *fbh;
     SQLSMALLINT col_type;
-    IV retlen;
+    IV retlen = 0;
     char *buf = SvPV_nolen(data);
 
     fbh = &imp_sth->fbh[colno-1];
@@ -5872,8 +5865,8 @@ static int post_connect(
                TRACE1(imp_dbh,
                       "    Setting cursor type to: %"UVuf"\n", odbc_cursortype);
            /* delete odbc_cursortype so we don't see it again via STORE */
-           hv_delete((HV*)SvRV(attr), "odbc_cursortype",
-                     strlen("odbc_cursortype"), G_DISCARD);
+           (void)hv_delete((HV*)SvRV(attr), "odbc_cursortype",
+                           strlen("odbc_cursortype"), G_DISCARD);
 
            rc = SQLSetConnectAttr(imp_dbh->hdbc,(SQLINTEGER)SQL_CURSOR_TYPE,
                                   (SQLPOINTER)odbc_cursortype,
@@ -5898,8 +5891,8 @@ static int post_connect(
                TRACE1(imp_dbh, "    Setting DBH query timeout to %d\n",
                       (int)odbc_timeout);
            /* delete odbc_cursortype so we don't see it again via STORE */
-           hv_delete((HV*)SvRV(attr), "odbc_query_timeout",
-                     strlen("odbc_query_timeout"), G_DISCARD);
+           (void)hv_delete((HV*)SvRV(attr), "odbc_query_timeout",
+                           strlen("odbc_query_timeout"), G_DISCARD);
        }
    }
 
@@ -5917,8 +5910,8 @@ static int post_connect(
                TRACE1(imp_dbh, "    Setting DBH putdata_start to %d\n",
                       (int)putdata_start_value);
            /* delete odbc_putdata_start so we don't see it again via STORE */
-           hv_delete((HV*)SvRV(attr), "odbc_putdata_start",
-                     strlen("odbc_putdata_start"), G_DISCARD);
+           (void)hv_delete((HV*)SvRV(attr), "odbc_putdata_start",
+                           strlen("odbc_putdata_start"), G_DISCARD);
        }
    }
 
@@ -5938,8 +5931,8 @@ static int post_connect(
 		      "    Setting DBH default column display size to %d\n",
                       (int)column_display_size_value);
            /* delete odbc_column_display_size so we don't see it again via STORE */
-           hv_delete((HV*)SvRV(attr), "odbc_column_display_size",
-                     strlen("odbc_column_display_size"), G_DISCARD);
+           (void)hv_delete((HV*)SvRV(attr), "odbc_column_display_size",
+                           strlen("odbc_column_display_size"), G_DISCARD);
        }
    }
 
@@ -5959,8 +5952,8 @@ static int post_connect(
 		      "    Setting UTF8_ON to %d\n",
                       (int)column_display_size_value);
            /* delete odbc_utf8_on so we don't see it again via STORE */
-           hv_delete((HV*)SvRV(attr), "odbc_utf8_on",
-                     strlen("odbc_utf8_on"), G_DISCARD);
+           (void)hv_delete((HV*)SvRV(attr), "odbc_utf8_on",
+                           strlen("odbc_utf8_on"), G_DISCARD);
        }
    }
 
@@ -5982,7 +5975,7 @@ static SQLSMALLINT default_parameter_type(
            or SQL_WLONGVARCHAR. Who knows what large is, but for now it is
            4000 */
         /*
-          Changed to 2000 for the varchar max swtich as in a unicode build we
+          Changed to 2000 for the varchar max switch as in a unicode build we
           can change a string of 'x' x 2001 into 4002 wide chrs and SQL Server
           will also return invalid precision in this case on a varchar(4000).
           Of course, being SQL Server, it also has this problem with the
