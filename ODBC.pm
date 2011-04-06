@@ -1537,6 +1537,13 @@ ODBC inherently allows this. Therefore you can do:
   # some DBDs will ignore the type in the following, DBD::ODBC does not
   $sth->bind_param(1, $data, DBI::SQL_VARCHAR);
 
+=head3 disconnect and transactions
+
+DBI does not define whether a driver commits or rolls back any
+outstanding transaction when disconnect is called. As such DBD::ODBC
+cannot deviate from the specification but you should know it rolls
+back an uncommitted transaction when disconnect is called if
+SQLDisconnect returns state 25000 (transaction in progress).
 
 =head2 Unicode
 
