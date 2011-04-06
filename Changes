@@ -6,23 +6,48 @@ As of $LastChangedDate$
 
 $Revision: 10667 $
 
-=head2 Changes in DBD::ODBC 1.30_1 XXX N, 2011
+=head2 Changes in DBD::ODBC 1.30_1 April 6, 2011
 
   [BUG FIXES]
 
-  Added missing order by in 70execute_array.t for drivers which don't
-  guarantee rorder or returned rows matches insert order (most
-  although most do actually work).
+  * Fixed some compiler warnings shown with -Wall including some
+    printf formats that had extra/missing arguments.
+
+  * Fixed t/70execute_array.t which was missing an "order by" in the
+    check_data sub which could cause failures for drivers not
+    returning the rows in the order they were inserted.
+
+  * Minor fix to Makefile.PL to avoid issuing variable used in void
+    context.
+
+  [CHANGE IN BEHAVIOR]
+
+  * DBD::ODBC used to quietly rollback any transactions when
+    disconnect was called and AutoCommit was off. This can mask a
+    problem and leads to different behavior when disconnect is called
+    vs not calling disconnect (where you get a warning). This release
+    issues a warning if you call disconnect and a transaction is in
+    progress then it is rolled back.
+
+
+  [ENHANCEMENTS]
+
+  * added -w option to Makefile.PL to add "-Wall" to CCFLAGS and
+    -fno-strict-aliasing so I can find warnings.
+
+  * Cope with broken ODBC drivers that describe a parameter as SQL
+    type 0.
 
   [OTHER]
 
-  Reorganised FAQ for bound parameter issues and added a lot on
-  bound parameter problems.
+  * Add "disconnect and transactions" to pod describing what DBD::ODBC
+    does if you call disconnect with an outstanding transaction.
 
-  Removed some unused variables and added some missing function
-  prototypes
+  * Reorganised FAQ for bound parameter issues and added a lot on
+    bound parameter problems.
 
-  Added -w option to Makefile.PL to add -Wall.
+  * Removed some unused variables and added some missing function
+    prototypes
 
 =head2 Changes in DBD::ODBC 1.29 March 8, 2011
 
