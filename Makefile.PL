@@ -1048,6 +1048,7 @@ sub find_unixodbc
 # Following generates
 # Useless use of private variable in void context at Makefile.PL
 # but is required
+no warnings 'void';
 $rv;
 
 # ====================================================================
