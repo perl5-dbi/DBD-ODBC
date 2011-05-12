@@ -1150,6 +1150,31 @@ around this problem.
 
 =back
 
+=head2 Why do I get data truncated errors with type_info and Firebird ODBC Driver?
+
+The Firebird ODBC driver from the open source Firebird project version
+02.01.0100 (as reported in ODBC via SQLGetInfo) seems to report the
+length of the TYPE_NAME field for types -9 'VARCHAR(x) CHARACTER SET
+UNICODE_' and -10 'BLOB SUB_TYPE TEXT CHARACTER SET ' as 34 but then
+attempt to write 36 characters to them.
+
+Unfortunately this is an error via DBI and due to the way type_info
+is implemented (where it retrieves all the types the first time you
+query any type) it stops you querying any type even those which are
+not -9 or -10. Unless you need the TYPE_NAME field this should not matter
+to you in which case you can set LongTruncOk before retrieving type_info:
+
+  my $ti;
+  {
+    local $dbh->{LongTruncOk} = 1;
+    $ti = $dbh->type_info_all;
+  }
+
+You will need to do something similar if you use the statements
+attributes like TYPE the first time you use them.
+
+I reported this issue at http://tracker.firebirdsql.org/browse/ODBC-122.
+
 =head1 AUTHOR
 
 Parts of this document were written by Tim Bunce,
