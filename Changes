@@ -56,6 +56,8 @@ $Revision: 10667 $
   * Reorganised FAQ for bound parameter issues and added a lot on
     bound parameter problems.
 
+  * Added new FAQ entry for Firebird
+
   * Removed some unused variables and added some missing function
     prototypes
 
