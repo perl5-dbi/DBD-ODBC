@@ -2942,7 +2942,7 @@ AV *dbd_st_fetch(SV *sth, imp_sth_t *imp_sth)
             * for the truncated data.
             */
            sv_setpvn(sv, (char*)fbh->data, fbh->ColDisplaySize);
-       }  {
+       }  else {
            switch(fbh->ftype) {
 #ifdef TIMESTAMP_STRUCT /* iODBC doesn't define this */
              case SQL_C_TIMESTAMP:
