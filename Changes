@@ -29,7 +29,17 @@ $Revision: 10667 $
     issues a warning if you call disconnect and a transaction is in
     progress then it is rolled back.
 
-
+  * DBD::ODBC used to bind char/varchar/longvarchar columns as SQL_CHAR
+    meaning that in the unicode build of DBD::ODBC the bound column
+    data would be returned 8bit in whatever character-set (codepage) the
+    data was in, in the database. This was inconvenient and arguably a
+    mistake. Columns like nchar/nvarchar etc were bound as SQL_WCHAR and
+    returned as Unicode. This release changes the behaviour in a unicode
+    build of DBD::ODBC to bind all char columns as SQL_WCHAR. This may
+    inconvenience a few people who expected 8bit chars back, knew the
+    char set and decoded them (sorry). See odbc_old_unicode to return
+    to old behaviour.
+    
   [ENHANCEMENTS]
 
   * added -w option to Makefile.PL to add "-Wall" to CCFLAGS and

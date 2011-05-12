@@ -135,6 +135,7 @@ $DBD::ODBC::VERSION = '1.30_1';
                 odbc_force_rebind => undef, # sth and dbh
                 odbc_async_exec => undef, # sth and dbh
                 odbc_exec_direct => undef,
+                odbc_old_unicode => undef,
                 odbc_SQL_ROWSET_SIZE => undef,
                 odbc_SQL_DRIVER_ODBC_VER => undef,
                 odbc_cursortype => undef,
@@ -498,7 +499,9 @@ $DBD::ODBC::VERSION = '1.30_1';
                 odbc_query_timeout => undef, # sth and dbh
                 odbc_putdata_start => undef, # sth and dbh
                 odbc_column_display_size => undef, # sth and dbh
-                odbc_utf8_on => undef # sth and dbh
+                odbc_utf8_on => undef, # sth and dbh
+                odbc_exec_direct => undef, # sth and dbh
+                odbc_old_unicode => undef, # sth and dbh
                };
     }
 
@@ -990,6 +993,23 @@ B<NOTE:> Even if you build DBD::ODBC with unicode support you can
 still not pass unicode strings to the prepare method if you also set
 odbc_exec_direct. This is a restriction in this attribute which is
 unavoidable.
+
+=head3 odbc_old_unicode
+
+defaults to off. if set to true returns DBD::ODBC to the old unicode behavior in 1.29 and earlier.
+
+By default DBD::ODBC now binds all char columns as SQL_WCHARs meaning the driver is asked to
+return the bound data as wide (Unicode) characters encoded in UCS2. So long as the driver supports
+the ODBC Unicode API properly this should mean you get your data back correctly in Perl even if it
+is in a character set (codepage) different from the one you are working in.
+
+However, if you wrote code using DBD::ODBC 1.29 or earlier and knew DBD::ODBC bound
+varchar/longvarchar columns as SQL_CHARs and decoded them yourself the new behaviour will
+adversely affect you (sorry). To revret to the old behaviour set odbc_old_unicode to true.
+
+See the stackoverflow question at L<http://stackoverflow.com/questions/5912082>,
+the RT at L<http://rt.cpan.org/Public/Bug/Display.html?id=67994>
+and lastly a small discussion on dbi-dev at L<http://www.nntp.perl.org/group/perl.dbi.dev/2011/05/msg6559.html>.
 
 =head3 odbc_SQL_DRIVER_ODBC_VER
 

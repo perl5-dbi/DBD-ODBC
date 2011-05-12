@@ -129,6 +129,7 @@ int dbd_st_finish(SV *sth, imp_sth_t *imp_sth);
 #define ODBC_COLUMN_DISPLAY_SIZE       0x8340
 #define ODBC_UTF8_ON                   0x8341
 #define ODBC_FORCE_BIND_TYPE           0x8342
+#define ODBC_OLD_UNICODE               0x8343
 
 /* This is the bind type for parameters we fall back to if the bind_param
    method was not given a parameter type and SQLDescribeParam is not supported
@@ -1782,7 +1783,8 @@ int odbc_st_prepare_sv(
    imp_sth->odbc_column_display_size = imp_dbh->odbc_column_display_size;
    imp_sth->odbc_utf8_on = imp_dbh->odbc_utf8_on;
    imp_sth->odbc_exec_direct = imp_dbh->odbc_exec_direct;
-
+   imp_sth->odbc_old_unicode = imp_dbh->odbc_old_unicode;
+   
    if (DBIc_TRACE(imp_dbh, DBD_TRACING, 0, 5)) {
        TRACE1(imp_dbh, "    initializing sth query timeout to %ld\n",
               (long)imp_dbh->odbc_query_timeout);
@@ -1818,6 +1820,21 @@ int odbc_st_prepare_sv(
 	 imp_sth->odbc_exec_direct = SvIV(*attr_sv) != 0;
       }
    }
+   
+   {
+      /*
+       * allow setting of odbc_old_unicode in prepare() or overriding
+       */
+       SV **attr_sv;
+      /* if the attribute is there, let it override what the default
+       * value from the dbh is (set above).
+       */
+      if ((attr_sv =
+           DBD_ATTRIB_GET_SVP(attribs, "odbc_old_unicode",
+                              (I32)strlen("odbc_old_unicode"))) != NULL) {
+	         imp_sth->odbc_old_unicode = SvIV(*attr_sv) != 0;
+      }
+   }   
    /* scan statement for '?', ':1' and/or ':foo' style placeholders	*/
    dbd_preparse(imp_sth, sql);
 
@@ -2197,6 +2214,12 @@ int dbd_describe(SV *h, imp_sth_t *imp_sth, int more)
         }
 # if defined(WITH_UNICODE)
         fbh->ColLength += 1; /* add extra byte for double nul terminator */
+        
+        /* Unless old unicode behavior map SQL_CHAR to SQL_WCHAR */
+        if (!imp_sth->odbc_old_unicode && 
+        	 (fbh->ColSqlType == SQL_CHAR)) {
+        	  fbh->ColSqlType = SQL_WCHAR;
+        }
 # endif
 #else  /* !SQL_COLUMN_LENGTH */
         fbh->ColLength = imp_sth->odbc_column_display_size;
@@ -4039,6 +4062,7 @@ static db_params S_db_storeOptions[] =  {
    { "odbc_putdata_start", ODBC_PUTDATA_START },
    { "odbc_column_display_size", ODBC_COLUMN_DISPLAY_SIZE },
    { "odbc_utf8_on", ODBC_UTF8_ON },
+   { "odbc_old_unicode", ODBC_OLD_UNICODE },
    { NULL },
 };
 
@@ -4061,6 +4085,7 @@ static db_params S_db_fetchOptions[] =  {
    { "odbc_utf8_on", ODBC_UTF8_ON},
    { "odbc_has_unicode", ODBC_HAS_UNICODE},
    { "odbc_out_connect_string", ODBC_OUTCON_STR},
+   { "odbc_old_unicode", ODBC_OLD_UNICODE},
    { NULL }
 };
 
@@ -4206,6 +4231,11 @@ int dbd_db_STORE_attrib(SV *dbh, imp_dbh_t *imp_dbh, SV *keysv, SV *valuesv)
 	  */
 	 imp_dbh->odbc_exec_direct = SvTRUE(valuesv);
 	 break;
+	 
+      case ODBC_OLD_UNICODE:
+	       bSetSQLConnectionOption = FALSE;
+      	 imp_dbh->odbc_old_unicode = SvTRUE(valuesv);
+      	 break;	 
 
       case ODBC_ASYNC_EXEC:
 	 bSetSQLConnectionOption = FALSE;
@@ -4453,6 +4483,10 @@ SV *dbd_db_FETCH_attrib(SV *dbh, imp_dbh_t *imp_dbh, SV *keysv)
 
       case ODBC_EXEC_DIRECT:
         retsv = newSViv(imp_dbh->odbc_exec_direct);
+        break;
+        
+      case ODBC_OLD_UNICODE:
+        retsv = newSViv(imp_dbh->odbc_old_unicode);
         break;
 
       case ODBC_ASYNC_EXEC:
@@ -5812,6 +5846,7 @@ static int post_connect(
    imp_dbh->odbc_column_display_size = 2001;
    imp_dbh->odbc_utf8_on = 0;
    imp_dbh->odbc_exec_direct = 0; /* default to not having SQLExecDirect used */
+   imp_dbh->odbc_old_unicode = 0;
    imp_dbh->RowCacheSize = 1;	/* default value for now */
 
    if (!strcmp(imp_dbh->odbc_dbms_name, "Microsoft SQL Server")) {

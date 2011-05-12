@@ -105,6 +105,7 @@ $sth->finish();
 
 # turn off error warnings.  We expect one here (invalid transaction state)
 $dbh->{RaiseError} = 0;
+$dbh->{PrintWarn} = 0;
 $dbh->{PrintError} = 0;
 
 ok( $dbh->{$_}, $_) for 'Active';
