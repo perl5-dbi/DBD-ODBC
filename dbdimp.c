@@ -28,6 +28,7 @@
  *   http://perl.active-venture.com/pod/perlapi-svfunctions.html
  * Formatted Printing of IVs, UVs, and NVs
  *   http://perldoc.perl.org/perlguts.html#Formatted-Printing-of-IVs,-UVs,-and-NVs
+ *   http://cpansearch.perl.org/src/RURBAN/illguts-0.36/index.html
  * Internal replacements for standard C library functions:
  * http://search.cpan.org/~jesse/perl-5.12.1/pod/perlclib.pod
  * http://search.cpan.org/dist/Devel-PPPort/PPPort.pm
@@ -2941,7 +2942,7 @@ AV *dbd_st_fetch(SV *sth, imp_sth_t *imp_sth)
             * for the truncated data.
             */
            sv_setpvn(sv, (char*)fbh->data, fbh->ColDisplaySize);
-       } else {
+       }  {
            switch(fbh->ftype) {
 #ifdef TIMESTAMP_STRUCT /* iODBC doesn't define this */
              case SQL_C_TIMESTAMP:
