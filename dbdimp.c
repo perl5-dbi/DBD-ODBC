@@ -131,6 +131,7 @@ int dbd_st_finish(SV *sth, imp_sth_t *imp_sth);
 #define ODBC_UTF8_ON                   0x8341
 #define ODBC_FORCE_BIND_TYPE           0x8342
 #define ODBC_OLD_UNICODE               0x8343
+#define ODBC_DESCRIBE_PARAMETERS       0x8344
 
 /* This is the bind type for parameters we fall back to if the bind_param
    method was not given a parameter type and SQLDescribeParam is not supported
@@ -1785,7 +1786,8 @@ int odbc_st_prepare_sv(
    imp_sth->odbc_utf8_on = imp_dbh->odbc_utf8_on;
    imp_sth->odbc_exec_direct = imp_dbh->odbc_exec_direct;
    imp_sth->odbc_old_unicode = imp_dbh->odbc_old_unicode;
-   
+   imp_sth->odbc_describe_parameters = imp_dbh->odbc_describe_parameters;
+
    if (DBIc_TRACE(imp_dbh, DBD_TRACING, 0, 5)) {
        TRACE1(imp_dbh, "    initializing sth query timeout to %ld\n",
               (long)imp_dbh->odbc_query_timeout);
@@ -1821,21 +1823,38 @@ int odbc_st_prepare_sv(
 	 imp_sth->odbc_exec_direct = SvIV(*attr_sv) != 0;
       }
    }
-   
+
    {
-      /*
-       * allow setting of odbc_old_unicode in prepare() or overriding
-       */
+       /*
+        * allow setting of odbc_old_unicode in prepare() or overriding
+        */
        SV **attr_sv;
-      /* if the attribute is there, let it override what the default
-       * value from the dbh is (set above).
-       */
-      if ((attr_sv =
-           DBD_ATTRIB_GET_SVP(attribs, "odbc_old_unicode",
-                              (I32)strlen("odbc_old_unicode"))) != NULL) {
-	         imp_sth->odbc_old_unicode = SvIV(*attr_sv) != 0;
-      }
-   }   
+       /* if the attribute is there, let it override what the default
+        * value from the dbh is (set above).
+        */
+       if ((attr_sv =
+            DBD_ATTRIB_GET_SVP(attribs, "odbc_old_unicode",
+                               (I32)strlen("odbc_old_unicode"))) != NULL) {
+           imp_sth->odbc_old_unicode = SvIV(*attr_sv) != 0;
+       }
+   }
+
+   {
+       /*
+        * allow setting of odbc_describe_parameters in prepare() or overriding
+        */
+       SV **attr_sv;
+       /* if the attribute is there, let it override what the default
+        * value from the dbh is (set above).
+        */
+       if ((attr_sv =
+            DBD_ATTRIB_GET_SVP(
+                attribs, "odbc_describe_parameters",
+                (I32)strlen("odbc_describe_parameters"))) != NULL) {
+           imp_sth->odbc_describe_parameters = SvIV(*attr_sv) != 0;
+       }
+   }
+
    /* scan statement for '?', ':1' and/or ':foo' style placeholders	*/
    dbd_preparse(imp_sth, sql);
 
@@ -2215,9 +2234,9 @@ int dbd_describe(SV *h, imp_sth_t *imp_sth, int more)
         }
 # if defined(WITH_UNICODE)
         fbh->ColLength += 1; /* add extra byte for double nul terminator */
-        
+
         /* Unless old unicode behavior map SQL_CHAR to SQL_WCHAR */
-        if (!imp_sth->odbc_old_unicode && 
+        if (!imp_sth->odbc_old_unicode &&
         	 (fbh->ColSqlType == SQL_CHAR)) {
         	  fbh->ColSqlType = SQL_WCHAR;
         }
@@ -4064,6 +4083,7 @@ static db_params S_db_storeOptions[] =  {
    { "odbc_column_display_size", ODBC_COLUMN_DISPLAY_SIZE },
    { "odbc_utf8_on", ODBC_UTF8_ON },
    { "odbc_old_unicode", ODBC_OLD_UNICODE },
+   { "odbc_describe_parameters", ODBC_DESCRIBE_PARAMETERS },
    { NULL },
 };
 
@@ -4086,7 +4106,7 @@ static db_params S_db_fetchOptions[] =  {
    { "odbc_utf8_on", ODBC_UTF8_ON},
    { "odbc_has_unicode", ODBC_HAS_UNICODE},
    { "odbc_out_connect_string", ODBC_OUTCON_STR},
-   { "odbc_old_unicode", ODBC_OLD_UNICODE},
+   { "odbc_describe_parameters", ODBC_DESCRIBE_PARAMETERS},
    { NULL }
 };
 
@@ -4135,255 +4155,260 @@ static const db_params *
 /*======================================================================*/
 int dbd_db_STORE_attrib(SV *dbh, imp_dbh_t *imp_dbh, SV *keysv, SV *valuesv)
 {
-   RETCODE rc;
-   STRLEN kl;
-   STRLEN plen;
-   char *key = SvPV(keysv,kl);
-   int on;
-   SQLPOINTER vParam;
-   const db_params *pars;
-   SQLINTEGER attr_length = SQL_IS_UINTEGER;
-   int bSetSQLConnectionOption;
+    RETCODE rc;
+    STRLEN kl;
+    STRLEN plen;
+    char *key = SvPV(keysv,kl);
+    int on;
+    SQLPOINTER vParam;
+    const db_params *pars;
+    SQLINTEGER attr_length = SQL_IS_UINTEGER;
+    int bSetSQLConnectionOption;
 
-   if ((pars = S_dbOption(S_db_storeOptions, key, kl)) == NULL) {
-       if (DBIc_TRACE(imp_dbh, DBD_TRACING, 0, 3))
-           TRACE1(imp_dbh,
-                  "    !!DBD::ODBC unsupported attribute passed (%s)\n", key);
+    if ((pars = S_dbOption(S_db_storeOptions, key, kl)) == NULL) {
+        if (DBIc_TRACE(imp_dbh, DBD_TRACING, 0, 3))
+            TRACE1(imp_dbh,
+                   "    !!DBD::ODBC unsupported attribute passed (%s)\n", key);
 
-      return FALSE;
-   }
+        return FALSE;
+    }
 
-   bSetSQLConnectionOption = TRUE;
-   switch(pars->fOption)
-   {
+    bSetSQLConnectionOption = TRUE;
+    switch(pars->fOption)
+    {
       case SQL_ATTR_LOGIN_TIMEOUT:
       case SQL_ATTR_TXN_ISOLATION:
       case SQL_ROWSET_SIZE:                     /* not ODBC 3 */
         vParam = (SQLPOINTER)SvIV(valuesv);
-	 break;
+        break;
       case SQL_OPT_TRACEFILE:
-	 vParam = (SQLPOINTER) SvPV(valuesv, plen);
-         attr_length = SQL_NTS;
-	 break;
+        vParam = (SQLPOINTER) SvPV(valuesv, plen);
+        attr_length = SQL_NTS;
+        break;
 
       case ODBC_IGNORE_NAMED_PLACEHOLDERS:
-	 bSetSQLConnectionOption = FALSE;
-	 /*
-	  * set value to ignore placeholders.  Will affect all
-	  * statements from here on.
-	  */
-	 imp_dbh->odbc_ignore_named_placeholders = SvTRUE(valuesv);
-	 break;
+        bSetSQLConnectionOption = FALSE;
+        /*
+         * set value to ignore placeholders.  Will affect all
+         * statements from here on.
+         */
+        imp_dbh->odbc_ignore_named_placeholders = SvTRUE(valuesv);
+        break;
 
       case ODBC_DEFAULT_BIND_TYPE:
-	 bSetSQLConnectionOption = FALSE;
-	 /*
-	  * set value of default bind type.  Default is SQL_VARCHAR,
-	  * but setting to 0 will cause SQLDescribeParam to be used.
-	  */
-	 imp_dbh->odbc_default_bind_type = (SQLSMALLINT)SvIV(valuesv);
-	 break;
+        bSetSQLConnectionOption = FALSE;
+        /*
+         * set value of default bind type.  Default is SQL_VARCHAR,
+         * but setting to 0 will cause SQLDescribeParam to be used.
+         */
+        imp_dbh->odbc_default_bind_type = (SQLSMALLINT)SvIV(valuesv);
+        break;
 
       case ODBC_FORCE_BIND_TYPE:
-	 bSetSQLConnectionOption = FALSE;
-	 /*
-	  * set value of the forced bind type.  Default is 0
-          * which means the bind type is not forced to be anything -
-          * we will use SQLDescribeParam or fall back on odbc_default_bind_type
-	  */
-	 imp_dbh->odbc_force_bind_type = (SQLSMALLINT)SvIV(valuesv);
-	 break;
+        bSetSQLConnectionOption = FALSE;
+        /*
+         * set value of the forced bind type.  Default is 0
+         * which means the bind type is not forced to be anything -
+         * we will use SQLDescribeParam or fall back on odbc_default_bind_type
+         */
+        imp_dbh->odbc_force_bind_type = (SQLSMALLINT)SvIV(valuesv);
+        break;
 
       case ODBC_FORCE_REBIND:
-	 bSetSQLConnectionOption = FALSE;
-	 /*
-	  * set value to force rebind
-	  */
-	 imp_dbh->odbc_force_rebind = SvTRUE(valuesv);
-	 break;
+        bSetSQLConnectionOption = FALSE;
+        /*
+         * set value to force rebind
+         */
+        imp_dbh->odbc_force_rebind = SvTRUE(valuesv);
+        break;
 
       case ODBC_QUERY_TIMEOUT:
-	 bSetSQLConnectionOption = FALSE;
-	 imp_dbh->odbc_query_timeout = (SQLINTEGER)SvIV(valuesv);
-	 break;
+        bSetSQLConnectionOption = FALSE;
+        imp_dbh->odbc_query_timeout = (SQLINTEGER)SvIV(valuesv);
+        break;
 
       case ODBC_PUTDATA_START:
-	 bSetSQLConnectionOption = FALSE;
-	 imp_dbh->odbc_putdata_start = SvIV(valuesv);
-	 break;
+        bSetSQLConnectionOption = FALSE;
+        imp_dbh->odbc_putdata_start = SvIV(valuesv);
+        break;
 
       case ODBC_COLUMN_DISPLAY_SIZE:
-	 bSetSQLConnectionOption = FALSE;
-	 imp_dbh->odbc_column_display_size = SvIV(valuesv);
-	 break;
+        bSetSQLConnectionOption = FALSE;
+        imp_dbh->odbc_column_display_size = SvIV(valuesv);
+        break;
 
       case ODBC_UTF8_ON:
-	 bSetSQLConnectionOption = FALSE;
-	 imp_dbh->odbc_utf8_on = SvIV(valuesv);
-	 break;
+        bSetSQLConnectionOption = FALSE;
+        imp_dbh->odbc_utf8_on = SvIV(valuesv);
+        break;
 
       case ODBC_EXEC_DIRECT:
-	 bSetSQLConnectionOption = FALSE;
-	 /*
-	  * set value of odbc_exec_direct.  Non-zero will
-	  * make prepare, essentially a noop and make execute
-	  * use SQLExecDirect.  This is to support drivers that
-	  * _only_ support SQLExecDirect.
-	  */
-	 imp_dbh->odbc_exec_direct = SvTRUE(valuesv);
-	 break;
-	 
+        bSetSQLConnectionOption = FALSE;
+        /*
+         * set value of odbc_exec_direct.  Non-zero will
+         * make prepare, essentially a noop and make execute
+         * use SQLExecDirect.  This is to support drivers that
+         * _only_ support SQLExecDirect.
+         */
+        imp_dbh->odbc_exec_direct = SvTRUE(valuesv);
+        break;
+
       case ODBC_OLD_UNICODE:
-	       bSetSQLConnectionOption = FALSE;
-      	 imp_dbh->odbc_old_unicode = SvTRUE(valuesv);
-      	 break;	 
+        bSetSQLConnectionOption = FALSE;
+        imp_dbh->odbc_old_unicode = SvTRUE(valuesv);
+        break;
+
+      case ODBC_DESCRIBE_PARAMETERS:
+        bSetSQLConnectionOption = FALSE;
+        imp_dbh->odbc_describe_parameters = SvTRUE(valuesv);
+        break;
 
       case ODBC_ASYNC_EXEC:
-	 bSetSQLConnectionOption = FALSE;
-	 /*
-	  * set asynchronous execution.  It can only be turned on if
-	  * the driver supports it, but will fail silently.
-	  */
-	 if (SvTRUE(valuesv)) {
-	    /* Only bother setting the attribute if it's not already set! */
-	    if (imp_dbh->odbc_async_exec)
-	       break;
+        bSetSQLConnectionOption = FALSE;
+        /*
+         * set asynchronous execution.  It can only be turned on if
+         * the driver supports it, but will fail silently.
+         */
+        if (SvTRUE(valuesv)) {
+            /* Only bother setting the attribute if it's not already set! */
+            if (imp_dbh->odbc_async_exec)
+                break;
 
-	    /*
-	     * Determine which method of async execution this
-	     * driver allows -- per-connection or per-statement
-	     */
-	    rc = SQLGetInfo(imp_dbh->hdbc,
-			    SQL_ASYNC_MODE,
-			    &imp_dbh->odbc_async_type,
-			    sizeof(imp_dbh->odbc_async_type),
-			    NULL);
-	    /*
-	     * Normally, we'd do a if (!SQL_ok(rc)) ... here.
-	     * Unfortunately, if the driver doesn't support async
-	     * mode, it may return an error here.  There doesn't
-	     * seem to be any other way to check (other than doing
-	     * a special check for the SQLSTATE).  We'll just default
-	     * to doing nothing and not bother checking errors.
-	     */
+            /*
+             * Determine which method of async execution this
+             * driver allows -- per-connection or per-statement
+             */
+            rc = SQLGetInfo(imp_dbh->hdbc,
+                            SQL_ASYNC_MODE,
+                            &imp_dbh->odbc_async_type,
+                            sizeof(imp_dbh->odbc_async_type),
+                            NULL);
+            /*
+             * Normally, we'd do a if (!SQL_ok(rc)) ... here.
+             * Unfortunately, if the driver doesn't support async
+             * mode, it may return an error here.  There doesn't
+             * seem to be any other way to check (other than doing
+             * a special check for the SQLSTATE).  We'll just default
+             * to doing nothing and not bother checking errors.
+             */
 
-	    if (imp_dbh->odbc_async_type == SQL_AM_CONNECTION){
-	       /*
-		* Driver has per-connection async option.  Set it
-		* now in the dbh.
-		*/
+            if (imp_dbh->odbc_async_type == SQL_AM_CONNECTION){
+                /*
+                 * Driver has per-connection async option.  Set it
+                 * now in the dbh.
+                 */
                 if (DBIc_TRACE(imp_dbh, DBD_TRACING, 0, 4))
                     TRACE0(imp_dbh,
                            "    Supported AsyncType is SQL_AM_CONNECTION\n");
-	       rc = SQLSetConnectAttr(imp_dbh->hdbc,
-                                      SQL_ATTR_ASYNC_ENABLE,
-                                      (SQLPOINTER)SQL_ASYNC_ENABLE_ON,
-                                      SQL_IS_UINTEGER);
-	       if (!SQL_SUCCEEDED(rc)) {
-		  dbd_error(dbh, rc, "db_STORE/SQLSetConnectAttr");
-		  return FALSE;
-	       }
-	       imp_dbh->odbc_async_exec = 1;
-	    }
-	    else if (imp_dbh->odbc_async_type == SQL_AM_STATEMENT){
-	       /*
-		* Driver has per-statement async option.  Just set
-		* odbc_async_exec and the rest will be handled by
-		* dbd_st_prepare.
-		*/
+                rc = SQLSetConnectAttr(imp_dbh->hdbc,
+                                       SQL_ATTR_ASYNC_ENABLE,
+                                       (SQLPOINTER)SQL_ASYNC_ENABLE_ON,
+                                       SQL_IS_UINTEGER);
+                if (!SQL_SUCCEEDED(rc)) {
+                    dbd_error(dbh, rc, "db_STORE/SQLSetConnectAttr");
+                    return FALSE;
+                }
+                imp_dbh->odbc_async_exec = 1;
+            }
+            else if (imp_dbh->odbc_async_type == SQL_AM_STATEMENT){
+                /*
+                 * Driver has per-statement async option.  Just set
+                 * odbc_async_exec and the rest will be handled by
+                 * dbd_st_prepare.
+                 */
                 if (DBIc_TRACE(imp_dbh, DBD_TRACING, 0, 4))
                     TRACE0(imp_dbh,
                            "    Supported AsyncType is SQL_AM_STATEMENT\n");
-	       imp_dbh->odbc_async_exec = 1;
-	    }
-	    else {   /* (imp_dbh->odbc_async_type == SQL_AM_NONE) */
-	       /*
-		* We're out of luck.
-		*/
+                imp_dbh->odbc_async_exec = 1;
+            }
+            else {   /* (imp_dbh->odbc_async_type == SQL_AM_NONE) */
+                /*
+                 * We're out of luck.
+                 */
                 if (DBIc_TRACE(imp_dbh, DBD_TRACING, 0, 4))
                     TRACE0(imp_dbh, "    Supported AsyncType is SQL_AM_NONE\n");
-	       imp_dbh->odbc_async_exec = 0;
-	       return FALSE;
-	    }
-	 } else {
-	    /* Only bother turning it off if it was previously set... */
-	    if (imp_dbh->odbc_async_exec == 1) {
+                imp_dbh->odbc_async_exec = 0;
+                return FALSE;
+            }
+        } else {
+            /* Only bother turning it off if it was previously set... */
+            if (imp_dbh->odbc_async_exec == 1) {
 
-	       /* We only need to do anything here if odbc_async_type is
-		* SQL_AM_CONNECTION since the per-statement async type
-		* is turned on only when the statement handle is created.
-		*/
-	       if (imp_dbh->odbc_async_type == SQL_AM_CONNECTION){
-		  rc = SQLSetConnectAttr(imp_dbh->hdbc,
-                                         SQL_ATTR_ASYNC_ENABLE,
-                                         (SQLPOINTER)SQL_ASYNC_ENABLE_OFF,
-                                         SQL_IS_UINTEGER);
-		  if (!SQL_SUCCEEDED(rc)) {
-		     dbd_error(dbh, rc, "db_STORE/SQLSetConnectAttr");
-		     return FALSE;
-		  }
-	       }
-	    }
-	    imp_dbh->odbc_async_exec = 0;
-	 }
-	 break;
+                /* We only need to do anything here if odbc_async_type is
+                 * SQL_AM_CONNECTION since the per-statement async type
+                 * is turned on only when the statement handle is created.
+                 */
+                if (imp_dbh->odbc_async_type == SQL_AM_CONNECTION){
+                    rc = SQLSetConnectAttr(imp_dbh->hdbc,
+                                           SQL_ATTR_ASYNC_ENABLE,
+                                           (SQLPOINTER)SQL_ASYNC_ENABLE_OFF,
+                                           SQL_IS_UINTEGER);
+                    if (!SQL_SUCCEEDED(rc)) {
+                        dbd_error(dbh, rc, "db_STORE/SQLSetConnectAttr");
+                        return FALSE;
+                    }
+                }
+            }
+            imp_dbh->odbc_async_exec = 0;
+        }
+        break;
 
       case ODBC_ERR_HANDLER:
-	 bSetSQLConnectionOption = FALSE;
+        bSetSQLConnectionOption = FALSE;
 
-	 /* This was taken from DBD::Sybase 0.21 */
-	 /* I believe the following if test which has been in DBD::ODBC
-          * for ages is wrong and should (at least now) use SvOK or
-          *  it is impossible to reset the error handler
-          *
-          *  if(valuesv == &PL_sv_undef) {
-	  *  imp_dbh->odbc_err_handler = NULL;
-          */
-	 if (!SvOK(valuesv)) {
-	    imp_dbh->odbc_err_handler = NULL;
-         } else if(imp_dbh->odbc_err_handler == (SV*)NULL) {
-	    imp_dbh->odbc_err_handler = newSVsv(valuesv);
-	 } else {
-	    sv_setsv(imp_dbh->odbc_err_handler, valuesv);
-	 }
-	 break;
+        /* This was taken from DBD::Sybase 0.21 */
+        /* I believe the following if test which has been in DBD::ODBC
+         * for ages is wrong and should (at least now) use SvOK or
+         *  it is impossible to reset the error handler
+         *
+         *  if(valuesv == &PL_sv_undef) {
+         *  imp_dbh->odbc_err_handler = NULL;
+         */
+        if (!SvOK(valuesv)) {
+            imp_dbh->odbc_err_handler = NULL;
+        } else if(imp_dbh->odbc_err_handler == (SV*)NULL) {
+            imp_dbh->odbc_err_handler = newSVsv(valuesv);
+        } else {
+            sv_setsv(imp_dbh->odbc_err_handler, valuesv);
+        }
+        break;
       case ODBC_VERSION:
-	 /* set only in connect, nothing to store */
-	 bSetSQLConnectionOption = FALSE;
-	 break;
+        /* set only in connect, nothing to store */
+        bSetSQLConnectionOption = FALSE;
+        break;
 
       case ODBC_CURSORTYPE:
-	 /* set only in connect, nothing to store */
-	 bSetSQLConnectionOption = FALSE;
-	 break;
+        /* set only in connect, nothing to store */
+        bSetSQLConnectionOption = FALSE;
+        break;
 
-       case SQL_ATTR_ACCESS_MODE:
-         on = SvTRUE(valuesv);
-	 vParam = (SQLPOINTER)(on ? pars->atrue : pars->afalse);
-         break;
+      case SQL_ATTR_ACCESS_MODE:
+        on = SvTRUE(valuesv);
+        vParam = (SQLPOINTER)(on ? pars->atrue : pars->afalse);
+        break;
 
       default:
-	 on = SvTRUE(valuesv);
-	 vParam = (SQLPOINTER)(on ? pars->atrue : pars->afalse);
-	 break;
-   }
+        on = SvTRUE(valuesv);
+        vParam = (SQLPOINTER)(on ? pars->atrue : pars->afalse);
+        break;
+    }
 
-   if (bSetSQLConnectionOption) {
-       rc = SQLSetConnectAttr(imp_dbh->hdbc, pars->fOption,
-                              vParam, attr_length);
+    if (bSetSQLConnectionOption) {
+        rc = SQLSetConnectAttr(imp_dbh->hdbc, pars->fOption,
+                               vParam, attr_length);
 
-      if (!SQL_SUCCEEDED(rc)) {
-          dbd_error(dbh, rc, "db_STORE/SQLSetConnectAttr");
-          return FALSE;
-      }
-      if (pars->fOption == SQL_ROWSET_SIZE)
-          imp_dbh->rowset_size = (SQLULEN)vParam;
+        if (!SQL_SUCCEEDED(rc)) {
+            dbd_error(dbh, rc, "db_STORE/SQLSetConnectAttr");
+            return FALSE;
+        }
+        if (pars->fOption == SQL_ROWSET_SIZE)
+            imp_dbh->rowset_size = (SQLULEN)vParam;
 
-      /* keep our flags in sync */
-      if (kl == 10 && strEQ(key, "AutoCommit"))
-	 DBIc_set(imp_dbh, DBIcf_AutoCommit, SvTRUE(valuesv));
-   }
-   return TRUE;
+        /* keep our flags in sync */
+        if (kl == 10 && strEQ(key, "AutoCommit"))
+            DBIc_set(imp_dbh, DBIcf_AutoCommit, SvTRUE(valuesv));
+    }
+    return TRUE;
 }
 
 
@@ -4485,9 +4510,13 @@ SV *dbd_db_FETCH_attrib(SV *dbh, imp_dbh_t *imp_dbh, SV *keysv)
       case ODBC_EXEC_DIRECT:
         retsv = newSViv(imp_dbh->odbc_exec_direct);
         break;
-        
+
       case ODBC_OLD_UNICODE:
         retsv = newSViv(imp_dbh->odbc_old_unicode);
+        break;
+
+      case ODBC_DESCRIBE_PARAMETERS:
+        retsv = newSViv(imp_dbh->odbc_describe_parameters);
         break;
 
       case ODBC_ASYNC_EXEC:
@@ -5848,6 +5877,7 @@ static int post_connect(
    imp_dbh->odbc_utf8_on = 0;
    imp_dbh->odbc_exec_direct = 0; /* default to not having SQLExecDirect used */
    imp_dbh->odbc_old_unicode = 0;
+   imp_dbh->odbc_describe_parameters = 1;
    imp_dbh->RowCacheSize = 1;	/* default value for now */
 
    if (!strcmp(imp_dbh->odbc_dbms_name, "Microsoft SQL Server")) {

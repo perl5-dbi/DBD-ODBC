@@ -19,7 +19,7 @@ require 5.006;
 # see discussion on dbi-users at
 # http://www.nntp.perl.org/group/perl.dbi.dev/2010/07/msg6096.html and
 # http://www.dagolden.com/index.php/369/version-numbers-should-be-boring/
-$DBD::ODBC::VERSION = '1.30_1';
+$DBD::ODBC::VERSION = '1.30_2';
 
 {
     ## no critic (ProhibitMagicNumbers ProhibitExplicitISA)
@@ -129,24 +129,25 @@ $DBD::ODBC::VERSION = '1.30_1';
 
     sub private_attribute_info {
         return {
-                odbc_ignore_named_placeholders => undef, # sth and dbh
-                odbc_default_bind_type => undef, # sth and dbh
-                odbc_force_bind_type => undef, # sth and dbh
-                odbc_force_rebind => undef, # sth and dbh
-                odbc_async_exec => undef, # sth and dbh
-                odbc_exec_direct => undef,
-                odbc_old_unicode => undef,
-                odbc_SQL_ROWSET_SIZE => undef,
-                odbc_SQL_DRIVER_ODBC_VER => undef,
-                odbc_cursortype => undef,
-                odbc_query_timeout => undef, # sth and dbh
-                odbc_has_unicode => undef,
-                odbc_out_connect_string => undef,
-                odbc_version => undef,
-                odbc_err_handler => undef,
-                odbc_putdata_start => undef, # sth and dbh
-                odbc_column_display_size => undef, # sth and dbh
-                odbc_utf8_on => undef # sth and dbh
+            odbc_ignore_named_placeholders => undef, # sth and dbh
+            odbc_default_bind_type         => undef, # sth and dbh
+            odbc_force_bind_type           => undef, # sth and dbh
+            odbc_force_rebind              => undef, # sth and dbh
+            odbc_async_exec                => undef, # sth and dbh
+            odbc_exec_direct               => undef,
+            odbc_old_unicode               => undef,
+            odbc_describe_parameters       => undef,
+            odbc_SQL_ROWSET_SIZE           => undef,
+            odbc_SQL_DRIVER_ODBC_VER       => undef,
+            odbc_cursortype                => undef,
+            odbc_query_timeout             => undef, # sth and dbh
+            odbc_has_unicode               => undef,
+            odbc_out_connect_string        => undef,
+            odbc_version                   => undef,
+            odbc_err_handler               => undef,
+            odbc_putdata_start             => undef, # sth and dbh
+            odbc_column_display_size       => undef, # sth and dbh
+            odbc_utf8_on                   => undef # sth and dbh
                };
     }
 
@@ -491,18 +492,19 @@ $DBD::ODBC::VERSION = '1.30_1';
 
     sub private_attribute_info {
         return {
-                odbc_ignore_named_placeholders => undef, # sth and dbh
-                odbc_default_bind_type => undef, # sth and dbh
-                odbc_force_bind_type => undef, # sth and dbh
-                odbc_force_rebind => undef, # sth and dbh
-                odbc_async_exec => undef, # sth and dbh
-                odbc_query_timeout => undef, # sth and dbh
-                odbc_putdata_start => undef, # sth and dbh
-                odbc_column_display_size => undef, # sth and dbh
-                odbc_utf8_on => undef, # sth and dbh
-                odbc_exec_direct => undef, # sth and dbh
-                odbc_old_unicode => undef, # sth and dbh
-               };
+            odbc_ignore_named_placeholders => undef, # sth and dbh
+            odbc_default_bind_type         => undef, # sth and dbh
+            odbc_force_bind_type           => undef, # sth and dbh
+            odbc_force_rebind              => undef, # sth and dbh
+            odbc_async_exec                => undef, # sth and dbh
+            odbc_query_timeout             => undef, # sth and dbh
+            odbc_putdata_start             => undef, # sth and dbh
+            odbc_column_display_size       => undef, # sth and dbh
+            odbc_utf8_on                   => undef, # sth and dbh
+            odbc_exec_direct               => undef, # sth and dbh
+            odbc_old_unicode               => undef, # sth and dbh
+            odbc_describe_parameters => undef, # sth and dbh
+        };
     }
 
     sub ColAttributes { # maps to SQLColAttributes
@@ -869,6 +871,55 @@ Do not confuse this with DBD::ODBC's unicode support. The
 C<odbc_utf8_on> attribute only applies to non-unicode enabled builds
 of DBD::ODBC.
 
+=head3 odbc_old_unicode
+
+Defaults to off. If set to true returns DBD::ODBC to the old unicode
+behavior in 1.29 and earlier. You can also set this on the prepare
+method.
+
+By default DBD::ODBC now binds all char columns as SQL_WCHARs meaning
+the driver is asked to return the bound data as wide (Unicode)
+characters encoded in UCS2. So long as the driver supports the ODBC
+Unicode API properly this should mean you get your data back correctly
+in Perl even if it is in a character set (codepage) different from the
+one you are working in.
+
+However, if you wrote code using DBD::ODBC 1.29 or earlier and knew
+DBD::ODBC bound varchar/longvarchar columns as SQL_CHARs and decoded
+them yourself the new behaviour will adversely affect you (sorry). To
+revret to the old behaviour set odbc_old_unicode to true.
+
+See the stackoverflow question at
+L<http://stackoverflow.com/questions/5912082>, the RT at
+L<http://rt.cpan.org/Public/Bug/Display.html?id=67994> and lastly a
+small discussion on dbi-dev at
+L<http://www.nntp.perl.org/group/perl.dbi.dev/2011/05/msg6559.html>.
+
+=head3 odbc_describe_parameters
+
+Defaults to on. When set this allows DBD::ODBC to call SQLDescribeParam
+(if the driver supports it) to retrieve information about any
+parameters.
+
+When off/false DBD::ODBC will not call SQLDescribeParam and defaults
+to binding parameters as SQL_CHAR/SQL_WCHAR depending on the build
+type.
+
+You do not have to disable odbc_describe_parameters just because your
+driver does not support SQLDescribeParam as DBD::ODBC will work this
+out at the start via SQLGetFunctions.
+
+Note: disabling odbc_describe_parameters when your driver does support
+SQLDescribeParam may prevent DBD::ODBC binding parameters for some
+column types properly.
+
+This attribute was added so someone moving from freeTDS (a driver
+which does not support SQLDescribeParam) to a driver which does
+support SQLDescribeParam could do so without changing any Perl. The
+situation was very specific since dates were being bound as dates when
+SQLDescribeParam was called and chars without and the data format was
+not a supported date format.
+
 =head2 Private connection attributes
 
 =head3 odbc_err_handler
@@ -993,23 +1044,6 @@ B<NOTE:> Even if you build DBD::ODBC with unicode support you can
 still not pass unicode strings to the prepare method if you also set
 odbc_exec_direct. This is a restriction in this attribute which is
 unavoidable.
-
-=head3 odbc_old_unicode
-
-defaults to off. if set to true returns DBD::ODBC to the old unicode behavior in 1.29 and earlier.
-
-By default DBD::ODBC now binds all char columns as SQL_WCHARs meaning the driver is asked to
-return the bound data as wide (Unicode) characters encoded in UCS2. So long as the driver supports
-the ODBC Unicode API properly this should mean you get your data back correctly in Perl even if it
-is in a character set (codepage) different from the one you are working in.
-
-However, if you wrote code using DBD::ODBC 1.29 or earlier and knew DBD::ODBC bound
-varchar/longvarchar columns as SQL_CHARs and decoded them yourself the new behaviour will
-adversely affect you (sorry). To revret to the old behaviour set odbc_old_unicode to true.
-
-See the stackoverflow question at L<http://stackoverflow.com/questions/5912082>,
-the RT at L<http://rt.cpan.org/Public/Bug/Display.html?id=67994>
-and lastly a small discussion on dbi-dev at L<http://www.nntp.perl.org/group/perl.dbi.dev/2011/05/msg6559.html>.
 
 =head3 odbc_SQL_DRIVER_ODBC_VER
 

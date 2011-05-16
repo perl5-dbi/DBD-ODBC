@@ -6,6 +6,12 @@ As of $LastChangedDate$
 
 $Revision: 10667 $
 
+=head2 Changes in DBD::ODBC 1.30_2 May 16, 2011
+
+  [ENHANCEMENTS]
+
+  * Added the new odbc_describe_parameters attribute.
+
 =head2 Changes in DBD::ODBC 1.30_1 May 12, 2011
 
   [BUG FIXES]
@@ -39,7 +45,7 @@ $Revision: 10667 $
     inconvenience a few people who expected 8bit chars back, knew the
     char set and decoded them (sorry). See odbc_old_unicode to return
     to old behaviour.
-    
+
   [ENHANCEMENTS]
 
   * added -w option to Makefile.PL to add "-Wall" to CCFLAGS and

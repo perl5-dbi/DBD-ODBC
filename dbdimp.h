@@ -67,6 +67,8 @@ struct imp_dbh_st {
     int  odbc_exec_direct;
     /* use old unicode behaviour of binding varchar/longvarchar as SQL_CHAR */
     int odbc_old_unicode;
+    /* used to disable describing paramters with SQLDescribeParam */
+    int odbc_describe_parameters;
     /* flag to store the type of asynchronous execution the driver supports */
     SQLUINTEGER odbc_async_type;
     SV *odbc_err_handler;     /* contains the error handler coderef */
@@ -158,6 +160,7 @@ struct imp_sth_st {
     IV odbc_column_display_size;
     int odbc_utf8_on;
     int odbc_old_unicode;
+    int odbc_describe_parameters;
 };
 #define IMP_STH_EXECUTING	0x0001
 
