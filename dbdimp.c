@@ -3194,6 +3194,9 @@ static void get_param_type(SV *sth, imp_sth_t *imp_sth, phs_t *phs)
           SQL_VARCHAR. */
        phs->sql_type = default_parameter_type(
            "SQLDescribeParam not supported", imp_sth, phs);
+   } else if (!imp_sth->odbc_describe_parameters) {
+       phs->sql_type = default_parameter_type(
+           "SQLDescribeParam disabled", imp_sth, phs);
    } else if (!phs->describe_param_called) {
        /* If we haven't had a go at calling SQLDescribeParam before for this
           parameter, have a go now. If it fails we'll default the sql type

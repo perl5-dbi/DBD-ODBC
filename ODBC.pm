@@ -19,7 +19,7 @@ require 5.006;
 # see discussion on dbi-users at
 # http://www.nntp.perl.org/group/perl.dbi.dev/2010/07/msg6096.html and
 # http://www.dagolden.com/index.php/369/version-numbers-should-be-boring/
-$DBD::ODBC::VERSION = '1.30_2';
+$DBD::ODBC::VERSION = '1.30_3';
 
 {
     ## no critic (ProhibitMagicNumbers ProhibitExplicitISA)
