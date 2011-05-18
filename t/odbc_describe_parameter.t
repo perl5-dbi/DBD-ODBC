@@ -100,7 +100,11 @@ sub default
         #use Data::Dumper;
         #diag(Dumper($pts->{$params[0]}));
         #7
-        is($pts->{$params[0]}->{TYPE}, 4, 'integer parameter');
+        # for drivers which don't have SQLDescribeParam the type will
+        # be defaulted to SQL_VARCHAR or SQL_WVARCHAR
+        ok(($pts->{$params[0]}->{TYPE} == 4) ||
+           ($pts->{$params[0]}->{TYPE} == -9) ||
+           ($pts->{$params[0]}->{TYPE} == 12), 'integer parameter');
     };
 
 
