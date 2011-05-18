@@ -2468,6 +2468,7 @@ static SQLRETURN bind_columns(
 int dbd_st_execute(
     SV *sth, imp_sth_t *imp_sth)
 {
+    D_imp_xxh(sth);
     RETCODE rc;
     D_imp_dbh_from_sth;
     int outparams = 0;
@@ -2475,6 +2476,13 @@ int dbd_st_execute(
 
     if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 3))
         TRACE1(imp_dbh, "    +dbd_st_execute(%p)\n", sth);
+
+    if (SQL_NULL_HDBC == imp_dbh->hdbc) {
+		DBIh_SET_ERR_CHAR(sth, imp_xxh, Nullch, 1,
+                          "Database handle has been disconnected",
+                          Nullch, Nullch);
+		return -2;
+	}
 
     /*
      * if the handle is active, we need to finish it here.
@@ -2781,6 +2789,7 @@ int dbd_st_execute(
 AV *dbd_st_fetch(SV *sth, imp_sth_t *imp_sth)
 {
    D_imp_dbh_from_sth;
+   D_imp_xxh(sth);
    int i;
    AV *av;
    RETCODE rc;
@@ -3041,7 +3050,35 @@ AV *dbd_st_fetch(SV *sth, imp_sth_t *imp_sth)
                           fbh->datalen);
            }
        }
-   }
+#if DBIXS_REVISION > 13590
+       /* If a bind type was specified we use DBI's sql_type_cast
+          to cast it - currently only number types are handled */
+       if (fbh->req_type != 0) {
+           int sts;
+           char errstr[256];
+
+           sts = DBIc_DBISTATE(imp_sth)->sql_type_cast_svpv(
+               aTHX_ sv, fbh->req_type, fbh->bind_flags, NULL);
+           if (sts == 0) {
+               sprintf(errstr,
+                       "over/under flow converting column %d to type %"IVdf"",
+                       i+1, fbh->req_type);
+               DBIh_SET_ERR_CHAR(sth, imp_xxh, Nullch, 1,
+                                 errstr, Nullch, Nullch);
+               return Nullav;
+           }
+           else if (sts == -2) {
+               sprintf(errstr,
+                       "unsupported bind type %"IVdf" for column %d",
+                       fbh->req_type, i+1);
+               DBIh_SET_ERR_CHAR(sth, imp_xxh, Nullch, 1,
+                                 errstr, Nullch, Nullch);
+               return Nullav;
+           }
+       }
+#endif /* DBISTATE_VERSION > 94 */
+
+   } /* end of loop through bound columns */
    return av;
 }
 
@@ -3877,6 +3914,14 @@ int dbd_bind_ph(
    phs_t *phs;
    D_imp_dbh_from_sth;
    SQLSMALLINT sql_type;
+   D_imp_xxh(sth);
+
+   if (SQL_NULL_HDBC == imp_dbh->hdbc) {
+		DBIh_SET_ERR_CHAR(sth, imp_xxh, Nullch, 1,
+                          "Database handle has been disconnected",
+                          Nullch, Nullch);
+		return -2;
+	}
 
    sql_type = (SQLSMALLINT)in_sql_type;
 

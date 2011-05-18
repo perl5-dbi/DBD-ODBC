@@ -184,7 +184,10 @@ struct imp_fbh_st { 	/* field buffer EXPERIMENTAL */
     UCHAR *data;		/* points into sth->RowBuffer */
     SQLLEN datalen;		/* length returned from fetch for single row. */
     unsigned long bind_flags;   /* flags passed to bind_col */
-#define ODBC_TREAT_AS_LOB 0x1
+    /* Be careful: bind_flags mix out flags like ODBC_TREAT_AS_LOB with
+       DBI's DBIstcf_DISCARD_STRING and DBIstcf_STRICT. If you add a
+       flag make sure it does not clash */
+#define ODBC_TREAT_AS_LOB 0x100
     IV req_type;                /* type passed to bind_col */
 };
 

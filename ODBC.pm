@@ -19,7 +19,7 @@ require 5.006;
 # see discussion on dbi-users at
 # http://www.nntp.perl.org/group/perl.dbi.dev/2010/07/msg6096.html and
 # http://www.dagolden.com/index.php/369/version-numbers-should-be-boring/
-$DBD::ODBC::VERSION = '1.30_3';
+$DBD::ODBC::VERSION = '1.30_4';
 
 {
     ## no critic (ProhibitMagicNumbers ProhibitExplicitISA)
@@ -567,7 +567,7 @@ DBD::ODBC - ODBC Driver for DBI
 
 =head1 VERSION
 
-This documentation refers to DBD::ODBC version 1.30_1.
+This documentation refers to DBD::ODBC version 1.30_4.
 
 =head1 SYNOPSIS
 
@@ -889,6 +889,9 @@ DBD::ODBC bound varchar/longvarchar columns as SQL_CHARs and decoded
 them yourself the new behaviour will adversely affect you (sorry). To
 revret to the old behaviour set odbc_old_unicode to true.
 
+You can also set this attribute in the attributes passed to the
+prepare method.
+
 See the stackoverflow question at
 L<http://stackoverflow.com/questions/5912082>, the RT at
 L<http://rt.cpan.org/Public/Bug/Display.html?id=67994> and lastly a
@@ -912,6 +915,9 @@ out at the start via SQLGetFunctions.
 Note: disabling odbc_describe_parameters when your driver does support
 SQLDescribeParam may prevent DBD::ODBC binding parameters for some
 column types properly.
+
+You can also set this attribute in the attributes passed to the
+prepare method.
 
 This attribute was added so someone moving from freeTDS (a driver
 which does not support SQLDescribeParam) to a driver which does
@@ -1183,7 +1189,7 @@ C<$length> so DBD::ODBC grows it appropriately.
 
 You can retrieve a lob in chunks like this:
 
-  $sth->bind_col($column, undef, {BindAsLOB=>1});
+  $sth->bind_col($column, undef, {TreatAsLOB=>1});
   while(my $retrieved = $sth->odbc_lob_read($column, \my $data, $length)) {
       print "retrieved=$retrieved lob_data=$data\n";
   }
@@ -1361,7 +1367,7 @@ You call SQLSpecialColumns like this:
 
 Handled as of version 0.28
 
-head3 ColAttributes
+=head3 ColAttributes
 
 B<This private function is now superceded by DBI's statement attributes
 NAME, TYPE, PRECISION, SCALE, NULLABLE etc).>
@@ -1396,7 +1402,7 @@ returns strange values for column name e.g., '20291'. It is wiser to
 use DBI's NAME and NAME_xx attributes for portability.
 
 
-head3 DescribeCol
+=head3 DescribeCol
 
 B<This private function is now superceded by DBI's statement attributes
 NAME, TYPE, PRECISION, SCLARE, NULLABLE etc).>
@@ -1408,6 +1414,46 @@ You call SQLDescribeCol like this:
 
 The returned array contains the column attributes in the order described
 in the ODBC specification for SQLDescribeCol.
+
+=head2 Additional bind_col attributes
+
+DBD::ODBC supports a few additional attributes which may be passed to
+the bind_col method in the attributes.
+
+=head3 DiscardString
+
+See DBI's sql_type_cast utility function.
+
+If you bind a column as a specific type (SQL_INTEGER, SQL_DOUBLE and
+SQL_NUMERIC are the only ones supported currently) and you add
+DiscardString to the prepare attributes then if the returned bound
+data is capable of being converted to that type the scalar's pv (the
+string portion of a scalar) is cleared.
+
+This is especially useful if you are using a module which uses a
+scalars flags and/or pv to decide if a scalar is a number. JSON::XS
+does this and without this flag you have to add 0 to all bound column
+data returning numbers to get JSON::XS to encode it is N instead of
+"N".
+
+=head3 StrictlyTyped
+
+See DBI's sql_type_cast utility function.
+
+See L</DiscardString> above.
+
+Specifies that when DBI's sql_type_cast function is called on returned
+data where a bind type is specified that if the conversion cannot be
+performed an error will be raised.
+
+This is probably not a lot of use with DBD::ODBC as if you ask for say
+an SQL_INTEGER and the data is not able to be converted to an integer
+the ODBC driver will problably return "Invalid character value for
+cast specification (SQL-22018)".
+
+=head3 TreatAsLOB
+
+See L</odbc_lob_read>.
 
 =head2 Tracing
 
@@ -1977,6 +2023,8 @@ L<DBI>
 L<Test::Simple>
 
 =head1 INCOMPATIBILITIES
+
+None known.
 
 =head1 BUGS AND LIMITATIONS
 

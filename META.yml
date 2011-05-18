@@ -1,7 +1,7 @@
 --- #YAML:1.0
 name: DBD-ODBC
 abstract: ODBC DBD for Perl DBI
-version: 1.30_3
+version: 1.30_4
 version_from: ODBC.pm
 author:
   - Tim Bunce
@@ -9,6 +9,7 @@ author:
   - Martin J. Evans <mjevans@cpan.org>
 license: perl
 distribution_type: module
+dynamic_config : 1
 requires:
     DBI: 1.609
     perl: 5.008
@@ -25,14 +26,16 @@ configure_requires:
   ExtUtils::MakeMaker: 0
 dynamic_config: 1
 resources:
+  homepage: http://search.cpan.org/dist/DBD-ODBC/
   license: http://dev.perl.org/licenses/
   bugtracker: http://rt.cpan.org/Public/Dist/Display.html?Name=DBD-ODBC
-  MailingList: http://dbi.perl.org/
+  MailingList: http://dbi.perl.org/support
   repository: http://svn.perl.org/modules/dbd-odbc
 installdirs:  site
 keywords:
   - ODBC
   - DBD
+  - DBI
 meta-spec:
   version: 1.4
   url: http://module-build.sourceforge.net/META-spec-v1.4.html

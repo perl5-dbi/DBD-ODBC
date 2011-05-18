@@ -6,6 +6,30 @@ As of $LastChangedDate$
 
 $Revision: 10667 $
 
+=head2 Changes in DBD::ODBC 1.30_4 May 18, 2011
+
+  [BUG FIXES]
+
+  * Fix issue described in
+    http://www.nntp.perl.org/group/perl.dbi.dev/2011/05/msg6567.html.
+    If you prepare a statement, disconnect and then try and execute the
+    statement you get an error but it does not tell what is wrong.
+
+  [ENHANCEMENTS]
+
+  * Added support for StrictlyTyped and DiscardString to the bind_col
+    method.
+
+  [OTHER]
+
+  * Minor changes to META.yml for mailing list, dynamic_config,
+    homepage and keywords.
+
+  * The pod was missing = before the heads on a couple of sections in
+    "Private DBD::ODBC Functions"
+
+  * TreatAsLob was incorrectly documented as BindAsLob.
+
 =head2 Changes in DBD::ODBC 1.30_3 May 17, 2011
 
   [BUG FIXES]
