@@ -3053,7 +3053,9 @@ AV *dbd_st_fetch(SV *sth, imp_sth_t *imp_sth)
 #if DBIXS_REVISION > 13590
        /* If a bind type was specified we use DBI's sql_type_cast
           to cast it - currently only number types are handled */
-       if (fbh->req_type != 0) {
+       if ((fbh->req_type == SQL_INTEGER) ||
+           (fbh->req_type == SQL_NUMERIC) ||
+           (fbh->req_type == SQL_DECIMAL)) {
            int sts;
            char errstr[256];
 
