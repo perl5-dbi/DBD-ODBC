@@ -110,6 +110,7 @@ t/rt_59621.t
 t/rt_61370.t
 t/rt_62033.t
 t/rt_63550.t
+t/sql_type_cast.t
 t/odbc_describe_parameter.t
 unicode_helper.c
 unicode_helper.h
