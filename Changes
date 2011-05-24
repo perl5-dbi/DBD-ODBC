@@ -6,6 +6,15 @@ As of $LastChangedDate$
 
 $Revision: 10667 $
 
+=head2 Changes in DBD::ODBC 1.30_5 May 24, 2011
+
+  [BUG FIXES]
+
+  * The change in behavior detailed in 1.30_1 for wide character
+    binding was still not working properly (see
+    http://rt.cpan.org/Ticket/Display.html?id=67994). It was working
+    for SQL_CHAR described columns but not SQL_VARCHAR.
+
 =head2 Changes in DBD::ODBC 1.30_4 May 18, 2011
 
   [BUG FIXES]

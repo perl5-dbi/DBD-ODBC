@@ -2237,7 +2237,7 @@ int dbd_describe(SV *h, imp_sth_t *imp_sth, int more)
 
         /* Unless old unicode behavior map SQL_CHAR to SQL_WCHAR */
         if (!imp_sth->odbc_old_unicode &&
-        	 (fbh->ColSqlType == SQL_CHAR)) {
+        	 (fbh->ColSqlType == SQL_CHAR || fbh->ColSqlType == SQL_VARCHAR)) {
         	  fbh->ColSqlType = SQL_WCHAR;
         }
 # endif

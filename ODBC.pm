@@ -10,7 +10,7 @@
 
 ## no critic (ProhibitManyArgs ProhibitMultiplePackages)
 
-require 5.006;
+require 5.008;
 
 # NOTE: Don't forget to update the version reference in the POD below too.
 # NOTE: If you create a developer release x.y_z ensure y is greater than
@@ -19,7 +19,7 @@ require 5.006;
 # see discussion on dbi-users at
 # http://www.nntp.perl.org/group/perl.dbi.dev/2010/07/msg6096.html and
 # http://www.dagolden.com/index.php/369/version-numbers-should-be-boring/
-$DBD::ODBC::VERSION = '1.30_4';
+$DBD::ODBC::VERSION = '1.30_5';
 
 {
     ## no critic (ProhibitMagicNumbers ProhibitExplicitISA)
@@ -567,7 +567,7 @@ DBD::ODBC - ODBC Driver for DBI
 
 =head1 VERSION
 
-This documentation refers to DBD::ODBC version 1.30_4.
+This documentation refers to DBD::ODBC version 1.30_5.
 
 =head1 SYNOPSIS
 
