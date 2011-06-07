@@ -457,12 +457,15 @@ int dbd_db_execdirect(SV *dbh,
    else {
       if (ret == SQL_NO_DATA) {
 	 rows = 0;
-      } else {
-	 ret = SQLRowCount(stmt, &rows);
-	 if (!SQL_SUCCEEDED(ret)) {
-	    dbd_error( dbh, ret, "SQLRowCount failed" );
-	    rows = -1;
-	 }
+      }
+      else if (ret != SQL_SUCCESS) {
+	dbd_error2(dbh, ret, "Execute immediate success with info",
+		   imp_dbh->henv, imp_dbh->hdbc, stmt );
+      }
+      ret = SQLRowCount(stmt, &rows);
+      if (!SQL_SUCCEEDED(ret)) {
+	dbd_error( dbh, ret, "SQLRowCount failed" );
+	rows = -1;
       }
    }
    ret = SQLFreeHandle(SQL_HANDLE_STMT,stmt);
@@ -3750,14 +3753,16 @@ static int rebind_param(
      * MS SQL Server because they override the type.
      */
     if ((phs->param_size == 0) &&
-        (SQL_SUCCEEDED(phs->describe_param_status))) {
-        /* not point in believing param_size = 0 if SQLDescribeParam failed */
+        (SQL_SUCCEEDED(phs->describe_param_status)) &&
+	(imp_sth->odbc_describe_parameters)) { /* SQLDescribeParam not disabled */
+        /* no point in believing param_size = 0 if SQLDescribeParam failed */
         /* See rt 55736 */
         if ((imp_dbh->driver_type == DT_SQL_SERVER_NATIVE_CLIENT) ||
             ((strcmp(imp_dbh->odbc_dbms_name, "Microsoft SQL Server") == 0) &&
              (phs->sql_type == SQL_WVARCHAR) &&
              (phs->requested_type == 0))) {
             column_size = 0;
+	    printf("HERE\n");
         }
     }
     /* for rt_38977 we get:

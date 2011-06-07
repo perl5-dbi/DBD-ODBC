@@ -147,7 +147,8 @@ sub on_prepare
         #diag(Dumper($pts->{$params[0]}));
         #12
         ok(($pts->{$params[0]}->{TYPE} == 12) ||
-               ($pts->{$params[0]}->{TYPE} == -9), 'char parameter (prepare)');
+               ($pts->{$params[0]}->{TYPE} == -9), 'char parameter (prepare)') or
+	       diag($pts->{$params[0]}->{TYPE});
     };
 }
 

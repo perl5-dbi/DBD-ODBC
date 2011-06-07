@@ -6,6 +6,29 @@ As of $LastChangedDate$
 
 $Revision: 10667 $
 
+=head2 Changes in DBD::ODBC 1.30_6 June 4, 2011
+
+  [BUG FIXES]
+
+  * When DBD::ODBC calls SQLExecDirect (the do method) it was not
+    reporting warnings (SQL_SUCCESS_WITH_INFO) and not calling the
+    error handler.
+
+    Arguably, this is a change in behaviour but one I've struggled to
+    resolve since in all other cases of warnings DBD::ODBC's error
+    handler is called. However, DBI does not call its error handler
+    for warnings so was DBD::ODBC wrong to call it's error in the
+    first place for warnings? I decided it was better to leave this as
+    it is but add checking of SQLExecDirect/do.
+
+  * The odbc_describe_parameter.t test could with with some versions
+    of MS SQL Server ODBC Driver. It was down to when
+    SQLDescribeParameter is disabled, the column_size passed to
+    SQLBindParameter is 0.
+
+  * pod example of odbc_err_handler incorrectly used \$err_handler
+    instead of \&err_handler.
+
 =head2 Changes in DBD::ODBC 1.30_5 May 24, 2011
 
   [BUG FIXES]

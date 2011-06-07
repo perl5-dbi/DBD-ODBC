@@ -19,7 +19,7 @@ require 5.008;
 # see discussion on dbi-users at
 # http://www.nntp.perl.org/group/perl.dbi.dev/2010/07/msg6096.html and
 # http://www.dagolden.com/index.php/369/version-numbers-should-be-boring/
-$DBD::ODBC::VERSION = '1.30_5';
+$DBD::ODBC::VERSION = '1.30_6';
 
 {
     ## no critic (ProhibitMagicNumbers ProhibitExplicitISA)
@@ -567,7 +567,7 @@ DBD::ODBC - ODBC Driver for DBI
 
 =head1 VERSION
 
-This documentation refers to DBD::ODBC version 1.30_5.
+This documentation refers to DBD::ODBC version 1.30_6.
 
 =head1 SYNOPSIS
 
@@ -955,7 +955,7 @@ Check F<t/20SQLServer.t> and F<t/10handler.t>.
      else
          return 1; # propagate error
   }
-  $dbh->{odbc_err_handler} = \$err_handler;
+  $dbh->{odbc_err_handler} = \&err_handler;
   # do something to cause an error
   $dbh->{odbc_err_handler} = undef; # cancel the handler
 
