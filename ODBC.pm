@@ -19,7 +19,7 @@ require 5.008;
 # see discussion on dbi-users at
 # http://www.nntp.perl.org/group/perl.dbi.dev/2010/07/msg6096.html and
 # http://www.dagolden.com/index.php/369/version-numbers-should-be-boring/
-$DBD::ODBC::VERSION = '1.30_6';
+$DBD::ODBC::VERSION = '1.30_7';
 
 {
     ## no critic (ProhibitMagicNumbers ProhibitExplicitISA)
@@ -567,7 +567,7 @@ DBD::ODBC - ODBC Driver for DBI
 
 =head1 VERSION
 
-This documentation refers to DBD::ODBC version 1.30_6.
+This documentation refers to DBD::ODBC version 1.30_7.
 
 =head1 SYNOPSIS
 
@@ -930,18 +930,25 @@ not a supported date format.
 
 =head3 odbc_err_handler
 
-B<NOTE:> There should be no reason to use this now as there is a DBI
-attribute of a similar name. In future versions this attribute will
-be deleted.
+B<NOTE:> You might want to look at DBI's error handler before using
+the one in DBD::ODBC however, there are subtle
+differences. DBD::ODBC's odbc_err_handler is called for error B<and>
+informational diagnostics i.e., it is called when an ODBC call fails
+the SQL_SUCCEEDED macro which means the ODBC call returned SQL_ERROR
+(-1) or SQL_SUCCESS_WITH_INFO (1).
 
-Allow errors to be handled by the application.  A call-back function
-supplied by the application to handle or ignore messages.
+Allow error and informational diagnostics to be handled by the
+application.  A call-back function supplied by the application to
+handle or ignore messages.
 
-The callback function receives three parameters: state (string),
-error (string) and the native error code (number).
+The callback function receives four parameters: state (string),
+error (string), native error code (number) and the status returned
+from the last ODBC API. The fourth argument was added in 1.30_7.
 
 If the error handler returns 0, the error is ignored, otherwise the
-error is passed through the normal DBI error handling.
+error is passed through the normal DBI error handling. Note, if the
+status is SQL_SUCCESS_WITH_INFO this will B<not> reach the DBI error
+handler as it is not an error.
 
 This can also be used for procedures under MS SQL Server (Sybase too,
 probably) to obtain messages from system procedures such as DBCC.
@@ -949,7 +956,7 @@ Check F<t/20SQLServer.t> and F<t/10handler.t>.
 
   $dbh->{RaiseError} = 1;
   sub err_handler {
-     ($state, $msg, $native) = @_;
+     ($state, $msg, $native, $rc, $status) = @_;
      if ($state = '12345')
          return 0; # ignore this error
      else

@@ -112,6 +112,7 @@ t/rt_62033.t
 t/rt_63550.t
 t/sql_type_cast.t
 t/odbc_describe_parameter.t
+t/rt_68720.t
 unicode_helper.c
 unicode_helper.h
 if_you_are_taking_over_this_code.txt
