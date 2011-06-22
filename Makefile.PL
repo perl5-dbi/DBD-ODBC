@@ -640,7 +640,7 @@ EOT
 	    # remove lib prefix and .so suffix so "-l" style link can be used
 	    $ilibname =~ s/^lib(odbc.*)\.\w+$/$1/;
 	    $opts{LIBS} = "-L$odbclibdir -l$ilibname";
-	    warn "Warning: LD_LIBRARY_PATH=$ENV{LD_LIBRARY_PATH} doesn't include $odbclibdir\n"
+	    warn "Warning: LD_LIBRARY_PATH=", ($ENV{LD_LIBRARY_PATH} ? $ENV{LD_LIBRARY_PATH} : ""), " doesn't include $odbclibdir\n"
 		unless (exists($ENV{LD_LIBRARY_PATH}) &&
                         ($ENV{LD_LIBRARY_PATH} =~ /\Q$odbclibdir/));
 	}

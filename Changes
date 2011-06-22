@@ -6,6 +6,16 @@ As of $LastChangedDate$
 
 $Revision: 10667 $
 
+=head2 Changes in DBD::ODBC 1.31 June 21, 2011
+
+  [BUG FIXES]
+
+  Recently introduced test sql_type_cast.t cannot work with DBI less
+  than 1.611.
+
+  Minor change to Makefile.PL to avoid use of unitialised warning on
+  $ENV{LD_LIBRARY_PATH} in warning when it is not set.
+
 =head2 Changes in DBD::ODBC 1.30_7 June 15, 2011
 
   [BUG FIXES]

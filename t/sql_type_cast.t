@@ -35,6 +35,9 @@ BEGIN {
    if (!defined $ENV{DBI_DSN}) {
       plan skip_all => "DBI_DSN is undefined";
    }
+   if ($DBI::VERSION < 1.611) {
+       plan skip_all => "DBI version is too old for this test";
+   }
 }
 
 END {
