@@ -66,6 +66,8 @@ examples/testver.pl
 examples/testxml.pl
 examples/thrtest.pl
 examples/timetest.pl
+examples/unicode_params.pl
+examples/unicode_sql.pl
 ODBC.h
 ODBC.pm
 ODBC.xs

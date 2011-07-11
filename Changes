@@ -6,6 +6,17 @@ As of $LastChangedDate$
 
 $Revision: 10667 $
 
+=head2 Changes in DBD::ODBC 1.32_1 June 24 2011
+
+  [OTHER]
+
+  * Changed line endings in README.af and README.unicode to be unix
+    line endings and native eol-style in subversion.
+
+  * Minor changes to Makefile.PL to save the opensuse guys patching.
+
+  * Added unicode_sql.pl and unicode_params.pl examples
+
 =head2 Changes in DBD::ODBC 1.31 June 21, 2011
 
   [BUG FIXES]

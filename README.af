@@ -11,7 +11,7 @@ Date: 2006-03-04
 
 =over 4
 
-=item * Allow an application on Win32 using DBD::ODBC to store and fetch Unicode 
+=item * Allow an application on Win32 using DBD::ODBC to store and fetch Unicode
 strings in a MS SQL Server 2000 database.
 
 =item * Minimal changes to the existing driver code.
@@ -27,9 +27,9 @@ strings in a MS SQL Server 2000 database.
 
 =head2 Legal disclaimer
 
-The Unicode patch for DBD::ODBC was initially written by Alexander Foken 
-(alexander at foken dot de). I wrote this patch during my working hours for a 
-project that needs Unicode support in DBD::ODBC on Windows, and I have the 
+The Unicode patch for DBD::ODBC was initially written by Alexander Foken
+(alexander at foken dot de). I wrote this patch during my working hours for a
+project that needs Unicode support in DBD::ODBC on Windows, and I have the
 permission of my former employer to publish this patch.
 
 You may distribute under the terms of either the GNU General Public License or
@@ -45,7 +45,7 @@ the Artistic License, as specified in the Perl README file.
 
 =item 3. C<patch -p1 E<lt> DBD-ODBC-1.13-Unicode.patch>
 
-=item 4. build DBD::ODBC as usual (C<perl Makefile.pl>, C<make>, C<make test>, 
+=item 4. build DBD::ODBC as usual (C<perl Makefile.pl>, C<make>, C<make test>,
 C<make install>)
 
 =back
@@ -81,24 +81,24 @@ support for Oracle-specific stuff.
 
 Not tested but known not to support Unicode very well.
 
-Quoting the DBD::Oracle man page: "I<Oracle 8 client libraries have a number of 
-bugs related to character set handling, especially when connected to an Oracle 
-9+ server.> [...] I<If you wish to use Unicode, I recommend upgrading client and 
+Quoting the DBD::Oracle man page: "I<Oracle 8 client libraries have a number of
+bugs related to character set handling, especially when connected to an Oracle
+9+ server.> [...] I<If you wish to use Unicode, I recommend upgrading client and
 server to Oracle 9 or later.>"
 
 =item MS Access 2000
 
-Unicode tests fail because MS Access 2000 seems not to give any hints about 
-Unicode, so all data is treated as non-Unicode. You do not want to use this 
+Unicode tests fail because MS Access 2000 seems not to give any hints about
+Unicode, so all data is treated as non-Unicode. You do not want to use this
 combination.
 
-You may want to try the MSDE, it has the SQL Server engine, but with a lower 
-connection limit and without GUI tools. There are several 3rd party GUIs for the 
+You may want to try the MSDE, it has the SQL Server engine, but with a lower
+connection limit and without GUI tools. There are several 3rd party GUIs for the
 MSDE.
 
 =item PostgreSQL 8.0.3
 
-Some tests from the original DBD::ODBC 1.13 fail with PostgreSQL 8.0.3, so you 
+Some tests from the original DBD::ODBC 1.13 fail with PostgreSQL 8.0.3, so you
 may not want to use DBD::ODBC to connect to PostgreSQL 8.0.3.
 
 Unicode tests fail because PostgreSQL seems not to give any hints about Unicode,
@@ -123,12 +123,12 @@ from Microsoft.
 
 =head2 Known Problems
 
-Perl 5.8.1 or newer is required. Older Perl before 5.8.0 lacked proper Unicode 
+Perl 5.8.1 or newer is required. Older Perl before 5.8.0 lacked proper Unicode
 support. Perl 5.8.0 lacks some auxillary functions for Unicode.
 
-Unicode is supported only for SQL statement parameters and data returned by the 
-fetch methods, SQL statements are still treated as native encoding. If you need 
-a unicode constant in an SQL statement, you have to pass it as parameter or use 
+Unicode is supported only for SQL statement parameters and data returned by the
+fetch methods, SQL statements are still treated as native encoding. If you need
+a unicode constant in an SQL statement, you have to pass it as parameter or use
 SQL functions to convert your constant from native encoding to Unicode.
 
 All data passed to the patched DBD::ODBC for C<SQL_C_WCHAR>, C<SQL_WCHAR>,
@@ -138,7 +138,7 @@ pass a value different from C<CP_UTF8> as first argument to
 C<WideCharToMultiByte()>. The problem is to know what encoding is used for the
 data in the scalar.
 
-Binding of unicode output parameters is untested (I don't need them) and likely 
+Binding of unicode output parameters is untested (I don't need them) and likely
 to fail.
 
 The patched DBD::ODBC may fail to compile on non-Win32 platforms. It needs a
@@ -196,7 +196,7 @@ I had to add C<SQL_WCHAR>, C<SQL_WVARCHAR>, C<SQL_WLONGVARCHAR> to
 F<t/ODBCTEST.pm>, because Oracle in the setup described above returns Unicode
 more often than expected.
 
-I added F<t/UChelp.pm>, that exports two utility functions for unicode string 
+I added F<t/UChelp.pm>, that exports two utility functions for unicode string
 tests:
 
 =over 4

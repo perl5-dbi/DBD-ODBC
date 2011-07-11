@@ -66,3 +66,11 @@ $Revision: 10667 $
 
   Add more Oracle-specific tests - like calling functions/procedures
   and in/out params.
+
+  Download rpm package from here ->
+  http://download.opensuse.org/repositories/devel:/languages:/perl/openSUSE_11.4/src/
+  and see what changes they are making (especially Makefile.PL) to see if we
+  might need to include them.
+
+  See http://www.nntp.perl.org/group/perl.dbi.dev/2011/06/msg6606.html and
+  containing thread. Downgrade error to warning.

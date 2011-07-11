@@ -118,6 +118,11 @@ my %opts =
     OBJECT       => '$(O_FILES)',
     DEFINE => q{},
  );
+# just save the open suse guys patching the following:
+if ($ENV{RPM_OPT_FLAGS}) {
+    $opts{OPTIMIZE} = $ENV{RPM_OPT_FLAGS};
+}
+
 my $eumm = $ExtUtils::MakeMaker::VERSION;
 $eumm =~ tr/_//d;
 
