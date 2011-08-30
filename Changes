@@ -8,6 +8,11 @@ $Revision: 10667 $
 
 =head2 Changes in DBD::ODBC 1.32_1 June 24 2011
 
+  [BUG FIXES]
+
+  * I omitted rt_68720.t from the 1.31 distribution which leads
+    to a warning as it is mentioned in the MANIFEST.
+ 
   [OTHER]
 
   * Changed line endings in README.af and README.unicode to be unix
