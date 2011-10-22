@@ -19,7 +19,7 @@ require 5.008;
 # see discussion on dbi-users at
 # http://www.nntp.perl.org/group/perl.dbi.dev/2010/07/msg6096.html and
 # http://www.dagolden.com/index.php/369/version-numbers-should-be-boring/
-$DBD::ODBC::VERSION = '1.32_1';
+$DBD::ODBC::VERSION = '1.32_2';
 
 {
     ## no critic (ProhibitMagicNumbers ProhibitExplicitISA)
@@ -147,7 +147,8 @@ $DBD::ODBC::VERSION = '1.32_1';
             odbc_err_handler               => undef,
             odbc_putdata_start             => undef, # sth and dbh
             odbc_column_display_size       => undef, # sth and dbh
-            odbc_utf8_on                   => undef # sth and dbh
+            odbc_utf8_on                   => undef, # sth and dbh
+	    odbc_driver_complete           => undef
                };
     }
 
@@ -567,7 +568,7 @@ DBD::ODBC - ODBC Driver for DBI
 
 =head1 VERSION
 
-This documentation refers to DBD::ODBC version 1.32_1.
+This documentation refers to DBD::ODBC version 1.32_2.
 
 =head1 SYNOPSIS
 
@@ -1162,6 +1163,38 @@ now 3.x, this can be used to force 2.x behavior via something like: my
 
   $dbh = DBI->connect("dbi:ODBC:$DSN", $user, $pass,
                       { odbc_version =>2});
+
+=head3 odbc_driver_complete
+
+This attribute was added to DBD::ODBC in 1.32_2.
+
+odbc_driver_complete is only relevant to the Windows operating system
+and will be ignored on other platforms. It is off by default.
+
+When set to a true value DBD::ODBC attempts to obtain a window handle
+and calls SQLDriverConnect with the SQL_DRIVER_COMPLETE attribute
+instead of the normal SQL_DRIVER_NOPROMPT option. What this means is
+that if the connection string does not describe sufficient attributes
+to enable the ODBC driver manager to connect to a data source it will
+throw a dialogue allowing you to input the remaining attributes. Once
+you ok that dialogue the ODBC Driver Manager will continue as if you
+specified those attributes in the connection string. Once the
+connection is complete you may want to look at the odbc_out_connect_string
+attribute to obtain a connection string you can use in the future to
+pass into the connect method without prompting.
+
+As a window handle is passed to SQLDriverConnect it also means the
+ODBC driver may throw a dialogue e.g., if your password has expired
+the MS SQL Server driver will often prompt for a new one.
+
+An example is:
+
+  my $h = DBI->connect('dbi:ODBC:DRIVER={SQL Server}', "username", "password",
+                       {odbc_driver_complete => 1});
+
+As this only provides the driver and further attributes are required a
+dialogue will be thrown allowing you to specify the SQL Server to
+connect to and possibly other attributes.
 
 =head2 Private statement methods
 

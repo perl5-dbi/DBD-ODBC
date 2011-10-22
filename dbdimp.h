@@ -65,6 +65,9 @@ struct imp_dbh_st {
     /* flag for executing SQLExecDirect instead of SQLPrepare and SQLExecute.
        Magic happens at SQLExecute() */
     int  odbc_exec_direct;
+    /* flag indicating if we should pass SQL_DRIVER_COMPLETE to
+       SQLDriverConnect */
+    int  odbc_driver_complete;
     /* use old unicode behaviour of binding varchar/longvarchar as SQL_CHAR */
     int odbc_old_unicode;
     /* used to disable describing paramters with SQLDescribeParam */

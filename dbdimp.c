@@ -104,6 +104,9 @@ static void AllODBCErrors(HENV henv, HDBC hdbc, HSTMT hstmt, int output,
                           PerlIO *logfp);
 static int check_connection_active(SV *h);
 static int build_results(SV *sth, SV *dbh, RETCODE orc);
+#ifdef WIN32
+static HWND GetConsoleHwnd(void);
+#endif
 
 int dbd_describe(SV *h, imp_sth_t *imp_sth, int more);
 int dbd_db_login6_sv(SV *dbh, imp_dbh_t *imp_dbh, SV *dbname,
@@ -138,6 +141,7 @@ int dbd_st_finish(SV *sth, imp_sth_t *imp_sth);
 #define ODBC_FORCE_BIND_TYPE           0x8342
 #define ODBC_OLD_UNICODE               0x8343
 #define ODBC_DESCRIBE_PARAMETERS       0x8344
+#define ODBC_DRIVER_COMPLETE           0x8345
 
 /* This is the bind type for parameters we fall back to if the bind_param
    method was not given a parameter type and SQLDescribeParam is not supported
@@ -617,6 +621,18 @@ int dbd_db_login6_sv(
       return 0;
    }
 
+   /* If odbc_driver_complete specified we need to grab it */
+   {
+     UV dc = 0;
+     SV **svp;
+
+     DBD_ATTRIB_GET_IV(attr, "odbc_driver_complete", 20, svp, dc);
+     if (svp && dc) {
+       imp_dbh->odbc_driver_complete = 1;
+     } else {
+       imp_dbh->odbc_driver_complete = 0;
+     }
+   }
    /* If the connection string is too long to pass to SQLConnect or it
       contains DSN or DRIVER, we've little choice but to call
       SQLDriverConnect and need to tag the uid/pwd on the end of the
@@ -665,7 +681,17 @@ int dbd_db_login6_sv(
    {
        SQLWCHAR wout_str[512];
        SQLSMALLINT wout_str_len;
-
+#ifdef WIN32
+       if (imp_dbh->odbc_driver_complete) {
+	 rc = SQLDriverConnectW(imp_dbh->hdbc,
+				GetConsoleHwnd(), /* no hwnd */
+				dc_constr,
+				(SQLSMALLINT)(dc_constr_len / sizeof(SQLWCHAR)),
+				wout_str, sizeof(wout_str) / sizeof(wout_str[0]),
+				&wout_str_len,
+				SQL_DRIVER_COMPLETE);
+       } else {
+#endif
        rc = SQLDriverConnectW(imp_dbh->hdbc,
                               0, /* no hwnd */
                               dc_constr,
@@ -673,6 +699,9 @@ int dbd_db_login6_sv(
                               wout_str, sizeof(wout_str) / sizeof(wout_str[0]),
                               &wout_str_len,
                               SQL_DRIVER_NOPROMPT);
+#ifdef WIN32
+       }
+#endif
        if (SQL_SUCCEEDED(rc)) {
            imp_dbh->out_connect_string = sv_newwvn(wout_str, wout_str_len);
            if (DBIc_TRACE(imp_dbh, CONNECTION_TRACING, 0, 0))
@@ -4181,6 +4210,7 @@ static db_params S_db_fetchOptions[] =  {
    { "odbc_has_unicode", ODBC_HAS_UNICODE},
    { "odbc_out_connect_string", ODBC_OUTCON_STR},
    { "odbc_describe_parameters", ODBC_DESCRIBE_PARAMETERS},
+   { "odbc_driver_complete", ODBC_DRIVER_COMPLETE },
    { NULL }
 };
 
@@ -4583,6 +4613,10 @@ SV *dbd_db_FETCH_attrib(SV *dbh, imp_dbh_t *imp_dbh, SV *keysv)
 
       case ODBC_EXEC_DIRECT:
         retsv = newSViv(imp_dbh->odbc_exec_direct);
+        break;
+
+      case ODBC_DRIVER_COMPLETE:
+        retsv = newSViv(imp_dbh->odbc_driver_complete);
         break;
 
       case ODBC_OLD_UNICODE:
@@ -6130,5 +6164,39 @@ static SQLSMALLINT default_parameter_type(
         }
     }
 }
+
+
+
+#ifdef WIN32
+static   HWND GetConsoleHwnd(void)
+{
+#define MY_BUFSIZE 1024 /* Buffer size for console window titles. */
+  HWND hwndFound;         /* This is what is returned to the caller. */
+  char pszNewWindowTitle[MY_BUFSIZE]; /* Contains fabricated WindowTitle. */
+  char pszOldWindowTitle[MY_BUFSIZE]; /* Contains original  WindowTitle */
+
+  /* Fetch current window title. */
+  GetConsoleTitle(pszOldWindowTitle, MY_BUFSIZE);
+
+  /* Format a "unique" NewWindowTitle. */
+  wsprintf(pszNewWindowTitle,"%d/%d",
+	   GetTickCount(),
+	   GetCurrentProcessId());
+
+  /* Change current window title. */
+  SetConsoleTitle(pszNewWindowTitle);
+
+  /* Ensure window title has been updated. */
+  Sleep(40);
+
+  /* Look for NewWindowTitle. */
+  hwndFound=FindWindow(NULL, pszNewWindowTitle);
+
+  /* Restore original window title. */
+  SetConsoleTitle(pszOldWindowTitle);
+
+  return(hwndFound);
+}
+#endif	/* WIN32 */
 
 /* end */

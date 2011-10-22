@@ -6,6 +6,14 @@ As of $LastChangedDate$
 
 $Revision: 10667 $
 
+=head2 Changes in DBD::ODBC 1.32_2 October 22 2011
+
+  [ENHANCEMENTS]
+
+  * Added new odbc_driver_complete attribute allowing the ODBC Driver
+    Manager and ODBC Driver to throw dialogues for incomplete
+    connection strings or expired passwords etc.
+
 =head2 Changes in DBD::ODBC 1.32_1 June 24 2011
 
   [BUG FIXES]

@@ -30,11 +30,13 @@ examples/money_test.cgi
 examples/moreresults.pl
 examples/multiple_active_stmts.pl
 examples/northwind.pl
+examples/driver_complete.pl
 examples/proctest1.pl
 examples/proctest2.pl
 examples/proctest3.pl
 examples/raiserror.pl
 examples/randombind.pl
+examples/set_nocount_on.pl
 examples/sqltmptabs.pl
 examples/temp_table.pl
 examples/Test_Dates_Jun19.pl
