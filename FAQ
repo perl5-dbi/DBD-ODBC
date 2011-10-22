@@ -1180,6 +1180,22 @@ I reported this issue at http://tracker.firebirdsql.org/browse/ODBC-122.
 Parts of this document were written by Tim Bunce,
 Jeff Urlwin and Martin J. Evans.
 
+=head2 How do I set the application and workstation names for MS SQL Server?
+
+MS SQL Server supports 2 additional connection attributes which you
+can use to set application name and the workstation name:
+
+B<APP> specifies the application name recorded in the program_name
+column in master.dbo.sysprocesses.
+
+B<WSID> sets thw workstation name recorded in the hostname column in
+master.dbo.sysprocesses.
+
+To set these add these attributes to the call to DBIs connect like this:
+
+  my $h = DBI->connect('dbi:ODBC:DSN=mydsn;APP=appname;WSID=wsname',
+                       'dbuser', 'dbpass');
+
 =head1 LICENSE
 
 This library is free software; you can redistribute it and/or modify
