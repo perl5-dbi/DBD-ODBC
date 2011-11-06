@@ -1917,7 +1917,7 @@ int odbc_st_prepare_sv(
            SV *sql_copy;
 
            if (DBIc_TRACE(imp_dbh, UNICODE_TRACING, 0, 0)) /* odbcunicode */
-               TRACE0(imp_dbh, "    Processing utf8 sql in unicode mode\n");
+               TRACE0(imp_dbh, "    Processing utf8 sql in unicode mode for SQLPrepareW\n");
 
            sql_copy = sv_newmortal();
            sv_setpv(sql_copy, imp_sth->statement);
@@ -1940,7 +1940,7 @@ int odbc_st_prepare_sv(
 
 #else  /* !WITH_UNICODE */
        if (DBIc_TRACE(imp_dbh, UNICODE_TRACING, 0, 0)) /* odbcunicode */
-           TRACE0(imp_dbh, "    Processing sql in non-unicode mode\n");
+           TRACE0(imp_dbh, "    Processing sql in non-unicode mode for SQLPrepare\n");
 
        rc = SQLPrepare(imp_sth->hstmt, imp_sth->statement, SQL_NTS);
 #endif

@@ -1809,6 +1809,10 @@ You cannot use unicode parameter names e.g.,
 You cannot use unicode strings in calls to prepare if you set the
 odbc_execdirect attribute.
 
+You cannot pass unicode schema, table and column names into metadata
+calls (like table_info and column_info) at present because the XS
+interface uses char * instead of Perl scalars.
+
 You cannot use the iODBC driver manager with DBD::ODBC built for
 unicode.
 
