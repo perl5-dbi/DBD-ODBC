@@ -76,6 +76,19 @@ _tables(dbh, sth, catalog, schema, table, type)
 	ST(0) = dbd_st_tables(dbh, sth, catalog, schema, table, type) ? &PL_sv_yes : &PL_sv_no;
 
 void
+_tables2(dbh, sth, catalog, schema, table, type)
+	SV *	dbh
+	SV *	sth
+	SV *	catalog
+	SV *	schema
+	SV *  table
+	SV *	type
+	CODE:
+
+	/* list all tables and views (0 as last parameter) */
+	ST(0) = dbd_st_tables2(dbh, sth, catalog, schema, table, type) ? &PL_sv_yes : &PL_sv_no;
+
+void
 _primary_keys(dbh, sth, catalog, schema, table)
     SV * 	dbh
     SV *	sth

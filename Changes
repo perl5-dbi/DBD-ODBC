@@ -6,6 +6,21 @@ As of $LastChangedDate$
 
 $Revision: 10667 $
 
+=head2 Changes in DBD::ODBC 1.32_3 November 15 2011
+
+  [BUG FIXES]
+
+  * Fix bug in utf16_copy which was not adding a trialing NUL but I'm
+    not sure this affected anyone until I changed table_info this
+    release.
+
+  [ENHANCEMENTS]
+
+  * DBD::ODBC now allows unicode catalog/schema/table parameters to be
+    passed to table_info. Of course they will only reliably work with
+    a supporting Unicode ODBC driver.
+
+
 =head2 Changes in DBD::ODBC 1.32_2 October 22 2011
 
   [ENHANCEMENTS]

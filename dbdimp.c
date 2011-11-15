@@ -1565,6 +1565,127 @@ void dbd_preparse(imp_sth_t *imp_sth, char *statement)
 
 
 
+int dbd_st_tables2(
+    SV *dbh,
+    SV *sth,
+    SV *catalog,
+    SV *schema,
+    SV *table,
+    SV *table_type)
+{
+    D_imp_dbh(dbh);
+    D_imp_sth(sth);
+    RETCODE rc;
+    int dbh_active;
+    size_t max_stmt_len;
+    char *acatalog = NULL;
+    char *aschema = NULL;
+    char *atable = NULL;
+    char *atype = NULL;
+
+    imp_sth->henv = imp_dbh->henv;
+    imp_sth->hdbc = imp_dbh->hdbc;
+
+    imp_sth->done_desc = 0;
+
+    if ((dbh_active = check_connection_active(dbh)) == 0) return 0;
+
+    rc = SQLAllocHandle(SQL_HANDLE_STMT, imp_dbh->hdbc, &imp_sth->hstmt);
+    if (rc != SQL_SUCCESS) {
+        dbd_error(sth, rc, "st_tables/SQLAllocHandle(stmt)");
+        return 0;
+    }
+
+    if (SvOK(catalog)) acatalog = SvPV_nolen(catalog);
+    if (SvOK(schema)) aschema = SvPV_nolen(schema);
+    if (SvOK(table)) atable = SvPV_nolen(table);
+    if (SvOK(table_type)) atype = SvPV_nolen(table_type);
+
+   max_stmt_len =
+       strlen(cSqlTables)+
+       strlen(XXSAFECHAR(acatalog)) +
+       strlen(XXSAFECHAR(aschema)) +
+       strlen(XXSAFECHAR(atable)) +
+       strlen(XXSAFECHAR(atype))+1;
+
+   imp_sth->statement = (char *)safemalloc(max_stmt_len);
+   my_snprintf(imp_sth->statement, max_stmt_len, cSqlTables,
+               XXSAFECHAR(acatalog), XXSAFECHAR(aschema),
+               XXSAFECHAR(atable), XXSAFECHAR(atype));
+
+#ifdef WITH_UNICODE
+   {
+       SQLWCHAR *wcatalog = NULL;
+       SQLWCHAR *wschema = NULL;
+       SQLWCHAR *wtable = NULL;
+       SQLWCHAR *wtype = NULL;
+       STRLEN wlen;
+       SV *copy;
+       int i;
+
+       if (SvOK(catalog)) {
+           /*printf("CATALOG OK %d\n", SvCUR(catalog));*/
+
+           copy = sv_mortalcopy(catalog);
+           SV_toWCHAR(copy);
+           wcatalog = (SQLWCHAR *)SvPV(copy, wlen);
+       }
+       if (SvOK(schema)) {
+           copy = sv_mortalcopy(schema);
+           SV_toWCHAR(copy);
+           wschema = (SQLWCHAR *)SvPV(copy, wlen);
+       }
+       if (SvOK(table)) {
+           copy = sv_mortalcopy(table);
+           SV_toWCHAR(copy);
+           wtable = (SQLWCHAR *)SvPV(copy, wlen);
+       }
+       if (SvOK(table_type)) {
+           copy = sv_mortalcopy(table_type);
+           SV_toWCHAR(copy);
+           wtype = (SQLWCHAR *)SvPV(copy, wlen);
+       }
+       /*
+       printf("wcatalog = %p\n", wcatalog);
+       for (i = 0; i < 10; i++) {
+           printf("%d\n", wcatalog[i]);
+       }
+       */
+       rc = SQLTablesW(imp_sth->hstmt,
+                       (wcatalog && *wcatalog) ? wcatalog : NULL, SQL_NTS,
+                       (wschema && *wschema) ? wschema : NULL, SQL_NTS,
+                       (wtable && *wtable) ? wtable : NULL, SQL_NTS,
+                       (wtype && *wtype) ? wtype : NULL, SQL_NTS		/* type (view, table, etc) */
+                      );
+   }
+#else
+   {
+       rc = SQLTables(imp_sth->hstmt,
+                      (acatalog && *acatalog) ? acatalog : 0, SQL_NTS,
+                      (aschema && *aschema) ? aschema : 0, SQL_NTS,
+                      (atable && *atable) ? atable : 0, SQL_NTS,
+                      atype && *atype ? atype : 0,
+                      SQL_NTS		/* type (view, table, etc) */
+                      );
+   }
+
+#endif  /* WITH_UNICODE */
+
+   if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 4))
+       TRACE2(imp_dbh, "   Tables result %d (%s)\n",
+           rc, atype ? atype : "(null)");
+
+   dbd_error(sth, rc, "st_tables/SQLTables");
+   if (!SQL_SUCCEEDED(rc)) {
+      SQLFreeHandle(SQL_HANDLE_STMT,imp_sth->hstmt);
+      imp_sth->hstmt = SQL_NULL_HSTMT;
+      return 0;
+   }
+   return build_results(sth, dbh, rc);
+
+}
+
+
 int dbd_st_tables(
     SV *dbh,
     SV *sth,
