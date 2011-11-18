@@ -373,6 +373,14 @@ sub row_wise
     clear_table($dbh, $table);
     $sth = $dbh->prepare(qq/insert into $table values(?,?)/);
     my $sth2 = $dbh->prepare(qq/select * from $table2/);
+    # some drivers issue warnings when mas fails and this causes
+    # Test::NoWarnings to output something when we already found
+    # the test failed and captured it.
+    # e.g., some ODBC drivers cannot do MAS and this test is then expected to
+    # fail but we ignore the failure. Unfortunately in failing DBD::ODBC will
+    # issue a warning in addition to the fail
+    $sth->{Warn} = 0;
+    $sth->{Warn} = 0;
     ok($sth2->execute, 'execute on second table') or diag($sth2->errstr);
     ok($sth2->{Executed}, 'second statement is in executed state');
     my $res = insert($dbh, $sth,

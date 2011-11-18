@@ -3931,7 +3931,6 @@ static int rebind_param(
              (phs->sql_type == SQL_WVARCHAR) &&
              (phs->requested_type == 0))) {
             column_size = 0;
-	    printf("HERE\n");
         }
     }
     /* for rt_38977 we get:

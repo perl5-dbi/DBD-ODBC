@@ -6,6 +6,16 @@ As of $LastChangedDate$
 
 $Revision: 10667 $
 
+=head2 Changes in DBD::ODBC 1.32_4 November XX 2011
+
+  [BUG FIXES]
+
+  * remove debugging printf which output "HERE" in some rare cases.
+    rt 72534 - thanks John Deighan for spotting this.
+
+  * The test 70execute_array.t could fail due to warning being output
+    if the driver does not support Multiple Active Statements.
+
 =head2 Changes in DBD::ODBC 1.32_3 November 15 2011
 
   [BUG FIXES]
