@@ -20,6 +20,9 @@ $Revision: 10667 $
 
   * Use SQLGetTypeInfoW on unicode builds.
 
+  * Change column_info to support Unicode catalog/schema/table/column
+    names.
+
 =head2 Changes in DBD::ODBC 1.32_3 November 15 2011
 
   [BUG FIXES]

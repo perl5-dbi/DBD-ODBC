@@ -180,7 +180,7 @@ $DBD::ODBC::VERSION = '1.32_4';
 	# create a "blank" statement handle
 	my $sth = DBI::_new_sth($dbh, { 'Statement' => "SQLColumns" });
 
-	_columns($dbh,$sth, $catalog, $schema, $table, $column)
+	_columns2($dbh,$sth, $catalog, $schema, $table, $column)
 	    or return;
 
 	return $sth;
@@ -1812,7 +1812,8 @@ odbc_execdirect attribute.
 You cannot pass unicode catalog, schema, table and column names into
 metadata calls (like column_info) at present because the XS interface
 uses char * instead of Perl scalars. NOTE: as of DBD::ODBC 1.32_3 Unicode
-is fully supported for input parameters in table_info.
+is fully supported for input parameters in table_info. As of DBD::ODBC
+1.32_4 Unicode is fully supported for input parameters in column_info.
 
 You cannot use the iODBC driver manager with DBD::ODBC built for
 unicode.

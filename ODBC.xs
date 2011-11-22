@@ -166,6 +166,17 @@ _columns(dbh, sth, catalog, schema, table, column)
 	ST(0) = odbc_db_columns(dbh, sth, catalog, schema, table, column) ? &PL_sv_yes : &PL_sv_no;
 
 void
+_columns2(dbh, sth, catalog, schema, table, column)
+	SV *	dbh
+	SV *	sth
+	SV *	catalog
+	SV *	schema
+	SV *	table
+	SV *	column
+	CODE:
+	ST(0) = odbc_db_columns2(dbh, sth, catalog, schema, table, column) ? &PL_sv_yes : &PL_sv_no;
+
+void
 _GetInfo(dbh, ftype)
 	SV *	dbh
 	int		ftype
