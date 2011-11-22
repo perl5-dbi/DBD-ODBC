@@ -16,6 +16,10 @@ $Revision: 10667 $
   * The test 70execute_array.t could fail due to warning being output
     if the driver does not support Multiple Active Statements.
 
+  [ENHANCEMENTS]
+
+  * Use SQLGetTypeInfoW on unicode builds.
+
 =head2 Changes in DBD::ODBC 1.32_3 November 15 2011
 
   [BUG FIXES]
