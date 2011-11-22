@@ -5497,7 +5497,11 @@ int ftype;
    imp_sth->statement = (char *)safemalloc(max_stmt_len);
    my_snprintf(imp_sth->statement, max_stmt_len, cSqlGetTypeInfo, ftype);
 
+#ifdef WITH_UNICODE
+   rc = SQLGetTypeInfoW(imp_sth->hstmt, (SQLSMALLINT)ftype);
+#else
    rc = SQLGetTypeInfo(imp_sth->hstmt, (SQLSMALLINT)ftype);
+#endif
 
    dbd_error(sth, rc, "odbc_get_type_info/SQLGetTypeInfo");
    if (!SQL_SUCCEEDED(rc)) {
