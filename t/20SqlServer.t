@@ -374,9 +374,9 @@ SKIP: {
 
       $sth1->execute();
       # print "$output";
-      if ($output != $i) {
+      if (!defined($output) || ($output !~ /\d+/) || ($output != $i)) {
 	 $iErrCount++;
-	 diag("$output error!\n");
+	 diag("output='$output' error, expected $i\n");
       }
       # print "\n";
       $i++;
@@ -441,7 +441,9 @@ SKIP: {
    eval {$dbh->do('DROP TABLE PERL_DBD_TABLE1');};
    eval {$dbh->do('DROP PROCEDURE PERL_DBD_PROC1');};
 
-   eval {$dbh->do('CREATE TABLE PERL_DBD_TABLE1 (i INTEGER, j integer)');};
+   eval {$dbh->do('CREATE TABLE PERL_DBD_TABLE1 (i INTEGER, j integer)')}
+   or diag($@);
+   
    $proc1 = <<EOT;
 CREATE PROCEDURE PERL_DBD_PROC1 (\@i INT) AS
 DECLARE \@result INT;
@@ -456,7 +458,7 @@ BEGIN
 END
 EOT
    $dbh->{RaiseError} = 0;
-   eval {$dbh->do($proc1);};
+   eval {$dbh->do($proc1)} or diag($@);
    my $sth = $dbh->prepare ('{call PERL_DBD_PROC1 (?)}');
    my $success = -1;
 

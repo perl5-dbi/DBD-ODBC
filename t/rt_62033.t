@@ -83,12 +83,12 @@ sub doit
     my $s = $dbh->prepare_cached(
         q/insert into PERL_DBD_RT_62033 (b) values(?);select @@identity/);
     eval {$s->execute(@_)};
-    #diag "sql errors $@\n" if $@;
 
     if (!$expect) {
-        ok($@, 'Error for constraint');
+        ok($@, 'Error for constraint - just inserted undef into not null column and it appeared to work');
+	note("For some drivers (freeTDS/MS SQL Server for Linux) there is no way out of this so expect further errors");
     } else {
-        ok(!$@, 'Execute ok');
+        ok(!$@, 'Execute ok') or diag($@);
     }
 
     # Some drivers won't like us calling SQLMoreResults/SQLDescribe etc
