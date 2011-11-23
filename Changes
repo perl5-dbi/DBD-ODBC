@@ -27,7 +27,7 @@ $Revision: 10667 $
 
   [BUG FIXES]
 
-  * Fix bug in utf16_copy which was not adding a trialing NUL but I'm
+  * Fix bug in utf16_copy which was not adding a trailing NUL but I'm
     not sure this affected anyone until I changed table_info this
     release.
 
