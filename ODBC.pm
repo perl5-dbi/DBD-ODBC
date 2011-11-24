@@ -19,7 +19,7 @@ require 5.008;
 # see discussion on dbi-users at
 # http://www.nntp.perl.org/group/perl.dbi.dev/2010/07/msg6096.html and
 # http://www.dagolden.com/index.php/369/version-numbers-should-be-boring/
-$DBD::ODBC::VERSION = '1.32_4';
+$DBD::ODBC::VERSION = '1.32_5';
 
 {
     ## no critic (ProhibitMagicNumbers ProhibitExplicitISA)
@@ -568,7 +568,7 @@ DBD::ODBC - ODBC Driver for DBI
 
 =head1 VERSION
 
-This documentation refers to DBD::ODBC version 1.32_4.
+This documentation refers to DBD::ODBC version 1.32_5.
 
 =head1 SYNOPSIS
 
@@ -1813,7 +1813,7 @@ You cannot pass unicode catalog, schema, table and column names into
 metadata calls (like column_info) at present because the XS interface
 uses char * instead of Perl scalars. NOTE: as of DBD::ODBC 1.32_3 Unicode
 is fully supported for input parameters in table_info. As of DBD::ODBC
-1.32_4 Unicode is fully supported for input parameters in column_info.
+1.32_5 Unicode is fully supported for input parameters in column_info.
 
 You cannot use the iODBC driver manager with DBD::ODBC built for
 unicode.

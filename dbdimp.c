@@ -5906,10 +5906,10 @@ SV *column;
 #else
    {
        rc = SQLColumns(imp_sth->hstmt,
-		       (catalog && *catalog) ? catalog : 0, SQL_NTS,
-		       (schema && *schema) ? schema : 0, SQL_NTS,
-		       (table && *table) ? table : 0, SQL_NTS,
-		       (column && *column) ? column : 0, SQL_NTS);
+		       (acatalog && *acatalog) ? acatalog : 0, SQL_NTS,
+		       (aschema && *aschema) ? aschema : 0, SQL_NTS,
+		       (atable && *atable) ? atable : 0, SQL_NTS,
+		       (acolumn && *acolumn) ? acolumn : 0, SQL_NTS);
    }
 #endif /* WITH_UNICODE */
 

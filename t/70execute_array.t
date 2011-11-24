@@ -454,6 +454,21 @@ unless($dbh) {
 }
 note("Using driver $dbh->{Driver}->{Name}");
 
+# this test uses multiple active statements
+# if we recognise the driver and it supports MAS enable it
+my $driver_name = $dbh->get_info(6) || '';
+if (($driver_name eq 'libessqlsrv.so') ||
+    ($driver_name =~ /libsqlncli/)) {
+    my $dsn = $ENV{DBI_DSN};
+    if ($dsn !~ /^dbi:ODBC:DSN=/ && $dsn !~ /DRIVER=/i) {
+        my @a = split(q/:/, $ENV{DBI_DSN});
+        $dsn = join(q/:/, @a[0..($#a - 1)]) . ":DSN=" . $a[-1];
+    }
+    $dsn .= ";MARS_Connection=yes";
+    $dbh->disconnect;
+    $dbh = DBI->connect($dsn, $ENV{DBI_USER}, $ENV{DBI_PASS});
+}
+
 #$dbh->{ora_verbose} = 5;
 $dbh->{RaiseError} = 1;
 $dbh->{PrintError} = 0;
