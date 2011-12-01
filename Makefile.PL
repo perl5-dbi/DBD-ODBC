@@ -221,7 +221,7 @@ if ($opt_g) {
    }
 }
 if ($opt_w) {
-    $opts{CCFLAGS} = '-Wall -fno-strict-aliasing';
+    $opts{CCFLAGS} = '-Wint-to-pointer-cast -fno-strict-aliasing';
 }
 if (defined($opt_u) && $opt_u) {
     $opts{DEFINE} .= ' -DWITH_UNICODE';
@@ -595,6 +595,7 @@ EOT
         # and store unixODBC version
         print "Looking for odbcinst\n";
         if (-x "$odbchome/bin/odbcinst") {
+            print "  Found odbcinst in $odbchome/bin\n";
             my $j = `$odbchome/bin/odbcinst -j 2>&1`;
             print "  odbcinst -j reports:\n\n$j\n" if $j;
             if ($j =~ /^unixODBC ([\d\.]+).*/ ) {
@@ -797,6 +798,7 @@ sub unixodbc_config
 {
     my $odbchome = shift;       # may not be set
 
+    print "Looking for odbc_config in : ", ($odbchome ? $odbchome : "nowhere"), "\n";
     my ($inc, $lib, $home, $configbin, $odbc_config_v);
 
     # unixODBC - would have liked to use odbc_config but it did not
@@ -808,7 +810,7 @@ sub unixodbc_config
         $odbc_config_v = `$configbin --version 2>&1`;
     }
     if (!defined($odbc_config_v) || ($odbc_config_v !~ /^(\d\.)+/)) {
-        print "Looking for odbc_config on PATH\n";
+        print "Looking for odbc_config on $ENV{PATH}\n";
         $configbin = 'odbc_config';
         $odbc_config_v = `$configbin --version 2>/dev/null`;
         if (!defined($odbc_config_v) || ($odbc_config_v !~ /^(\d\.)+/)) {
@@ -845,6 +847,19 @@ EOT
     }
     print "  odbc_config reports --prefix=$home\n";
 
+    # if we cannot find the --prefix dir someone perhaps someone has built
+    # it in one place and moved it to another. Try path to odbc_config
+    if (! -e "$home") {
+        my $ocp = `which $configbin`;
+        if ($ocp) {
+            chomp $ocp;
+            if ($ocp =~ /$configbin$/) {
+                $ocp =~ s/bin\/$configbin$//;
+                $home = $ocp;
+            }
+        }
+    }
+
     $inc = `$configbin --include-prefix`;
     chomp $inc;
     print "  odbc_config reports --include-prefix=$inc\n";
@@ -856,16 +871,31 @@ EOT
     my $found_hdrs = 0;
     # try with --include-prefix
     if (defined($inc) && (-e $inc) && files_exist($inc, @hdrstofind)) {
-        print "  ODBC INC dir set to $inc from odbc_config\n";
+        print "  ODBC INC dir set to $inc via odbc_config\n";
         $found_hdrs++;
-    } elsif (-e "$home") {
+    }
+    if (!$found_hdrs && (-e "$home")) {
         # try with --prefix + include
         $inc = File::Spec->catdir($home, 'include');
         if ((-e "$inc") && files_exist($inc, @hdrstofind)) {
-            print "  ODBC INC dir set to $inc from odbc_config\n";
+            print "  ODBC INC dir set to $inc via odbc_config\n";
             $found_hdrs++;
         }
     }
+#    if (!$found_hdrs) {
+#        my $ocp = `which $configbin`;
+#        if ($ocp) {
+#            chomp $ocp;
+#            if ($ocp =~ /$configbin$/) {
+#                $ocp =~ s/bin\/$configbin$//;
+#                $inc = File::Spec->catdir($ocp, 'include');
+#                if ((-e "$inc") && files_exist($inc, @hdrstofind)) {
+#                    print "  ODBC INC dir set to $inc from path to $configbin\n";
+#                    $found_hdrs++;
+#                }
+#            }
+#        }
+#    }
     if (!$found_hdrs) {
         print "  but cannot find header files " . join(',', @hdrstofind) .
             " in that path so ignoring\n";
@@ -873,15 +903,35 @@ EOT
         return;
     }
 
+    my $found_libdir = 0;
+
     if (-e "$lib") { # try with --lib-prefix
-        print "  ODBC LIB dir set to $lib from odbc_config\n";
-    } elsif (-e "$home") {
+        print "  ODBC LIB dir set to $lib via odbc_config\n";
+        $found_libdir++;
+    }
+    if (!$found_libdir && -e "$home") {
         # try with --prefix + lib
         $lib = File::Spec->catdir($home, 'lib');
         if (-e "$lib") {
             print "  ODBC LIB dir set to $lib from odbc_config\n";
+            $found_libdir++;
         }
-    } else {
+    }
+#    if (!$found_libdir) {
+#        my $ocp = `which $configbin`;
+#        if ($ocp) {
+#            chomp $ocp;
+#            if ($ocp =~ /$configbin$/) {
+#                $ocp =~ s/bin\/$configbin$//;
+#                $lib = File::Spec->catdir($ocp, 'lib');
+#                if (-e "$lib") {
+#                    print "Found lib dir $lib from path to $configbin";
+#                    $found_libdir++;
+#                }
+#            }
+#        }
+#    }
+    if (!$lib) {
         print "  but cannot find lib dir so ignoring\n";
         return;
     }

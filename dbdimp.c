@@ -1565,7 +1565,7 @@ void dbd_preparse(imp_sth_t *imp_sth, char *statement)
 
 
 
-int dbd_st_tables2(
+int dbd_st_tables(
     SV *dbh,
     SV *sth,
     SV *catalog,
@@ -1685,7 +1685,7 @@ int dbd_st_tables2(
 
 }
 
-
+#ifdef OLD_ONE_BEFORE_SCALARS
 int dbd_st_tables(
     SV *dbh,
     SV *sth,
@@ -1745,6 +1745,7 @@ int dbd_st_tables(
    }
    return build_results(sth, dbh, rc);
 }
+#endif  /* OLD_ONE_BEFORE_SCALARS */
 
 
 
@@ -5750,6 +5751,7 @@ SV *odbc_col_attributes(SV *sth, int colno, int desctype)
 
 
 
+#ifdef OLD_ONE_BEFORE_SCALARS
 int
    odbc_db_columns(dbh, sth, catalog, schema, table, column)
    SV *dbh;
@@ -5813,11 +5815,11 @@ char *column;
     }
     return build_results(sth, dbh, rc);
 }
-
+#endif  /* OLD_ONE_BEFORE_SCALARS */
 
 
 int
-   odbc_db_columns2(dbh, sth, catalog, schema, table, column)
+   odbc_db_columns(dbh, sth, catalog, schema, table, column)
    SV *dbh;
 SV *sth;
 SV *catalog;

@@ -27,9 +27,9 @@ int	 odbc_describe_col _((SV *sth, int colno,
 	    I16 *DataType, U32 *ColumnSize,
 	    I16 *DecimalDigits, I16 *Nullable));
 int	 odbc_db_columns _((SV *dbh, SV *sth,
-	    char *catalog, char *schema, char *table, char *column));
+	    SV *catalog, SV *schema, SV *table, SV *column));
 
-int  odbc_st_tables _((SV *dbh, SV *sth, char *catalog, char *schema, char *table, char *table_type));
+int  odbc_st_tables _((SV *dbh, SV *sth, SV *catalog, SV *schema, SV *table, SV *table_type));
 int  odbc_st_primary_keys _((SV *dbh, SV *sth, char *catalog, char *schema, char *table));
 int  odbc_get_statistics _((SV *dbh, SV *sth, char *CatalogName, char *SchemaName, char *TableName, int Unique));
 int  odbc_get_special_columns _((SV *dbh, SV *sth, int Identifier, char *CatalogName, char *SchemaName, char *TableName, int Scope, int Nullable));

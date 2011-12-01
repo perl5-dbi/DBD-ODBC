@@ -67,18 +67,6 @@ void
 _tables(dbh, sth, catalog, schema, table, type)
 	SV *	dbh
 	SV *	sth
-	char *	catalog
-	char *	schema
-	char *  table
-	char *	type
-	CODE:
-	/* list all tables and views (0 as last parameter) */
-	ST(0) = dbd_st_tables(dbh, sth, catalog, schema, table, type) ? &PL_sv_yes : &PL_sv_no;
-
-void
-_tables2(dbh, sth, catalog, schema, table, type)
-	SV *	dbh
-	SV *	sth
 	SV *	catalog
 	SV *	schema
 	SV *  table
@@ -86,7 +74,7 @@ _tables2(dbh, sth, catalog, schema, table, type)
 	CODE:
 
 	/* list all tables and views (0 as last parameter) */
-	ST(0) = dbd_st_tables2(dbh, sth, catalog, schema, table, type) ? &PL_sv_yes : &PL_sv_no;
+	ST(0) = dbd_st_tables(dbh, sth, catalog, schema, table, type) ? &PL_sv_yes : &PL_sv_no;
 
 void
 _primary_keys(dbh, sth, catalog, schema, table)
@@ -158,23 +146,12 @@ void
 _columns(dbh, sth, catalog, schema, table, column)
 	SV *	dbh
 	SV *	sth
-	char *	catalog
-	char *	schema
-	char *	table
-	char *	column
-	CODE:
-	ST(0) = odbc_db_columns(dbh, sth, catalog, schema, table, column) ? &PL_sv_yes : &PL_sv_no;
-
-void
-_columns2(dbh, sth, catalog, schema, table, column)
-	SV *	dbh
-	SV *	sth
 	SV *	catalog
 	SV *	schema
 	SV *	table
 	SV *	column
 	CODE:
-	ST(0) = odbc_db_columns2(dbh, sth, catalog, schema, table, column) ? &PL_sv_yes : &PL_sv_no;
+	ST(0) = odbc_db_columns(dbh, sth, catalog, schema, table, column) ? &PL_sv_yes : &PL_sv_no;
 
 void
 _GetInfo(dbh, ftype)

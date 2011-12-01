@@ -19,7 +19,7 @@ require 5.008;
 # see discussion on dbi-users at
 # http://www.nntp.perl.org/group/perl.dbi.dev/2010/07/msg6096.html and
 # http://www.dagolden.com/index.php/369/version-numbers-should-be-boring/
-$DBD::ODBC::VERSION = '1.32_5';
+$DBD::ODBC::VERSION = '1.33';
 
 {
     ## no critic (ProhibitMagicNumbers ProhibitExplicitISA)
@@ -180,7 +180,7 @@ $DBD::ODBC::VERSION = '1.32_5';
 	# create a "blank" statement handle
 	my $sth = DBI::_new_sth($dbh, { 'Statement' => "SQLColumns" });
 
-	_columns2($dbh,$sth, $catalog, $schema, $table, $column)
+	_columns($dbh,$sth, $catalog, $schema, $table, $column)
 	    or return;
 
 	return $sth;
@@ -222,7 +222,7 @@ $DBD::ODBC::VERSION = '1.32_5';
 	# create a "blank" statement handle
 	my $sth = DBI::_new_sth($dbh, { 'Statement' => "SQLTables" });
 
-	DBD::ODBC::st::_tables2($dbh,$sth, $catalog, $schema, $table, $type)
+	DBD::ODBC::st::_tables($dbh,$sth, $catalog, $schema, $table, $type)
 	      or return;
 	return $sth;
     }
@@ -568,7 +568,7 @@ DBD::ODBC - ODBC Driver for DBI
 
 =head1 VERSION
 
-This documentation refers to DBD::ODBC version 1.32_5.
+This documentation refers to DBD::ODBC version 1.33.
 
 =head1 SYNOPSIS
 

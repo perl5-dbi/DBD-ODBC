@@ -6,6 +6,11 @@ As of $LastChangedDate$
 
 $Revision: 10667 $
 
+=head2 Changes in DBD::ODBC 1.33 December 1 2011
+
+  This is simply the official release of the 1.32 development
+  releases.
+
 =head2 Changes in DBD::ODBC 1.32_5 November 24 2011
 
   [ENHANCEMENTS]
