@@ -6294,7 +6294,7 @@ static int post_connect(
     imp_dbh->odbc_query_timeout = -1;
     imp_dbh->odbc_putdata_start = 32768;
     imp_dbh->odbc_batch_size = 10;
-    printf("odbc_batch_size defaulted to %d\n", imp_dbh->odbc_batch_size);
+    /*printf("odbc_batch_size defaulted to %d\n", imp_dbh->odbc_batch_size);*/
     imp_dbh->odbc_column_display_size = 2001;
     imp_dbh->odbc_utf8_on = 0;
     imp_dbh->odbc_exec_direct = 0; /* default to not having SQLExecDirect used */
