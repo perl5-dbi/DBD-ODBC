@@ -2,7 +2,7 @@ use DBI;
 use Data::Dumper;
 use strict;
 use warnings;
-use Devel::Leak;
+#use Devel::Leak;
 
 my $h = DBI->connect("dbi:ODBC:DSN=baugi","sa","easysoft",
 		     {RaiseError => 1, PrintError => 0,odbc_disable_array_operations => 0});
