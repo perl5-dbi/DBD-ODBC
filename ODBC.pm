@@ -148,7 +148,9 @@ $DBD::ODBC::VERSION = '1.33';
             odbc_putdata_start             => undef, # sth and dbh
             odbc_column_display_size       => undef, # sth and dbh
             odbc_utf8_on                   => undef, # sth and dbh
-	    odbc_driver_complete           => undef
+	    odbc_driver_complete           => undef,
+	    odbc_batch_size                => undef,
+            odbc_disable_array_operations  => undef, # sth and dbh
                };
     }
 
@@ -504,7 +506,9 @@ $DBD::ODBC::VERSION = '1.33';
             odbc_utf8_on                   => undef, # sth and dbh
             odbc_exec_direct               => undef, # sth and dbh
             odbc_old_unicode               => undef, # sth and dbh
-            odbc_describe_parameters => undef, # sth and dbh
+            odbc_describe_parameters       => undef, # sth and dbh
+	    odbc_batch_size                => undef, # sth and dbh
+            odbc_disable_array_operations  => undef, # sth and dbh
         };
     }
 
@@ -520,43 +524,71 @@ $DBD::ODBC::VERSION = '1.33';
 	return $tmp;
     }
 
-# Just in case someone comes along and wants to add this
-#    sub execute_for_fetch {
-#        my ($sth, $fetch_tuple_sub, $tuple_status) = @_;
-#        print "execute_for_fetch\n";
-#        my $row_count = 0;
-#        my $tuple_count="0E0";
-#        my $tuple_batch_status;
-#
-#        if (defined($tuple_status)) {
-#            @$tuple_status = ();
-#            $tuple_batch_status = [ ];
-#        }
-#        while (1) {
-#            my @tuple_batch;
-#            for (my $i = 0; $i < $batch_size; $i++) {
-#                push @tuple_batch, [ @{$fetch_tuple_sub->() || last} ];
-#            }
-#            last unless @tuple_batch;
-#            my $res = odbc_execute_array($sth,
-#                                         \@tuple_batch,
-#                                         scalar(@tuple_batch),
-#                                         $tuple_batch_status);
-#            if (defined($res) && defined($row_count)) {
-#                $row_count += $res;
-#            } else {
-#                $row_count = undef;
-#            }
-#            $tuple_count+=@$tuple_batch_status;
-#            push @$tuple_status, @$tuple_batch_status
-#                if defined($tuple_status);
-#        }
-#        if (!wantarray) {
-#            return undef if !defined $row_count;
-#            return $tuple_count;
-#        }
-#        return (defined $row_count ? $tuple_count : undef, $row_count);
-#    }
+    sub execute_for_fetch {
+        my ($sth, $fetch_tuple_sub, $tuple_status) = @_;
+        #print "execute_for_fetch\n";
+        my $row_count = 0;
+        my $tuple_count="0E0";
+        my $tuple_batch_status;
+        my $batch_size = $sth->FETCH('odbc_batch_size');
+
+        $sth->trace_msg("execute_for_fetch($fetch_tuple_sub, " .
+                            ($tuple_status ? $tuple_status : 'undef') .
+                                ") batch_size = $batch_size\n");
+        # Use DBI's execute_for_fetch if ours is disabled
+        if ($sth->FETCH('odbc_disable_array_operations')) {
+            $sth->trace_msg("array operations disabled\n");
+            my $sth = shift;
+            return $sth->SUPER::execute_for_fetch(@_);
+        }
+
+        if (defined($tuple_status)) {
+            @$tuple_status = ();
+            $tuple_batch_status = [ ];
+        }
+        my $finished;
+        while (1) {
+            my @tuple_batch;
+            for (my $i = 0; $i < $batch_size; $i++) {
+                $finished = $fetch_tuple_sub->();
+                push @tuple_batch, [ @{$finished || last} ];
+            }
+            $sth->trace_msg("Found " . scalar(@tuple_batch) . " rows\n");
+            last unless @tuple_batch;
+            my $res = odbc_execute_array($sth,
+                                         \@tuple_batch,
+                                         scalar(@tuple_batch),
+                                         $tuple_batch_status);
+            $sth->trace_msg("odbc_execute_array returns " .
+                                ($res ? $res : 'undef') . "\n");
+
+            #print "odbc_execute_array XS returned $res\n";
+            # count how many tuples were used
+            # basically they are all used unless marked UNUSED
+            # TO_DO may need to change this as it is not DBI spec setting
+            # SQL_PARAM_xxx values in tuple status
+            if ($tuple_batch_status) {
+                foreach (@$tuple_batch_status) {
+                    next if ref($_);
+                    $tuple_count++ unless $_  == 7; # SQL_PARAM_UNUSED
+                }
+                push @$tuple_status, @$tuple_batch_status
+                    if defined($tuple_status);
+            }
+            if (!defined($res)) {	# error
+                $row_count = undef;
+                last;
+            } else {
+                $row_count += $res;
+            }
+            last if !$finished;
+        }
+        if (!wantarray) {
+            return undef if !defined $row_count;
+            return $tuple_count;
+        }
+        return (defined $row_count ? $tuple_count : undef, $row_count);
+    }
 }
 
 1;
@@ -1195,6 +1227,13 @@ An example is:
 As this only provides the driver and further attributes are required a
 dialogue will be thrown allowing you to specify the SQL Server to
 connect to and possibly other attributes.
+
+=head3 odbc_batch_size
+
+Sets the batch size for execute_for_fetch which defaults to 10.
+Bare in mind the bigger you set this the more memory DBD::ODBC will need
+to allocate when running execute_for_fetch and the memory required is
+max_length_of_pn * odbc_batch_size * n_parameters.
 
 =head2 Private statement methods
 

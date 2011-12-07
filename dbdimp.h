@@ -114,6 +114,8 @@ struct imp_dbh_st {
     char odbc_driver_version[20];
     char odbc_dbms_name[80];
     char odbc_dbms_version[80];
+    int odbc_batch_size;	/* rows in a batch operation */
+    int odbc_disable_array_operations;	/* disable inbuilt execute_for_fetch etc */
 };
 
 /* Define sth implementor data structure */
@@ -146,7 +148,6 @@ struct imp_sth_st {
 				 */
     SV	*param_sts;			/* ref to param status array for array bound PHs */
     int params_procd;			/* to recv number of parms processed by an SQLExecute() */
-    UWORD *param_status;		/* row indicators for array binding */
     SV	*row_sts;			/* ref to row status array for array bound columns */
     UDWORD rows_fetched;		/* actual number of rows fetched for array binding */
     UDWORD max_rows;			/* max number of rows per fetch for array binding */
@@ -164,6 +165,11 @@ struct imp_sth_st {
     int odbc_utf8_on;
     int odbc_old_unicode;
     int odbc_describe_parameters;
+    SQLUSMALLINT *param_status_array; /* array for execute_for_fetch parameter status */
+    SQLULEN params_processed;	      /* for execute_for_fetch */
+    int odbc_batch_size;	/* rows in a batch operation */
+    int odbc_disable_array_operations;	/* disable inbuilt execute_for_fetch etc */
+    int allocated_batch_size;		/* size used for last batch */
 };
 #define IMP_STH_EXECUTING	0x0001
 
@@ -213,6 +219,9 @@ struct phs_st {             /* scalar placeholder */
     SQLLEN strlen_or_ind;   /* SQLBindParameter StrLen_or_IndPtr argument */
                             /* containg parameter length on input for input */
                             /* and returned parameter size for output params */
+    SQLLEN *strlen_or_ind_array; /* as above but an array for execute_for_fetch */
+
+    char *param_array_buf;  /* allocated buffer for array of params */
     SQLSMALLINT requested_type; /* type optionally passed in bind_param call */
     SQLSMALLINT value_type; /* SQLBindParameter value_type - a SQL C type */
     SQLSMALLINT described_sql_type;
