@@ -6,6 +6,13 @@ As of $LastChangedDate$
 
 $Revision: 10667 $
 
+=head2 Changes in DBD::ODBC 1.34_1 xxx nn 2011
+
+  [ENHANCEMENTS]
+
+  * Added experimental execute_for_fetch support and associated
+    attributes odbc_batch_size and odbc_disable_array_operations.
+
 =head2 Changes in DBD::ODBC 1.33 December 1 2011
 
   This is simply the official release of the 1.32 development
