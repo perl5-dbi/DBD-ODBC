@@ -1235,6 +1235,14 @@ Bare in mind the bigger you set this the more memory DBD::ODBC will need
 to allocate when running execute_for_fetch and the memory required is
 max_length_of_pn * odbc_batch_size * n_parameters.
 
+=head3 odbc_disable_array_operations
+
+Please read the documentation on L<execute_array> and L<execute_for_fetch>
+which details subtle differences in DBD::ODBC's implementation compared
+with using DBI's default implementation. If these difference cause you
+a problem you can set odbc_disable_array_operations to true and DBD::ODBC
+will revert to DBI's implementations of the array methods.
+
 =head2 Private statement methods
 
 =head3 odbc_lob_read
@@ -1723,6 +1731,56 @@ outstanding transaction when disconnect is called. As such DBD::ODBC
 cannot deviate from the specification but you should know it rolls
 back an uncommitted transaction when disconnect is called if
 SQLDisconnect returns state 25000 (transaction in progress).
+
+=head3 execute_for_fetch and execute_array
+
+From version 1.34_01 DBD::ODBC implements its own execute_for_fetch
+which binds arrays of parameters and can send multiple rows
+(L</odbc_batch_size) of parameters through the ODBC driver in one go
+(this overrides DBI's default execute_for_fetch). This is much faster
+when inserting, updating or deleting many rows in one go. Note,
+execute_array uses execute_for_fetch when the parameters are passed
+for column-wise binding.
+
+However, there are a small number of differences between using
+DBD::ODBC's execute_for_fetch compared with using DBI's default
+implementation (which simply calls execute repeatedly once per row).
+The differences you may see are:
+
+o as DBI's execute_for_fetch does one row at a time the result from
+execute is for one row and just about all ODBC drivers can report the
+number of affected rows when SQLRowCount is called per execute. When
+batches of parameters are sent the driver can still return the number
+of affected rows but it is usually per batch rather than per row. As a
+result, the tuple_status array you may pass to execute_for_fetch (or
+execute_array) usually shows -1 (unknown) for each row although the total
+affected returned in array context is a correct total affected.
+
+o not all ODBC drivers have sufficient ODBC support (arguably a bug)
+for correct diagnostics support when using arrays. DBI dictates that
+if a row in the batch is in error the tuple_status will contain the
+state, native and error message text. However the batch may generate
+multiple errors per row (which DBI says nothing about) and more than
+one row may error. In ODBC we get a list of errors but to associate
+each one with a particular row we need to call SQLGetDiagField for
+SQL_DIAG_ROW_NUMBER and it should say which row in the batch the
+diagnostic is associated with. Some ODBC drivers do not support
+SQL_DIAG_ROW_NUMBER properly and then DBD::ODBC cannot know which row
+in the batch an error refers to. In this case DBD::ODBC will report an
+error saying "failed to retrieve diags", state of HY000 and a native
+of 1 so you'll still see an error but not necessarily the exact
+one. Also, when more than one diagnostic is found for a row DBD::ODBC
+picks the first one (which is usually most relevant) as there is no
+way to report more than one diagnostic per row in the tuple_status. If
+the first problem of SQL_DIAG_ROW_NUMBER proves to be a problem for
+you the DBD::ODBC tracing will show all errors and if that is still
+not sufficient I'd consider adding a method to show all diagnostics.
+
+o Binding parameters with execute_array and execute_for_fetch does not
+allow the parameter types to be set. However, as parameter types are sticky
+you can call bind_param(param_num, undef, {TYPE => sql_type}) before
+calling execute_for_fetch/execute_array and the TYPE should be sticky
+when the batch of parameters is bound.
 
 =head2 Unicode
 
