@@ -1783,6 +1783,13 @@ you can call bind_param(param_num, undef, {TYPE => sql_type}) before
 calling execute_for_fetch/execute_array and the TYPE should be sticky
 when the batch of parameters is bound.
 
+o Although you can insert very large columns execute_for_fetch will
+need L</odbc_batch_size> * max length of parameter per parameter so
+you may hit memory limits. If you use DBI's execute_for_fetch
+DBD::ODBC uses the ODBC API SQLPutData (see L</odbc_putdata_start)
+which does not require large amounts of memory as large columns are
+sent in pieces.
+
 =head2 Unicode
 
 The ODBC specification supports wide character versions (a postfix of
