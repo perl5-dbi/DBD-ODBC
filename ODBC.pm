@@ -1786,7 +1786,7 @@ when the batch of parameters is bound.
 o Although you can insert very large columns execute_for_fetch will
 need L</odbc_batch_size> * max length of parameter per parameter so
 you may hit memory limits. If you use DBI's execute_for_fetch
-DBD::ODBC uses the ODBC API SQLPutData (see L</odbc_putdata_start)
+DBD::ODBC uses the ODBC API SQLPutData (see L</odbc_putdata_start>)
 which does not require large amounts of memory as large columns are
 sent in pieces.
 
