@@ -9,7 +9,7 @@ INCLUDE: ODBC.xsi
 MODULE = DBD::ODBC    PACKAGE = DBD::ODBC::st
 
 void
-odbc_execute_array(sth, tuples, count, tuple_status)
+odbc_execute_for_fetch(sth, tuples, count, tuple_status)
 	SV *	sth
 	SV *    tuples
 	IV      count
@@ -18,7 +18,7 @@ odbc_execute_array(sth, tuples, count, tuple_status)
         IV   ret;
 	CODE:
 	/*printf("odbc_execute_array\n");*/
-        ret = odbc_st_execute_array(sth, tuples, count, tuple_status);
+        ret = odbc_st_execute_for_fetch(sth, tuples, count, tuple_status);
 
 	if (ret == 0)
 	  XST_mPV(0, "0E0");

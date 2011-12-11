@@ -6526,7 +6526,7 @@ static   HWND GetConsoleHwnd(void)
  * I've no idea what will happen with lobs - probably won't work or will be set
  *   as hex strings (depends on driver mapping of SQL_CHAR to binary columns)
  */
-IV odbc_st_execute_array(
+IV odbc_st_execute_for_fetch(
     SV *sth,
     SV *tuples,
     IV count,			/* count of rows */
@@ -6545,7 +6545,7 @@ IV odbc_st_execute_array(
     int remalloc_svs = 0;   /* remalloc the phs sv arrays */
 
     if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 3))
-        TRACE2(imp_sth, "    +dbd_st_execute_array(%p) count=%"IVdf"\n",
+        TRACE2(imp_sth, "    +dbd_st_execute_for_fetch(%p) count=%"IVdf"\n",
                sth, count);
 
     if (SQL_NULL_HDBC == imp_dbh->hdbc) {
@@ -6557,14 +6557,14 @@ IV odbc_st_execute_array(
 
     /* Check that the `tuples' parameter is an array ref */
     if(!SvROK(tuples) || SvTYPE(SvRV(tuples)) != SVt_PVAV) {
-        croak("odbc_st_execute_array(): Not an array reference.");
+        croak("odbc_st_execute_for_fetch(): Not an array reference.");
     }
     tuples_av = (AV*)SvRV(tuples);
 
     /* Check the `tuples_status' parameter. */
     if(SvTRUE(tuple_status)) {
         if(!SvROK(tuple_status) || SvTYPE(SvRV(tuple_status)) != SVt_PVAV) {
-            croak("odbc_st_execute_array(): tuples_status not an array reference.");
+            croak("odbc_st_execute_for_fetch(): tuples_status not an array reference.");
         }
         tuples_status_av = (AV*)SvRV(tuple_status);
         av_fill(tuples_status_av, count - 1);
@@ -6583,7 +6583,7 @@ IV odbc_st_execute_array(
     dbd_st_finish(sth, imp_sth);;
     rc = SQLFreeStmt(imp_sth->hstmt, SQL_RESET_PARAMS);
     if (!SQL_SUCCEEDED(rc)) {
-        dbd_error(sth, rc, "odbc_st_execute_array/SQL_RESET_PARAMS");
+        dbd_error(sth, rc, "odbc_st_execute_for_fetch/SQL_RESET_PARAMS");
         return -2;
     }
 
@@ -6595,7 +6595,7 @@ IV odbc_st_execute_array(
     rc = SQLSetStmtAttr(imp_sth->hstmt, SQL_ATTR_PARAM_BIND_TYPE,
                         (SQLPOINTER)SQL_PARAM_BIND_BY_COLUMN, 0);
     if (!SQL_SUCCEEDED(rc)) {
-        dbd_error(sth, rc, "odbc_st_execute_array/SQL_ATTR_BIND_TYPE");
+        dbd_error(sth, rc, "odbc_st_execute_for_fetch/SQL_ATTR_BIND_TYPE");
         return -2;
     }
 
@@ -6700,7 +6700,12 @@ IV odbc_st_execute_array(
             if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 4))
                 TRACE3(imp_sth, "    allocating %ld * rows=%"IVdf" for p%u\n",
                        maxlen[p-1], count, p);
+#if defined(WITH_UNICODE)
+            phs->param_array_buf =
+	      (char *)safemalloc(maxlen[p-1] * count * sizeof(SQLWCHAR));
+#else
             phs->param_array_buf = (char *)safemalloc(maxlen[p-1] * count);
+#endif	    
         } else {
             phs->param_array_buf = NULL;
         }
@@ -6729,14 +6734,22 @@ IV odbc_st_execute_array(
                           phs->param_array_buf, phs->param_size,
                           phs->describe_param_called, phs->describe_param_status,
                           phs->maxlen, phs->described_sql_type);
+#if defined(WITH_UNICODE)
         rc = SQLBindParameter(imp_sth->hstmt,
-                              p, SQL_PARAM_INPUT, SQL_CHAR,
+                              p, SQL_PARAM_INPUT, SQL_C_WCHAR,
+                              phs->sql_type, maxlen[p-1], 0,
+                              phs->param_array_buf, maxlen[p-1] * sizeof(SQLWCHAR),
+                              phs->strlen_or_ind_array);
+#else
+        rc = SQLBindParameter(imp_sth->hstmt,
+                              p, SQL_PARAM_INPUT, SQL_C_CHAR,
                               phs->sql_type, maxlen[p-1], 0,
                               phs->param_array_buf, maxlen[p-1],
                               phs->strlen_or_ind_array);
+#endif
         if (!SQL_SUCCEEDED(rc)) {
             Safefree(maxlen);
-            dbd_error(sth, rc, "odbc_st_execute_array/SQLBindParameter");
+            dbd_error(sth, rc, "odbc_st_execute_for_fetch/SQLBindParameter");
             return -2;
         }
     }
@@ -6775,9 +6788,17 @@ IV odbc_st_execute_array(
                 phs->strlen_or_ind_array[row] = SQL_NULL_DATA;
             }
             else {
+#if defined(WITH_UNICODE)
+		SV_toWCHAR(sv);
+                sv_val = SvPV(sv, sv_len);
+		memcpy((char *)(phs->param_array_buf + (row * maxlen[p-1] * sizeof(SQLWCHAR))), sv_val,
+		       sv_len);
+                phs->strlen_or_ind_array[row] = sv_len;
+#else
                 sv_val = SvPV(sv, sv_len);
                 phs->strlen_or_ind_array[row] = SQL_NTS /*strlen(sv_val)*/;
                 strcpy((char *)(phs->param_array_buf + (row * maxlen[p-1])), sv_val);
+#endif
             }
             if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 4))
                 PerlIO_printf(DBIc_LOGPIO(imp_sth),
@@ -6799,19 +6820,19 @@ IV odbc_st_execute_array(
     rc = SQLSetStmtAttr(imp_sth->hstmt, SQL_ATTR_PARAMSET_SIZE,
                         (SQLPOINTER)count, 0);
     if (!SQL_SUCCEEDED(rc)) {
-        dbd_error(sth, rc, "odbc_st_execute_array/SQL_ATTR_PARAMSET_SIZE");
+        dbd_error(sth, rc, "odbc_st_execute_for_fetch/SQL_ATTR_PARAMSET_SIZE");
         return -2;
     }
     rc = SQLSetStmtAttr(imp_sth->hstmt, SQL_ATTR_PARAMS_PROCESSED_PTR,
                         (SQLPOINTER)&imp_sth->params_processed, 0);
     if (!SQL_SUCCEEDED(rc)) {
-        dbd_error(sth, rc, "odbc_st_execute_array/SQL_ATTR_PARAMS_PROCESSED_PTR");
+        dbd_error(sth, rc, "odbc_st_execute_for_fetch/SQL_ATTR_PARAMS_PROCESSED_PTR");
         return -2;
     }
     rc = SQLSetStmtAttr(imp_sth->hstmt, SQL_ATTR_PARAM_STATUS_PTR,
                         (SQLPOINTER)imp_sth->param_status_array, 0);
     if (!SQL_SUCCEEDED(rc)) {
-        dbd_error(sth, rc, "odbc_st_execute_array/SQL_ATTR_PARAM_STATUS_PTR");
+        dbd_error(sth, rc, "odbc_st_execute_for_fetch/SQL_ATTR_PARAM_STATUS_PTR");
         return -2;
     }
 
@@ -6821,7 +6842,7 @@ IV odbc_st_execute_array(
      * SQL_SUCCESS_WITH_INFO - in the latter case the parameter status
      * array will indicate and error for this row and we'll pick it up later */
     if (!SQL_SUCCEEDED(rc)) {
-        dbd_error(sth, rc, "odbc_st_execute_array/SQLExecute");
+        dbd_error(sth, rc, "odbc_st_execute_for_fetch/SQLExecute");
         /* reset paramset size and params processed */
         SQLSetStmtAttr(imp_sth->hstmt, SQL_ATTR_PARAMS_PROCESSED_PTR,
                        (SQLPOINTER)NULL, 0);
@@ -6848,7 +6869,7 @@ IV odbc_st_execute_array(
            returns - i.e., row count. It makes more sense for ODBC to fill
            it with the values in SQL_ATTR_PARAM_STATUS_PTR which are:
            SQL_PARAM_SUCCESS, SQL_PARAM_SUCCESS_WITH_INFO, SQL_PARAM_ERROR,
-           SQL_PARAM_UNUSED, SQL_PARAM_IGNORE */
+           SQL_PARAM_UNUSED, SQL_PARAM_IGNORE - but we do what DBI says */
 
         for (row = 0; row < count; row++) {
             if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 3))
@@ -6856,13 +6877,16 @@ IV odbc_st_execute_array(
                        row, imp_sth->param_status_array[row]);
             if ((imp_sth->param_status_array[row] == SQL_PARAM_SUCCESS) ||
                 (imp_sth->param_status_array[row] == SQL_PARAM_UNUSED)) {
-                /* We'll never get SQL_PARAM_IGNORE as we never set a row
-                 * operations array */
+                /* We'll never get SQL_PARAM_IGNORE as we never set a row operations array */
                 /* DBI requires us to set each tuple_status to the rows
-                 * affected but we don't know it on a per row basis so
-                 * we are forced to say -1 - don't know */
+                 * affected but we don't know it on a per row basis so. In any case in
+		 * order to count which tuples were executed and which were not we need
+		 * to return SQL_PARAM_SUCCES/SQL_PARAM_UNUSED - obviously any rows in
+		 * error were executed. The code above needs to translate ODBC statuses.*/
                 if (SvTRUE(tuple_status)){
-                    av_store(tuples_status_av, row, newSViv((IV)-1));
+		    av_store(tuples_status_av, row,
+			     newSViv((IV) imp_sth->param_status_array[row]));
+                    /*av_store(tuples_status_av, row, newSViv((IV)-1));*/
                 }
             } else {		/* SQL_PARAM_ERROR or SQL_PARAM_SUCCESS_WITH_INFO */
                 SV *err_svs[3];
@@ -6909,7 +6933,7 @@ IV odbc_st_execute_array(
            leave this for other execute_for_fetches */
         /*safefree(phs->strlen_or_ind_array);*/
         /*phs->strlen_or_ind_array = NULL;*/
-        dbd_error(sth, rc, "odbc_st_execute_array/SQLRowCount");
+        dbd_error(sth, rc, "odbc_st_execute_for_fetch/SQLRowCount");
         return -2;
     }
     /* why does this break stuff  imp_sth->param_status_array = NULL; */
@@ -6986,22 +7010,22 @@ static int get_row_diag(SQLSMALLINT recno,
                              0,
                              NULL);
         if (SQL_SUCCEEDED(rc)) {
+	    /* Could return SQL_ROW_NUMBER_UNKNOWN or SQL_NO_ROW_NUMBER */
             if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 3))
                 PerlIO_printf(DBIc_LOGPIO(imp_sth), "     diag row=%ld\n", row);
+	    /* few drivers support SQL_DIAG_COLUMN_NUMBER - most return -1 unfortunately
+	    rc = SQLGetDiagField(SQL_HANDLE_STMT,
+				 imp_sth->hstmt,
+				 i,
+				 SQL_DIAG_COLUMN_NUMBER,
+				 &col,
+				 0,
+				 NULL);
+				 printf("  row %d col %ld\n", row, col); */
             if (row == (SQLLEN)recno) return 1;
         } else if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 3)) {
             TRACE0(imp_sth, "SQLGetDiagField for SQL_DIAG_ROW_NUMBER failed");
         }
-        /* few drivers support SQL_DIAG_COLUMN_NUMBER - most return -1 unfortunately
-           rc = SQLGetDiagField(SQL_HANDLE_STMT,
-           imp_sth->hstmt,
-           i,
-           SQL_DIAG_COLUMN_NUMBER,
-           &col,
-           0,
-           NULL);
-           printf("  col %ld\n", col);
-        */
         i++;			/* next record */
     };
     /* will be SQL_NO_DATA if we reach the end of diags without finding anything */

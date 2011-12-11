@@ -542,9 +542,9 @@ $DBD::ODBC::VERSION = '1.34_1';
             return $sth->SUPER::execute_for_fetch(@_);
         }
 
+	$tuple_batch_status = [ ]; # we always want this here
         if (defined($tuple_status)) {
             @$tuple_status = ();
-            $tuple_batch_status = [ ];
         }
         my $finished;
         while (1) {
@@ -555,25 +555,26 @@ $DBD::ODBC::VERSION = '1.34_1';
             }
             $sth->trace_msg("Found " . scalar(@tuple_batch) . " rows\n");
             last unless @tuple_batch;
-            my $res = odbc_execute_array($sth,
-                                         \@tuple_batch,
-                                         scalar(@tuple_batch),
-                                         $tuple_batch_status);
+            my $res = odbc_execute_for_fetch($sth,
+					     \@tuple_batch,
+					     scalar(@tuple_batch),
+					     $tuple_batch_status);
             $sth->trace_msg("odbc_execute_array returns " .
                                 ($res ? $res : 'undef') . "\n");
 
             #print "odbc_execute_array XS returned $res\n";
             # count how many tuples were used
             # basically they are all used unless marked UNUSED
-            # TO_DO may need to change this as it is not DBI spec setting
-            # SQL_PARAM_xxx values in tuple status
             if ($tuple_batch_status) {
                 foreach (@$tuple_batch_status) {
+                    $tuple_count++ unless $_ == 7; # SQL_PARAM_UNUSED
                     next if ref($_);
-                    $tuple_count++ unless $_  == 7; # SQL_PARAM_UNUSED
+		    $_ = -1;	# we don't know individual row counts
                 }
-                push @$tuple_status, @$tuple_batch_status
-                    if defined($tuple_status);
+		if ($tuple_status) {
+		    push @$tuple_status, @$tuple_batch_status
+			if defined($tuple_status);
+		}
             }
             if (!defined($res)) {	# error
                 $row_count = undef;
@@ -1736,7 +1737,7 @@ SQLDisconnect returns state 25000 (transaction in progress).
 
 From version 1.34_01 DBD::ODBC implements its own execute_for_fetch
 which binds arrays of parameters and can send multiple rows
-(L</odbc_batch_size) of parameters through the ODBC driver in one go
+(L</odbc_batch_size>) of parameters through the ODBC driver in one go
 (this overrides DBI's default execute_for_fetch). This is much faster
 when inserting, updating or deleting many rows in one go. Note,
 execute_array uses execute_for_fetch when the parameters are passed
