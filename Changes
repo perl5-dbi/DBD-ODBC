@@ -736,7 +736,7 @@ $Revision: 10667 $
   In 99_yaml.t pick up the yaml spec version from the meta file instead of
   specifying it.
 
-  Change calls to SQLPrepare which passed in the string lenth of the SQL
+  Change calls to SQLPrepare which passed in the string length of the SQL
   to use SQL_NTS because a) they are null terminated and more importantly
   b) unixODBC contains a bug in versions up to 2.2.16 which can overwrite
   the stack by 1 byte if the string length is specified and not built with
