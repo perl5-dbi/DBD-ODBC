@@ -504,7 +504,7 @@ void dbd_db_destroy(SV *dbh, imp_dbh_t *imp_dbh)
 
 /*
  * quick dumb function to handle case insensitivity for DSN= or DRIVER=
- * in DSN...note this is becuase strncmpi is not available on all
+ * in DSN...note this is because strncmpi is not available on all
  * platforms using that name (VC++, Debian, etc most notably).
  * Note, also, strupr doesn't seem to have a standard name, either...
  */
@@ -637,7 +637,7 @@ int dbd_db_login6_sv(
       contains DSN or DRIVER, we've little choice but to call
       SQLDriverConnect and need to tag the uid/pwd on the end of the
       connection string (unless they already exist). */
-   if ((SvCUR(dbname) > SQL_MAX_DSN_LENGTH ||
+   if ((SvCUR(dbname) > SQL_MAX_DSN_LENGTH || /* too big for SQLConnect */
         dsnHasDriverOrDSN(SvPV_nolen(dbname))) &&
        !dsnHasUIDorPWD(SvPV_nolen(dbname))) {
 
