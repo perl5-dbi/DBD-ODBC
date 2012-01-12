@@ -472,7 +472,10 @@ EOT
     # This is to cater for those insane situations when someone had libiodbc
     # and unixODBC binary packages installed but unixODBC dev package
     # e.g. some people on Debian/Ubuntu
-    if ($opt_x && !$myodbc) {
+    #
+    # PERL_DBD_ODBC_PREFER_UNIXODBC  added for Caelum/Rafael for automated
+    # installs/upgrades from cpan clients
+    if (!$myodbc && ($opt_x || $ENV{PERL_DBD_ODBC_PREFER_UNIXODBC})) {
         ($myodbc, $odbclibdir) = find_unixodbc($odbchome);
     } else {
         ($myodbc, $odbclibdir) = find_iodbc($odbchome) if !$myodbc;
