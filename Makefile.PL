@@ -1070,7 +1070,7 @@ sub find_iodbc
     for my $d(@dirs) {
         print "  Looking for iODBC libs in $d\n";
         my @found;
-        if (@found = glob "$d/*iodbc*") {
+        if (@found = glob "$d/libiodbc*") {
             print "    Found iODBC libs ", join(",", @found), " in $d\n";
             return ('iodbc', $d);
         }
@@ -1095,7 +1095,7 @@ sub find_unixodbc
     for my $d(@dirs) {
         my @found;
         print "  Looking for unixODBC libs in $d\n";
-        if (@found = glob "$d/*odbc*") {
+        if (@found = glob "$d/libodbc*") {
             print "    Found unixODBC libs ", join(",", @found), " in $d\n";
             return ('unixodbc', $d);
         }

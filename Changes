@@ -8,6 +8,10 @@ $Revision: 10667 $
 
 =head2 Changes in DBD::ODBC 1.34_2 January NN 2011
 
+  [BUG FIXES]
+
+  * Fixed rt73734 - debian moved where unixODBC libs are stored.
+
   [ENHANCEMENTS]
 
   * Added environment variable PERL_DBD_ODBC_PREFER_UNIXODBC as a
