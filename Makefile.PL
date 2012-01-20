@@ -396,8 +396,7 @@ EOT
             print "odbc_config not found - " .
                 "ok, there are other things I can do\n";
 
-            print "Still trying to guess ODBCHOME - " .
-                "looking for headers now\n";
+            print "Still trying to guess ODBCHOME - looking for headers now\n";
             $odbchome = find_dm_hdr_files();
         }
     }
@@ -428,7 +427,7 @@ EOT
         exit 0;
     }
     die "odbc home ($odbchome) does not refer to a directory.\n"
-	unless -d $odbchome;
+        unless -d $odbchome;
     warn "Using ODBCHOME $odbchome\n";
 
     # $odbcincdir and $odbclibdir will only be set at this point if we
