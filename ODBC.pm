@@ -534,10 +534,10 @@ $DBD::ODBC::VERSION = '1.34_2';
 
         $sth->trace_msg("execute_for_fetch($fetch_tuple_sub, " .
                             ($tuple_status ? $tuple_status : 'undef') .
-                                ") batch_size = $batch_size\n");
+                                ") batch_size = $batch_size\n", 4);
         # Use DBI's execute_for_fetch if ours is disabled
         if ($sth->FETCH('odbc_disable_array_operations')) {
-            $sth->trace_msg("array operations disabled\n");
+            $sth->trace_msg("array operations disabled\n", 4);
             my $sth = shift;
             return $sth->SUPER::execute_for_fetch(@_);
         }
@@ -553,14 +553,14 @@ $DBD::ODBC::VERSION = '1.34_2';
                 $finished = $fetch_tuple_sub->();
                 push @tuple_batch, [ @{$finished || last} ];
             }
-            $sth->trace_msg("Found " . scalar(@tuple_batch) . " rows\n");
+            $sth->trace_msg("Found " . scalar(@tuple_batch) . " rows\n", 4);
             last unless @tuple_batch;
             my $res = odbc_execute_for_fetch($sth,
 					     \@tuple_batch,
 					     scalar(@tuple_batch),
 					     $tuple_batch_status);
             $sth->trace_msg("odbc_execute_array returns " .
-                                ($res ? $res : 'undef') . "\n");
+                                ($res ? $res : 'undef') . "\n", 4);
 
             #print "odbc_execute_array XS returned $res\n";
             # count how many tuples were used
