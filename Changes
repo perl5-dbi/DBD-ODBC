@@ -17,6 +17,10 @@ $Revision: 10667 $
   * Added environment variable PERL_DBD_ODBC_PREFER_UNIXODBC as a
     synonym for -x from Rafael Kitover (Caelum).
 
+  [OTHER]
+
+  * Added example execute_for_fetch.pl
+  
 =head2 Changes in DBD::ODBC 1.34_1 December 11 2011
 
   [ENHANCEMENTS]
