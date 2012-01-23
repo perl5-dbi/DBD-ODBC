@@ -3327,6 +3327,10 @@ void dbd_st_destroy(SV *sth, imp_sth_t *imp_sth)
     if (imp_sth->out_params_av)
         sv_free((SV*)imp_sth->out_params_av);
 
+    if (imp_sth->param_status_array) {
+      Safefree(imp_sth->param_status_array);
+      imp_sth->param_status_array = NULL;
+    }
     if (imp_sth->all_params_hv) {
         HV *hv = imp_sth->all_params_hv;
         SV *sv;
@@ -6528,21 +6532,21 @@ static   HWND GetConsoleHwnd(void)
  */
 IV odbc_st_execute_for_fetch(
     SV *sth,
-    SV *tuples,
+    SV *tuples,			/* the actual data to bind */
     IV count,			/* count of rows */
-    SV *tuple_status)
+    SV *tuple_status)		/* returned tupe status */
 {
     D_imp_sth(sth);
     D_imp_xxh(sth);
     D_imp_dbh_from_sth;
     SQLRETURN rc;
-    AV *tuples_av, *tuples_status_av;
-    unsigned int p;
-    unsigned long *maxlen;
-    int n_params;
+    AV *tuples_av, *tuples_status_av; /* array ptrs for tuples and tuple_status */
+    unsigned int p;		      /* for loop through parameters */
+    unsigned long *maxlen;	/* array to store max size of each param */
+    int n_params;		/* number of parameters */
     unsigned int row;
     int err_seen = 0;		/* some row errored */
-    int remalloc_svs = 0;   /* remalloc the phs sv arrays */
+    int remalloc_svs = 0;	/* remalloc the phs sv arrays */
 
     if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 3))
         TRACE2(imp_sth, "    +dbd_st_execute_for_fetch(%p) count=%"IVdf"\n",

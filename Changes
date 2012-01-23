@@ -12,6 +12,10 @@ $Revision: 10667 $
 
   * Fixed rt73734 - debian moved where unixODBC libs are stored.
 
+  * Fixed memory leak of the parameter status array introduced in
+    previous release when execute_for_fetch used. When the statement
+    handle is destroyed the parameter status array was not freed.
+
   [ENHANCEMENTS]
 
   * Added environment variable PERL_DBD_ODBC_PREFER_UNIXODBC as a
