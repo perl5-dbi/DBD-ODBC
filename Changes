@@ -21,6 +21,10 @@ $Revision: 10667 $
   * Added environment variable PERL_DBD_ODBC_PREFER_UNIXODBC as a
     synonym for -x from Rafael Kitover (Caelum).
 
+  [DOCUMENTATION]
+
+  * Add a deviation from DBI spec for type_info_all.
+
   [OTHER]
 
   * Added example execute_for_fetch.pl

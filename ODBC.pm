@@ -1790,6 +1790,14 @@ DBD::ODBC uses the ODBC API SQLPutData (see L</odbc_putdata_start>)
 which does not require large amounts of memory as large columns are
 sent in pieces.
 
+=head type_info_all
+
+Many ODBC drivers now return 20 columns in type_info_all rather than
+the 19 DBI documents DBI documents. The 20th column is usually called
+"USERTYPE".  Recent MS SQL Server ODBC drivers do this. Fortunately
+this should adversely affect you so long as you are using the keys
+provided at the start of type_info_all.
+
 =head2 Unicode
 
 The ODBC specification supports wide character versions (a postfix of
