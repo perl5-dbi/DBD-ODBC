@@ -1790,7 +1790,7 @@ DBD::ODBC uses the ODBC API SQLPutData (see L</odbc_putdata_start>)
 which does not require large amounts of memory as large columns are
 sent in pieces.
 
-=head type_info_all
+=head3 type_info_all
 
 Many ODBC drivers now return 20 columns in type_info_all rather than
 the 19 DBI documents DBI documents. The 20th column is usually called
