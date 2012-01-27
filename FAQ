@@ -1175,6 +1175,26 @@ attributes like TYPE the first time you use them.
 
 I reported this issue at http://tracker.firebirdsql.org/browse/ODBC-122.
 
+=head2 Why do I get "symbol lookup error for SQLAllocHandle" on Ubuntu/Debian?
+
+You've probably got iODBC installed and the Makefile.PL found it before
+unixODBC but on some Ubuntu and Debian distributions iODBC is not installed
+with the symbolic link libiodbc.so e.g., /usr/lib contains
+
+lrwxrwxrwx 1 root root     22 2011-01-04 20:00 libiodbcinst.so.2 -> libiodbcinst.so.2.1.18
+-rw-r--r-- 1 root root  67140 2009-11-11 00:42 libiodbcinst.so.2.1.18
+lrwxrwxrwx 1 root root     18 2011-01-04 20:00 libiodbc.so.2 -> libiodbc.so.2.1.18
+-rw-r--r-- 1 root root 305108 2009-11-11 00:42 libiodbc.so.2.1.18
+
+but no libiodbc.so. You could create the symbolic link:
+
+cd /usr/lib
+sudo ln -s libiodbc.so.2 libiodbc.so
+
+however, you'll probably have other problems so better to use
+unixODBC. Ensure you've installed unixodbc and unixodbc-dev packages
+and re-run Makefile.PL with the -x argument to prefer unixODBC.
+
 =head1 AUTHOR
 
 Parts of this document were written by Tim Bunce,
