@@ -1215,14 +1215,20 @@ To set these add these attributes to the call to DBIs connect like this:
 
 You've got a 64 bit Windows.
 
-You are trying to connect to a 64bit DSN from a 32 bit application or
-vice versa. See my initial experience http://www.martin-evans.me.uk/node/81.
+Your attempting to connect to a SYSTEM DSN.
+
+You are trying to connect to a 64bit SYSTEM DSN from a 32 bit
+application or vice versa. See my initial experience
+http://www.martin-evans.me.uk/node/81.
 
 More confusing is if you use the data_sources method, that calls
 SQLDataSources and the list returned matches the architecture of your
 Perl binary and yet when you attempt to connect to a DSN for the
 wrong architecture you get this error instead of the more sensible
 (and usual) data source not found.
+
+NOTE: User DSNs don't exhibit this - they just seem to pick the right
+driver.
 
 =head1 AUTHOR
 
