@@ -1195,11 +1195,6 @@ however, you'll probably have other problems so better to use
 unixODBC. Ensure you've installed unixodbc and unixodbc-dev packages
 and re-run Makefile.PL with the -x argument to prefer unixODBC.
 
-=head1 AUTHOR
-
-Parts of this document were written by Tim Bunce,
-Jeff Urlwin and Martin J. Evans.
-
 =head2 How do I set the application and workstation names for MS SQL Server?
 
 MS SQL Server supports 2 additional connection attributes which you
@@ -1215,6 +1210,24 @@ To set these add these attributes to the call to DBIs connect like this:
 
   my $h = DBI->connect('dbi:ODBC:DSN=mydsn;APP=appname;WSID=wsname',
                        'dbuser', 'dbpass');
+
+=head2 Why do I get "The specified DSN contains an architecture mismatch between the Driver and Application" on Windows?
+
+You've got a 64 bit Windows.
+
+You are trying to connect to a 64bit DSN from a 32 bit application or
+vice versa. See my initial experience http://www.martin-evans.me.uk/node/81.
+
+More confusing is if you use the data_sources method, that calls
+SQLDataSources and the list returned matches the architecture of your
+Perl binary and yet when you attempt to connect to a DSN for the
+wrong architecture you get this error instead of the more sensible
+(and usual) data source not found.
+
+=head1 AUTHOR
+
+Parts of this document were written by Tim Bunce,
+Jeff Urlwin and Martin J. Evans.
 
 =head1 LICENSE
 
