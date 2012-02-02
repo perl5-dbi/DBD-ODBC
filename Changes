@@ -10,7 +10,14 @@ $Revision: 10667 $
 
   [BUG FIXES]
 
-  * 
+  * Linking against unixODBC was working by accident on most UNIX
+    machines and depended on the order of the files in /usr/lib (or
+    wherever) and what files there were (e.g. an archive or a shared
+    object). Same applied to iODBC but it was more broken especially
+    on machines where libiodbc.so.N.N existed but there was no
+    libiodbc.so which could lead to no adding the shared object at
+    all. I doubt anyone really noticed this but I did eventually on
+    Ubuntu where libiodbc.so.N.N existed but libiodbc.so did not.
 
   [DOCUMENTATION]
 

@@ -239,7 +239,7 @@ my @known_drivers = sort { $a cmp $b } (
 	'udbc',
 	'solid',
 	'informix',
-        'ingrescli', ## clach04 Ingres CLI name?
+    'ingrescli', ## clach04 Ingres CLI name?
 	);
 my $odbchome_specified;
 $odbchome_specified = 1 if defined($opt_o) || defined($ENV{ODBCHOME});
@@ -446,10 +446,10 @@ EOT
     $opts{INC}  .= " -I/usr/include/w32api" if $OSNAME eq 'cygwin';
 
     # TO_DO all this needs to move until later
-    my $lib_d1 = "$odbchome/lib";
-    my $lib_d2 = "$odbchome/dlls";
-    my $libs   = "odbc";
-    $opts{LIBS} = " -L$lib_d1 -R$lib_d1 -L$lib_d2 -R$lib_d2 -l$libs";
+#    my $lib_d1 = "$odbchome/lib";
+#    my $lib_d2 = "$odbchome/dlls";
+#    my $libs   = "odbc";
+#    $opts{LIBS} = " -L$lib_d1 -R$lib_d1 -L$lib_d2 -R$lib_d2 -l$libs";
 
     my $soext = $Config{so};      # extension for share objects
     my $dlext = $Config{dlext};   # extension for dynamically loaded modules
@@ -541,8 +541,8 @@ EOT
     }
 
     if ($myodbc eq 'Microsoft ODBC') {
-	print "\nBuilding for Microsoft under Cygwin\n";
-	$opts{LIBS} = "-L/usr/lib/w32api -lodbc32";
+        print "\nBuilding for Microsoft under Cygwin\n";
+        $opts{LIBS} = "-L/usr/lib/w32api -lodbc32";
         print {$sqlhfh} "#include <windows.h>\n";
         print {$sqlhfh} "#include <sql.h>\n";
         print {$sqlhfh} "#include <sqltypes.h>\n";
@@ -555,30 +555,30 @@ EOT
         print {$sqlhfh}
             qq{typedef void* PTR;\n#include <sql.h>\n#include <sqlext.h>\n};
     } elsif ($myodbc eq 'iodbc') {
-	my @libs = glob "$odbclibdir/*iodbc*.*";
-	my @ilibs = grep { /\.($dlext|$soext|$arext)/ } @libs;
+        my @libs = glob "$odbclibdir/*iodbc*.*";
+        my @ilibs = grep { /\.($dlext|$soext|$arext)/ } @libs;
         if (scalar(@ilibs) == 0) {
             die "That's odd, I can't see any iodbc libs in $odbclibdir. " .
                 "This is all I found:\n" . join(q{,}, @libs) . "\n" .
                 "Perhaps you need to install the iODBC development " .
                 "package, often called libiodbc-dev.";
         }
-	# Note: we use DEFINE not INC for iODBC so we don't get its config.h
-	my $ilibpath = $ilibs[0]; # if both .so and .a, pick based on LINKTYPE?
-	my $ilibname = basename($ilibpath);
-	$opts{DEFINE} .= " -I$odbcincdir";
-	if ($ilibname =~ /^iodbc/) { # no "lib" prefix
-	    $opts{LIBS} = q{};
-	    $opts{dynamic_lib} = { OTHERLDFLAGS => "$ilibpath" };
-	}
-	else {
-	    # remove lib prefix and .so suffix so "-l" style link can be used
-	    $ilibname =~ s/^lib(iodbc.*?)\.\w+$/$1/;
-	    $opts{LIBS} = "-L$odbclibdir -l$ilibname";
-	    warn "Warning: LD_LIBRARY_PATH doesn't include $odbchome/lib\n"
-		if (!defined($ENV{LD_LIBRARY_PATH})) ||
-                        ($ENV{LD_LIBRARY_PATH} =~ /\Q$odbclibdir/);
-	}
+        # Note: we use DEFINE not INC for iODBC so we don't get its config.h
+        my $ilibpath = $ilibs[0]; # if both .so and .a, pick based on LINKTYPE?
+        my $ilibname = basename($ilibpath);
+        $opts{DEFINE} .= " -I$odbcincdir";
+        if ($ilibname =~ /^iodbc/) { # no "lib" prefix
+            $opts{LIBS} = q{};
+            $opts{dynamic_lib} = { OTHERLDFLAGS => "$ilibpath" };
+        }
+        else {
+            # remove lib prefix and .so suffix so "-l" style link can be used
+            $ilibname =~ s/^lib(iodbc.*?)\.\w+$/$1/;
+            $opts{LIBS} = "-L$odbclibdir -l$ilibname";
+            warn "Warning: LD_LIBRARY_PATH doesn't include $odbchome/lib\n"
+                if (!defined($ENV{LD_LIBRARY_PATH})) ||
+                    ($ENV{LD_LIBRARY_PATH} =~ /\Q$odbclibdir/);
+        }
         if (-x "$odbchome/bin/iodbc-config") {
             my $cf = `$odbchome/bin/iodbc-config --cflags 2>&1`;
             if ($cf =~ /\-I/) {
@@ -588,9 +588,9 @@ EOT
                 $opts{DEFINE} .= " $cf";
             }
         }
-	print {$sqlhfh} qq{#include <sqlext.h>\n};
-	print {$sqlhfh} qq{#include <sql.h>\n};
-	print {$sqlhfh} qq{#include <sqltypes.h>\n};
+        print {$sqlhfh} qq{#include <sqlext.h>\n};
+        print {$sqlhfh} qq{#include <sql.h>\n};
+        print {$sqlhfh} qq{#include <sqltypes.h>\n};
     }
     elsif ($myodbc eq 'unixodbc') {
         # if we find odbcinst, output useful info about this version of unixODBC
@@ -629,33 +629,46 @@ EOT
         } else {
             print "  odbc_config not found - ok\n";
         }
-	my @libs = glob "$odbclibdir/libodbc.*";
-	my @ilibs = grep /\.($soext|$dlext|$arext)/, @libs;
-        if (scalar(@ilibs) == 0) {
+        my ($ilibpath, $ilibname, @ilibs);
+        my @libs = glob "$odbclibdir/libodbc.*";
+        # prefer dynamic linking
+        if (@ilibs = grep /\.($soext)/, @libs) {
+            # remove any shared object version off the end e.g. libodbc.so.2
+            $ilibpath = $ilibs[0];
+            $ilibpath =~ s/(.*\.$soext).*$/$1/;
+            $ilibname = basename($ilibpath);
+            $ilibname =~ s/^lib(odbc.*)\.\w+$/$1/;
+            $opts{LIBS} = "-L$odbclibdir -l$ilibname";
+            warn "Warning: LD_LIBRARY_PATH=", ($ENV{LD_LIBRARY_PATH} ? $ENV{LD_LIBRARY_PATH} : ""), " doesn't include $odbclibdir\n"
+                unless (exists($ENV{LD_LIBRARY_PATH}) &&
+                            ($ENV{LD_LIBRARY_PATH} =~ /\Q$odbclibdir/));
+        } elsif (@ilibs = grep /\.($dlext)/, @libs) {
+            $ilibpath = $ilibs[0];
+            $ilibpath =~ s/(.*\.$dlext).*$/$1/;
+            $ilibname = basename($ilibpath);
+            $ilibname =~ s/^lib(odbc.*)\.\w+$/$1/;
+            $opts{LIBS} = "-L$odbclibdir -l$ilibname";
+        } elsif (@ilibs = grep /\.($arext)$/, @libs) {
+            $ilibpath = $ilibs[0];
+            $ilibname = basename($ilibpath);
+            #$opts{LINKTYPE} = 'static';
+            #$opts{linkext} = {LINKTYPE => 'static'};
+            $opts{dynamic_lib} = { OTHERLDFLAGS => "$ilibpath" };
+            # you can build against a static unixODBC lib but it still needs
+            # to dynamically load (dl_open) drivers so we need libltdl:
+            $opts{LIBS} = "-lltdl";
+        } else {
             die "That's odd, I can't see any unixodbc libs in $odbchome.\n" .
                 "This is all I found:\n" . join(q{,}, @libs) . "\n" .
                 "Perhaps you need to install the unixODBC development " .
                 "package, often called unixodbc-dev.\n";
         }
-	my $ilibpath = $ilibs[0]; # if both .so and .a, pick based on LINKTYPE?
-	my $ilibname = basename($ilibpath);
-	$opts{DEFINE} .= " -I$odbcincdir";
-	if ($ilibname =~ /^odbc/) { # no "lib" prefix
-	    $opts{LIBS} = q{};
-	    $opts{dynamic_lib} = { OTHERLDFLAGS => "$ilibpath" };
-	}
-	else {
-	    # remove lib prefix and .so suffix so "-l" style link can be used
-	    $ilibname =~ s/^lib(odbc.*)\.\w+$/$1/;
-	    $opts{LIBS} = "-L$odbclibdir -l$ilibname";
-	    warn "Warning: LD_LIBRARY_PATH=", ($ENV{LD_LIBRARY_PATH} ? $ENV{LD_LIBRARY_PATH} : ""), " doesn't include $odbclibdir\n"
-		unless (exists($ENV{LD_LIBRARY_PATH}) &&
-                        ($ENV{LD_LIBRARY_PATH} =~ /\Q$odbclibdir/));
-	}
-	print {$sqlhfh} qq{#include <sql.h>\n};
-	print {$sqlhfh} qq{#include <sqlucode.h>\n};
-	print {$sqlhfh} qq{#include <sqltypes.h>\n};
-	print {$sqlhfh} qq{#include <sqlext.h>\n};
+
+        $opts{DEFINE} .= " -I$odbcincdir";
+        print {$sqlhfh} qq{#include <sql.h>\n};
+        print {$sqlhfh} qq{#include <sqlucode.h>\n};
+        print {$sqlhfh} qq{#include <sqltypes.h>\n};
+        print {$sqlhfh} qq{#include <sqlext.h>\n};
     }
     elsif ($myodbc eq 'intersolve') {
   	print {$sqlhfh} qq{#include <qeodbc.h>\n};
@@ -812,7 +825,7 @@ sub unixodbc_config
         $odbc_config_v = `$configbin --version 2>&1`;
     }
     if (!defined($odbc_config_v) || ($odbc_config_v !~ /^(\d\.)+/)) {
-        print "Looking for odbc_config on $ENV{PATH}\n";
+        print "Looking for odbc_config in (PATH) $ENV{PATH}\n";
         $configbin = 'odbc_config';
         $odbc_config_v = `$configbin --version 2>/dev/null`;
         if (!defined($odbc_config_v) || ($odbc_config_v !~ /^(\d\.)+/)) {
@@ -956,7 +969,7 @@ sub iodbc_config
         $iodbc_config_v = `$configbin --version 2>&1`;
     }
     if (!defined($iodbc_config_v) || ($iodbc_config_v !~ /^(\d\.)+/)) {
-        print "Looking for iodbc-config on PATH\n";
+        print "Looking for iodbc-config in PATH $ENV{PATH}\n";
         $configbin = 'iodbc-config';
         $iodbc_config_v = `$configbin --version 2>/dev/null`;
         if (!defined($iodbc_config_v) || ($iodbc_config_v !~ /^(\d\.)+/)) {
