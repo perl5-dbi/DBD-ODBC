@@ -3,7 +3,7 @@
  * portions Copyright (c) 1994,1995,1996,1997  Tim Bunce
  * portions Copyright (c) 1997 Thomas K. Wenrich
  * portions Copyright (c) 1997-2001 Jeff Urlwin
- * portions Copyright (c) 2007-2011 Martin J. Evans
+ * portions Copyright (c) 2007-2012 Martin J. Evans
  *
  * You may distribute under the terms of either the GNU General Public
  * License or the Artistic License, as specified in the Perl README file.
@@ -1261,12 +1261,12 @@ void dbd_error2(
             if (err_rc == DBDODBC_INTERNAL_ERROR) {
                 strcpy(ErrorMsg, what);
                 strcpy(sqlstate, "HY000");
-		NativeError = 1;
+                NativeError = 1;
                 err_rc = SQL_ERROR;
             } else {
-	        ErrorMsg[ErrorMsgLen] = '\0';
-	        sqlstate[SQL_SQLSTATE_SIZE] = '\0';
-	    }
+                ErrorMsg[ErrorMsgLen] = '\0';
+                sqlstate[SQL_SQLSTATE_SIZE] = '\0';
+            }
             if (DBIc_TRACE(imp_dbh, DBD_TRACING, 0, 3)) {
                 PerlIO_printf(DBIc_LOGPIO(imp_dbh),
                               "    !SQLError(%p,%p,%p) = "
@@ -3083,13 +3083,15 @@ AV *dbd_st_fetch(SV *sth, imp_sth_t *imp_sth)
                  */
                 imp_sth->moreResults = 0;
                 /* XXX need to 'finish' here */
-                dbd_st_finish(sth, imp_sth);
+                /*dbd_st_finish(sth, imp_sth);*/
                 return Nullav;
             }
         } else {
             dbd_error(sth, rc, "st_fetch/SQLFetch");
             /* XXX need to 'finish' here */
-            dbd_st_finish(sth, imp_sth);
+            /* MJE commented out the following in 1.34_3 as it prevents
+               calling odbc_get
+            /*dbd_st_finish(sth, imp_sth);*/
             return Nullav;
         }
     }
@@ -6867,7 +6869,6 @@ IV odbc_st_execute_for_fetch(
         char sqlstate[SQL_SQLSTATE_SIZE+1];
         SQLINTEGER native;
         char msg[256];
-        SQLSMALLINT msg_len;
 
         /* NOTE, DBI says we fill tuple_status for each row with what execute
            returns - i.e., row count. It makes more sense for ODBC to fill

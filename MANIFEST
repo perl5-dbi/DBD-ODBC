@@ -31,6 +31,8 @@ examples/money_test.cgi
 examples/moreresults.pl
 examples/multiple_active_stmts.pl
 examples/northwind.pl
+examples/odbc_diag.pl
+examples/params_in_error.pl
 examples/driver_complete.pl
 examples/proctest1.pl
 examples/proctest2.pl

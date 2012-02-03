@@ -19,6 +19,11 @@ $Revision: 10667 $
     all. I doubt anyone really noticed this but I did eventually on
     Ubuntu where libiodbc.so.N.N existed but libiodbc.so did not.
 
+  [ENHANCEMENTS]
+
+  * Added experimental odbc_getdiagrec and odbc_getdiagrec methods,
+    examples/odbc_diag.pl and examples/params_in_error.pl.
+
   [DOCUMENTATION]
 
   * New FAQ entries.

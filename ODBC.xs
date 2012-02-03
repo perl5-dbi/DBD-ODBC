@@ -27,6 +27,98 @@ odbc_execute_for_fetch(sth, tuples, count, tuple_status)
         else
           XST_mIV(0, ret);
 
+void odbc_getdiagrec(sth, record)
+    SV * sth
+    unsigned short record
+    PPCODE:
+    SQLINTEGER native;
+    SQLCHAR state[10];
+    SQLCHAR msg[256];
+    SQLRETURN rc;
+    SQLSMALLINT msg_len;
+	D_imp_sth(sth);
+    D_imp_xxh(sth);
+
+    rc = SQLGetDiagRec(SQL_HANDLE_STMT, imp_sth->hstmt, record,
+                       state, &native, msg, sizeof(msg), &msg_len);
+    if (SQL_SUCCEEDED(rc)) {
+        XPUSHs(sv_2mortal(newSVpv(state, 0)));
+        XPUSHs(sv_2mortal(newSViv(native)));
+        XPUSHs(sv_2mortal(newSVpv(msg, 0)));
+    } else if (rc == SQL_NO_DATA) {
+      # no diags found
+    } else {
+      DBIh_SET_ERR_CHAR(
+                sth, imp_xxh, Nullch, 1,
+                "SQLGetDiagField failed",
+                "IM008", Nullch);
+    }
+
+void odbc_getdiagfield(sth, record, identifier)
+    SV * sth
+    unsigned short record
+    int identifier
+    PPCODE:
+    SQLCHAR buf[256];
+    SQLSMALLINT buf_len;
+    SQLLEN len_type;
+    SQLINTEGER int_type;
+    SQLRETURN ret_type;
+    SQLPOINTER info_ptr;
+    SQLRETURN rc;
+	D_imp_sth(sth);
+    D_imp_xxh(sth);
+
+    switch(identifier) {
+      case SQL_DIAG_CURSOR_ROW_COUNT:
+      case SQL_DIAG_ROW_COUNT:
+      case SQL_DIAG_ROW_NUMBER:
+      {
+          info_ptr = &len_type;
+          break;
+      }
+      case SQL_DIAG_DYNAMIC_FUNCTION_CODE:
+      case SQL_DIAG_NUMBER:
+      case SQL_DIAG_COLUMN_NUMBER:
+      case SQL_DIAG_NATIVE:
+      {
+          info_ptr = &int_type;
+          break;
+      }
+      case SQL_DIAG_RETURNCODE:
+      {
+          info_ptr = &ret_type;
+          break;
+      }
+      default:
+      {
+          info_ptr = buf;
+          break;
+      }
+    }
+
+    rc = SQLGetDiagField(SQL_HANDLE_STMT, imp_sth->hstmt, record,
+                         identifier, info_ptr, sizeof(buf), &buf_len);
+    if (SQL_SUCCEEDED(rc)) {
+        if (info_ptr == &int_type) {
+            XPUSHs(sv_2mortal(newSViv(int_type)));
+        } else if (info_ptr == &len_type) {
+            XPUSHs(sv_2mortal(newSViv(len_type)));
+        } else if (info_ptr == &ret_type) {
+            XPUSHs(sv_2mortal(newSViv(ret_type)));
+        } else {
+            XPUSHs(sv_2mortal(newSVpv(buf, 0)));
+        }
+    } else if (rc == SQL_NO_DATA) {
+      # no diags found
+    } else {
+      DBIh_SET_ERR_CHAR(
+                sth, imp_xxh, Nullch, 1,
+                "SQLGetDiagField failed",
+                "IM008", Nullch);
+# TO_DO wrong state
+
+    }
 
 SV *
 odbc_lob_read(sth, colno, bufsv, length, attr = NULL)
@@ -161,6 +253,99 @@ CODE:
    ST(0) = sv_2mortal(newSViv( (IV)dbd_db_execdirect( dbh, stmt ) ) );
 }
 
+void odbc_getdiagrec(dbh, record)
+    SV * dbh
+    unsigned short record
+    PPCODE:
+    SQLINTEGER native;
+    SQLCHAR state[10];
+    SQLCHAR msg[256];
+    SQLRETURN rc;
+    SQLSMALLINT msg_len;
+	D_imp_dbh(dbh);
+    D_imp_xxh(dbh);
+
+    rc = SQLGetDiagRec(SQL_HANDLE_DBC, imp_dbh->hdbc, record,
+                           state, &native, msg, sizeof(msg), &msg_len);
+    if (SQL_SUCCEEDED(rc)) {
+        XPUSHs(sv_2mortal(newSVpv(state, 0)));
+        XPUSHs(sv_2mortal(newSViv(native)));
+        XPUSHs(sv_2mortal(newSVpv(msg, 0)));
+    } else if (rc == SQL_NO_DATA) {
+      # no diags found
+    } else {
+      DBIh_SET_ERR_CHAR(
+                dbh, imp_xxh, Nullch, 1,
+                "SQLGetDiagRec failed",
+                "IM008", Nullch);
+
+    }
+
+void odbc_getdiagfield(dbh, record, identifier)
+    SV * dbh
+    unsigned short record
+    int identifier
+    PPCODE:
+    SQLCHAR buf[256];
+    SQLSMALLINT buf_len;
+    SQLLEN len_type;
+    SQLINTEGER int_type;
+    SQLRETURN ret_type;
+    SQLPOINTER info_ptr;
+    SQLRETURN rc;
+	D_imp_dbh(dbh);
+    D_imp_xxh(dbh);
+
+    switch(identifier) {
+      case SQL_DIAG_CURSOR_ROW_COUNT:
+      case SQL_DIAG_ROW_COUNT:
+      case SQL_DIAG_ROW_NUMBER:
+      {
+          info_ptr = &len_type;
+          break;
+      }
+      case SQL_DIAG_DYNAMIC_FUNCTION_CODE:
+      case SQL_DIAG_NUMBER:
+      case SQL_DIAG_COLUMN_NUMBER:
+      case SQL_DIAG_NATIVE:
+      {
+          info_ptr = &int_type;
+          break;
+      }
+      case SQL_DIAG_RETURNCODE:
+      {
+          info_ptr = &ret_type;
+          break;
+      }
+      default:
+      {
+          info_ptr = buf;
+          break;
+      }
+    }
+
+    rc = SQLGetDiagField(SQL_HANDLE_DBC, imp_dbh->hdbc, record,
+                         identifier, info_ptr, sizeof(buf), &buf_len);
+    if (SQL_SUCCEEDED(rc)) {
+        if (info_ptr == &int_type) {
+            XPUSHs(sv_2mortal(newSViv(int_type)));
+        } else if (info_ptr == &len_type) {
+            XPUSHs(sv_2mortal(newSViv(len_type)));
+        } else if (info_ptr == &ret_type) {
+            XPUSHs(sv_2mortal(newSViv(ret_type)));
+        } else {
+            XPUSHs(sv_2mortal(newSVpv(buf, 0)));
+        }
+    } else if (rc == SQL_NO_DATA) {
+      # no diags found
+    } else {
+      DBIh_SET_ERR_CHAR(
+                dbh, imp_xxh, Nullch, 1,
+                "SQLGetDiagField failed",
+                "IM008", Nullch);
+# TO_DO wrong state
+
+    }
 
 void
 _columns(dbh, sth, catalog, schema, table, column)
