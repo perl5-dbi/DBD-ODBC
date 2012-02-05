@@ -28,8 +28,11 @@ eval {
     $s->execute;
 };
 if ($@) {
-    my $dbierr = $s->errstr;
+    # NOTE from 1.34_3 calling odbc_getdiag* would clear DBI's errors
+    # and so if you wanted them you'd have to call DBI's error methods first.
+    # From 1.34_4 calling odbc_getdiag* will not clear DBI's errors.
     my @diags = $s->odbc_getdiagrec(1);
+    my $dbierr = $s->errstr;
     print <<"EOT";
 DBI error is $dbierr
 which was created from the ODBC diagnostics:
@@ -51,8 +54,11 @@ eval {
     $s->fetch;
 };
 if ($@) {
-    my $dbierr = $s->errstr;
+    # NOTE from 1.34_3 calling odbc_getdiag* would clear DBI's errors
+    # and so if you wanted them you'd have to call DBI's error methods first.
+    # From 1.34_4 calling odbc_getdiag* will not clear DBI's errors.
     my @diags = $s->odbc_getdiagrec(1);
+    my $dbierr = $s->errstr;
     print <<"EOT";
 DBI error is $dbierr
 which was created from the ODBC diagnostics:

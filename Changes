@@ -6,7 +6,15 @@ As of $LastChangedDate$
 
 $Revision: 10667 $
 
-=head2 Changes in DBD::ODBC 1.34_3 February NN 2012
+=head2 Changes in DBD::ODBC 1.34_4 February 5 2012
+
+  [BUG FIXES]
+
+  * When odbc_getdiag* methods were added they installed themselves
+    into DBI but did not set IMP_KEEP_ERR so calling them cleared
+    DBI's errors.
+
+=head2 Changes in DBD::ODBC 1.34_3 February 3 2012
 
   [BUG FIXES]
 

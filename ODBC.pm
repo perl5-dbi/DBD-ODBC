@@ -19,7 +19,7 @@ require 5.008;
 # see discussion on dbi-users at
 # http://www.nntp.perl.org/group/perl.dbi.dev/2010/07/msg6096.html and
 # http://www.dagolden.com/index.php/369/version-numbers-should-be-boring/
-$DBD::ODBC::VERSION = '1.34_3';
+$DBD::ODBC::VERSION = '1.34_4';
 
 {
     ## no critic (ProhibitMagicNumbers ProhibitExplicitISA)
@@ -96,10 +96,11 @@ $DBD::ODBC::VERSION = '1.34_3';
             'Attribution' => 'DBD::ODBC by Jeff Urlwin, Tim Bunce and Martin J. Evans',
 	    });
         DBD::ODBC::st->install_method("odbc_lob_read");
-        DBD::ODBC::st->install_method("odbc_getdiagrec");
-        DBD::ODBC::db->install_method("odbc_getdiagrec");
-        DBD::ODBC::db->install_method("odbc_getdiagfield");
-        DBD::ODBC::st->install_method("odbc_getdiagfield");
+        # don't clear errors - IMA_KEEP_ERR = 0x00000004
+        DBD::ODBC::st->install_method("odbc_getdiagrec", { O=>0x00000004 });
+        DBD::ODBC::db->install_method("odbc_getdiagrec", { O=>0x00000004 });
+        DBD::ODBC::db->install_method("odbc_getdiagfield", { O=>0x00000004 });
+        DBD::ODBC::st->install_method("odbc_getdiagfield", { O=>0x00000004 });
         return $drh;
     }
 
@@ -629,7 +630,7 @@ DBD::ODBC - ODBC Driver for DBI
 
 =head1 VERSION
 
-This documentation refers to DBD::ODBC version 1.34_3.
+This documentation refers to DBD::ODBC version 1.34_4.
 
 =head1 SYNOPSIS
 
@@ -1016,9 +1017,8 @@ You may find this useful in an error handler as you can get the ODBC
 diagnostics as they are and not how DBD::ODBC was forced to fit them
 into the DBI's system.
 
-NOTE: be careful calling this before using DBI's errstr, err or state
-or methods as calling odbc_getdiagfield will clear DBI's values
-as it always does when you make another method call.
+NOTE: calling this method does not clear DBI's error values as usually
+happens.
 
 =head3 odbc_getdiagrec
 
@@ -1056,9 +1056,8 @@ Of particular interest is SQL_DIAG_COLUMN_NUMBER as it will tell you
 which bound column or parameter is in error (assuming your driver
 supports it). See params_in_error in the examples dir.
 
-NOTE: be careful calling this before using DBI's errstr, err or state
-or methods as calling odbc_getdiagfield will clear DBI's values
-as it always does when you make another method call.
+NOTE: calling this method does not clear DBI's error values as usually
+happens.
 
 =head2 Private connection attributes
 
@@ -1835,7 +1834,7 @@ SQLDisconnect returns state 25000 (transaction in progress).
 
 =head3 execute_for_fetch and execute_array
 
-From version 1.34_01 DBD::ODBC implements its own execute_for_fetch
+From version 1.34_1 DBD::ODBC implements its own execute_for_fetch
 which binds arrays of parameters and can send multiple rows
 (L</odbc_batch_size>) of parameters through the ODBC driver in one go
 (this overrides DBI's default execute_for_fetch). This is much faster
