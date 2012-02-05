@@ -10,8 +10,6 @@ $Revision: 10667 $
 
 =head1 Todo
 
-  Add array parameter binding (per new DBI Spec)
-
   Add row caching/multiple row fetches to speed selects
 
   Better/more tests on multiple statement handles which ensure the
@@ -24,8 +22,6 @@ $Revision: 10667 $
 
   Keep checking Oracle's ODBC drivers for Windows to fix the Date
     binding problem
-
-  Add support for $sth->more_results based on DBD::ODBC-specific attribute
 
   There is a Columns private ODBC method which is not documented.
 
