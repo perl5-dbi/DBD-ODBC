@@ -6,6 +6,15 @@ As of $LastChangedDate$
 
 $Revision: 10667 $
 
+=head2 Changes in DBD::ODBC 1.34_5 February N 2012
+
+  [DOCUMENTATION]
+
+  * dbc_getdiagfield was incorrectly named odbc_getdiagrec in the pod
+
+  * add DBI version required for StrictlyTyped and DiscardString to
+    pod
+
 =head2 Changes in DBD::ODBC 1.34_4 February 5 2012
 
   [BUG FIXES]

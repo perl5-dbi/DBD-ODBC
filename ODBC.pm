@@ -3,7 +3,7 @@
 # Copyright (c) 1994,1995,1996,1998  Tim Bunce
 # portions Copyright (c) 1997-2004  Jeff Urlwin
 # portions Copyright (c) 1997  Thomas K. Wenrich
-# portions Copyright (c) 2007-2011 Martin J. Evans
+# portions Copyright (c) 2007-2012 Martin J. Evans
 #
 # You may distribute under the terms of either the GNU General Public
 # License or the Artistic License, as specified in the Perl README file.
@@ -19,7 +19,7 @@ require 5.008;
 # see discussion on dbi-users at
 # http://www.nntp.perl.org/group/perl.dbi.dev/2010/07/msg6096.html and
 # http://www.dagolden.com/index.php/369/version-numbers-should-be-boring/
-$DBD::ODBC::VERSION = '1.34_4';
+$DBD::ODBC::VERSION = '1.34_5';
 
 {
     ## no critic (ProhibitMagicNumbers ProhibitExplicitISA)
@@ -34,7 +34,7 @@ $DBD::ODBC::VERSION = '1.34_4';
 
     # my $Revision = substr(q$Id$, 13,2);
 
-    require_version DBI 1.21;
+    require_version DBI 1.609;
 
     bootstrap DBD::ODBC $VERSION;
 
@@ -630,7 +630,7 @@ DBD::ODBC - ODBC Driver for DBI
 
 =head1 VERSION
 
-This documentation refers to DBD::ODBC version 1.34_4.
+This documentation refers to DBD::ODBC version 1.34_5.
 
 =head1 SYNOPSIS
 
@@ -1020,7 +1020,7 @@ into the DBI's system.
 NOTE: calling this method does not clear DBI's error values as usually
 happens.
 
-=head3 odbc_getdiagrec
+=head3 odbc_getdiagfield
 
   $diag = $handle->odbc_getdiagfield($record, $identifier);
 
@@ -1623,6 +1623,8 @@ does this and without this flag you have to add 0 to all bound column
 data returning numbers to get JSON::XS to encode it is N instead of
 "N".
 
+NOTE: For StrictlyTyped you need at least DBI 1.611.
+
 =head3 StrictlyTyped
 
 See DBI's sql_type_cast utility function.
@@ -1637,6 +1639,8 @@ This is probably not a lot of use with DBD::ODBC as if you ask for say
 an SQL_INTEGER and the data is not able to be converted to an integer
 the ODBC driver will problably return "Invalid character value for
 cast specification (SQL-22018)".
+
+NOTE: For DiscardString you need at least DBI 1.611.
 
 =head3 TreatAsLOB
 
