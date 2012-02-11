@@ -15,6 +15,11 @@ $Revision: 10667 $
   * add DBI version required for StrictlyTyped and DiscardString to
     pod
 
+  [OTHER]
+
+  * Make examples\odbc_diag.pl more tolerant of drivers which do not
+    handle diagnostic calls properly.
+
 =head2 Changes in DBD::ODBC 1.34_4 February 5 2012
 
   [BUG FIXES]

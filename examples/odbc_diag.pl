@@ -38,7 +38,7 @@ sub get_fields {
     foreach (@hdr_fields, @record_fields) {
         eval {
             my $x = $h->odbc_getdiagfield($record, $_);
-            diag("$_ = $x\n");
+            diag("$_ = " . ($x ? $x : 'undef') . "\n");
         };
         if ($@) {
             diag("diag field $_ errored\n");
@@ -46,7 +46,7 @@ sub get_fields {
     }
 }
 
-my $h = DBI->connect("dbi:ODBC:DSN=baugi","sa","easysoft",
+my $h = DBI->connect("dbi:ODBC:DSN=SQLite",undef,undef,
                      {RaiseError => 1, PrintError => 0});
 my ($s, @diags);
 
@@ -68,16 +68,18 @@ get_fields($h, 1);
 @diags = $h->odbc_getdiagrec(2);
 is(scalar(@diags), 0, '   and no second record diags');
 
-$s = $h->prepare(q/select * from table_does_not_exist/);
 $ok = eval {
+    # some drivers fail on the prepare - some don't fail until execute
+    $s = $h->prepare(q/select * from table_does_not_exist/);
     $s->execute;
     1;
 };
 ok(!$ok, "select on non-existant table fails");
-@diags = $s->odbc_getdiagrec(1);
+my $hd = $s || $h;
+@diags = $hd->odbc_getdiagrec(1);
 is(scalar(@diags), 3, '   and 3 diag fields returned');
 diag(Data::Dumper->Dump([\@diags], [qw(diags)]));
 
-get_fields($s, 1);
+get_fields($hd, 1);
 
 done_testing();
