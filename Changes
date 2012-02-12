@@ -8,6 +8,10 @@ $Revision: 10667 $
 
 =head2 Changes in DBD::ODBC 1.34_5 February N 2012
 
+  [BUG FIXES]
+
+  * The 40UnicodeRoundTrip tests counts could be 1 off in some cases.
+
   [DOCUMENTATION]
 
   * dbc_getdiagfield was incorrectly named odbc_getdiagrec in the pod

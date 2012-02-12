@@ -39,13 +39,15 @@ BEGIN {
 	@plaindata or die "OOPS";
 
 	$data_tests = 6*@data+6*@plaindata;
-	$tests=2+$data_tests;
+	diag("Data Tests : $data_tests");
+	$tests=1+$data_tests;
 
 	eval "require Test::NoWarnings";
 	if (!$@) {
 	    $has_test_nowarnings = 1;
 	}
 	$tests += 1 if $has_test_nowarnings;
+	diag("Total Tests : $tests");
         plan tests => $tests;
 }
 
@@ -59,11 +61,11 @@ ok(defined($dbh),"DBI connect");
 
 SKIP: {
     skip "Unicode-specific tests disabled - not a unicode build",
-        $data_tests + 1 if (!$dbh->{odbc_has_unicode});
+        $data_tests if (!$dbh->{odbc_has_unicode});
 
     if (DBI::neat($dbh->get_info(6)) =~ 'SQORA32') {
         skip "Oracle ODBC driver does not work with these tests",
-            $data_tests + 1;
+            $data_tests;
     }
 
 my $dbname=$dbh->get_info(17); # DBI::SQL_DBMS_NAME
@@ -78,7 +80,7 @@ SKIP: {
 	} elsif ($dbname=~/ACCESS/i) {
 		($len,$fromdual,$skipempty)=('LEN','',0);
 	} else {
-		skip "Tests not supported using $dbname",$tests-1;
+		skip "Tests not supported using $dbname",$data_tests;
 	}
 
 	$dbh->{RaiseError} = 1;
@@ -124,7 +126,6 @@ SKIP: {
 
 	$dbh->disconnect;
 
-	pass("all done");
 }
 };
 exit 0;
