@@ -109,7 +109,7 @@ $rows = 0;
 $dbh->{PrintError} = 0;
 my @tables = $dbh->tables;
 
-cmp_ok($#tables, '>', 0, "tables returns array");
+cmp_ok(@tables, '>', 0, "tables returns array");
 $rows = 0;
 if ($sth = $dbh->column_info(undef, undef, $ODBCTEST::table_name, undef)) {
     while (@row = $sth->fetchrow()) {

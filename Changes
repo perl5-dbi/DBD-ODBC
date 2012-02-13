@@ -12,6 +12,9 @@ $Revision: 10667 $
 
   * The 40UnicodeRoundTrip tests counts could be 1 off in some cases.
 
+  * Fix for t/03batt.t which could fail a test if the data source had
+    no table - Kenichi Ishigaki
+
   [DOCUMENTATION]
 
   * dbc_getdiagfield was incorrectly named odbc_getdiagrec in the pod
@@ -23,6 +26,11 @@ $Revision: 10667 $
 
   * Make examples\odbc_diag.pl more tolerant of drivers which do not
     handle diagnostic calls properly.
+
+  * Make t/40UnicodeRoundTrip.t work with SQLite - Kenichi Ishigaki
+
+  * Make t/odbc_describe_parameter.t work with SQLite - Kenichi
+    Ishigaki
 
 =head2 Changes in DBD::ODBC 1.34_4 February 5 2012
 

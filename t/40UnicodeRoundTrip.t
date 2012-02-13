@@ -39,7 +39,7 @@ BEGIN {
 	@plaindata or die "OOPS";
 
 	$data_tests = 6*@data+6*@plaindata;
-	diag("Data Tests : $data_tests");
+	#diag("Data Tests : $data_tests");
 	$tests=1+$data_tests;
 
 	eval "require Test::NoWarnings";
@@ -77,6 +77,8 @@ SKIP: {
 		($len,$fromdual,$skipempty)=('LENGTH','FROM DUAL',1);
 	} elsif ($dbname=~/PostgreSQL/i) {
 		($len,$fromdual,$skipempty)=('LENGTH','',0);
+    } elsif ($dbname=~/SQLite/i) {
+        ($len,$fromdual,$skipempty)=('LENGTH','',0);
 	} elsif ($dbname=~/ACCESS/i) {
 		($len,$fromdual,$skipempty)=('LEN','',0);
 	} else {
