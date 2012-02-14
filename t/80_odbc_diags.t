@@ -9,6 +9,15 @@ use Data::Dumper;
 use Test::More;
 use DBD::ODBC qw(:diags);
 
+my $has_test_nowarnings = 1;
+eval "require Test::NoWarnings";
+
+BEGIN {
+   if (!defined $ENV{DBI_DSN}) {
+      plan skip_all => "DBI_DSN is undefined";
+   }
+}
+
 # header fields:
 #define SQL_DIAG_CURSOR_ROW_COUNT			(-1249)
 #define SQL_DIAG_DYNAMIC_FUNCTION  7
@@ -46,8 +55,14 @@ sub get_fields {
     }
 }
 
-my $h = DBI->connect("dbi:ODBC:DSN=asus2",undef,undef,
-                     {RaiseError => 1, PrintError => 0});
+my $h = DBI->connect();
+unless($h) {
+   BAIL_OUT("Unable to connect to the database ($DBI::errstr)\nTests skipped.\n");
+   exit 0;
+}
+$h->{RaiseError} = 1;
+$h->{PrintError} = 0;
+
 my ($s, @diags);
 
 @diags = $h->odbc_getdiagrec(1);
@@ -61,7 +76,7 @@ my $ok = eval {
 ok(!$ok, "SQLGetInfo fails");
 @diags = $h->odbc_getdiagrec(1);
 is(scalar(@diags), 3, '   and 3 diag fields returned');
-diag(Data::Dumper->Dump([\@diags], [qw(diags)]));
+note(Data::Dumper->Dump([\@diags], [qw(diags)]));
 
 get_fields($h, 1);
 
@@ -78,8 +93,11 @@ ok(!$ok, "select on non-existant table fails");
 my $hd = $s || $h;
 @diags = $hd->odbc_getdiagrec(1);
 is(scalar(@diags), 3, '   and 3 diag fields returned');
-diag(Data::Dumper->Dump([\@diags], [qw(diags)]));
+note(Data::Dumper->Dump([\@diags], [qw(diags)]));
 
 get_fields($hd, 1);
+
+Test::NoWarnings::had_no_warnings()
+  if ($has_test_nowarnings);
 
 done_testing();
