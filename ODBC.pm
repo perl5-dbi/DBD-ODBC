@@ -2245,7 +2245,6 @@ L<http://www.easysoft.com/developer/languages/perl/dbi-debugging.html>
 
 Enabling ODBC support in Perl with Perl DBI and DBD::ODBC:
 
-
 L<http://www.easysoft.com/developer/languages/perl/dbi_dbd_odbc.html>
 
 Perl DBI/DBD::ODBC Tutorial Part 1 - Drivers, Data Sources and Connection:
@@ -2267,6 +2266,10 @@ L<http://www.easysoft.com/developer/languages/perl/tutorial_data_web.html>
 Multiple Active Statements (MAS) and DBD::ODBC
 
 L<http://www.easysoft.com/developer/languages/perl/multiple-active-statements.html>
+
+64-bit ODBC
+
+L<http://www.easysoft.com/developer/interfaces/odbc/64-bit.html>
 
 =head2 Frequently Asked Questions
 
