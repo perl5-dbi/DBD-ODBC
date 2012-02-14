@@ -32,6 +32,8 @@ $Revision: 10667 $
   * Make t/odbc_describe_parameter.t work with SQLite - Kenichi
     Ishigaki
 
+  * Add 80_odbc_diags.t based on the same file in examples
+
 =head2 Changes in DBD::ODBC 1.34_4 February 5 2012
 
   [BUG FIXES]
