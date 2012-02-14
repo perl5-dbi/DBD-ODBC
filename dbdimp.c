@@ -3265,12 +3265,11 @@ AV *dbd_st_fetch(SV *sth, imp_sth_t *imp_sth)
                 return Nullav;
             }
         }
-#endif /* DBISTATE_VERSION > 94 */
+#endif /* DBIXS_REVISION > 13590 */
 
     } /* end of loop through bound columns */
     return av;
 }
-
 
 
 
