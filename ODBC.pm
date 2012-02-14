@@ -2237,7 +2237,7 @@ L<http://www.datadirect.com>
 
 L<http://www.atinet.com>
 
-Some useful tutorials:
+=head2 Some useful tutorials:
 
 Debugging Perl DBI:
 
