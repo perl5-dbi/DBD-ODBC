@@ -11,6 +11,7 @@ use DBD::ODBC qw(:diags);
 
 my $has_test_nowarnings = 1;
 eval "require Test::NoWarnings";
+$has_test_nowarnings = undef if $@;
 
 BEGIN {
    if (!defined $ENV{DBI_DSN}) {
