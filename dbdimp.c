@@ -1335,10 +1335,12 @@ void dbd_error2(
             if (DBIc_TRACE(imp_xxh, DBD_TRACING, 0, 3))
                 TRACE1(imp_dbh,
                        "    !!SQLError returned %d unexpectedly.\n", rc);
-            DBIh_SET_ERR_CHAR(
-                h, imp_xxh, Nullch, 1,
-                "    Unable to fetch information about the error",
-                "IM008", Nullch);
+            if (!PL_dirty) {           /* not in global destruction */
+                DBIh_SET_ERR_CHAR(
+                    h, imp_xxh, Nullch, 1,
+                    "    Unable to fetch information about the error",
+                    "IM008", Nullch);
+            }
         }
         /* climb up the tree each time round the loop		*/
         if (hstmt != SQL_NULL_HSTMT) hstmt = SQL_NULL_HSTMT;

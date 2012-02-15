@@ -15,6 +15,13 @@ $Revision: 10667 $
   * Fix for t/03batt.t which could fail a test if the data source had
     no table - Kenichi Ishigaki
 
+  * If a driver misbehaves during global destruction e.g. SQLFreeStmt
+    fails but no error is available DBD::ODBC issues an error saying
+    an error occurred but no error diagnostics could be found. This is
+    pointless and irritating during global destruction. This stems
+    from a change in 1.28. Thanks to Peter Rabbitson for reporting
+    and suggested fix.
+
   [DOCUMENTATION]
 
   * dbc_getdiagfield was incorrectly named odbc_getdiagrec in the pod
