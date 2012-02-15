@@ -22,6 +22,9 @@ $Revision: 10667 $
   * add DBI version required for StrictlyTyped and DiscardString to
     pod
 
+  * Added new FAQ on why a transaction may be committed when
+    AutoCommit is turned off.
+
   [OTHER]
 
   * Make examples\odbc_diag.pl more tolerant of drivers which do not

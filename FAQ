@@ -1230,6 +1230,24 @@ wrong architecture you get this error instead of the more sensible
 NOTE: User DSNs don't exhibit this - they just seem to pick the right
 driver.
 
+See also http://www.easysoft.com/developer/interfaces/odbc/64-bit.html
+
+=head2 Why does my transaction get committed when I disable AutoCommit?
+
+If you are doing something like this:
+
+  {local $h->{AutoCommit} = 0;
+   $h->do(q/insert into mje values(1)/);
+  }
+
+then what really happens is AutoCommit is disabled at the start of the
+block and when the block is exited AutoCommit is re-enabled. In ODBC
+enabling AutoCommit will commit any outstanding transaction. Don't do
+this. Instead, either rollback or commit at the end of the block or
+leave AutoCommit alone and call begin_work/commit/rollback yourself in
+the block.
+
+
 =head1 AUTHOR
 
 Parts of this document were written by Tim Bunce,
