@@ -22,6 +22,16 @@ $Revision: 10667 $
     from a change in 1.28. Thanks to Peter Rabbitson for reporting
     and suggested fix.
 
+  [CHANGE IN BEHAVIOUR]
+
+  * Prior to this release if you called selectall_* methods with a
+    non-select statement DBD::ODBC would raise an error saying "no
+    select statement currently executing".  See RT 68720. After
+    discussions on dbi-dev the concensus seems to be that issuing a
+    warning in this case is better so that is what I've done. As a
+    result t/rt_68720.t has been removed and
+    t/85_selectall_non_select.t has been added.
+
   [DOCUMENTATION]
 
   * dbc_getdiagfield was incorrectly named odbc_getdiagrec in the pod
@@ -298,11 +308,11 @@ $Revision: 10667 $
   * Minor fix to Makefile.PL to avoid issuing variable used in void
     context.
 
-  [CHANGE IN BEHAVIOR]
+  [CHANGE IN BEHAVIOUR]
 
   * DBD::ODBC used to quietly rollback any transactions when
     disconnect was called and AutoCommit was off. This can mask a
-    problem and leads to different behavior when disconnect is called
+    problem and leads to different behaviour when disconnect is called
     vs not calling disconnect (where you get a warning). This release
     issues a warning if you call disconnect and a transaction is in
     progress then it is rolled back.
@@ -1452,7 +1462,7 @@ $Revision: 10667 $
   Minor changes to 02simple.t and 03dbatt.t to fix diagnostics output and
   help debug DBD which does not handle long data properly.
 
-  Further changes to Makefile.PL to avoid change in behavior of
+  Further changes to Makefile.PL to avoid change in behaviour of
   ExtUtils::MakeMaker wrt order of execution of PREREQ_PM and CONFIGURE.
   Now if DBI::DBD is not installed we just warn and exit 0 to avoid a
   cpan-testers failure.
@@ -2031,7 +2041,7 @@ $Revision: 10667 $
 
   Most significant change is the change in the default binding type which
   forces DBD::ODBC to attempt to determine the bind type if one is not
-  passed.  I decided to make this the default behavior to make things as
+  passed.  I decided to make this the default behaviour to make things as
   simple as possible.
 
   Fixed connection code put in 0.39 to work correctly.
@@ -2155,7 +2165,7 @@ $Revision: 10667 $
     $dbh->{odbc_default_bind_type} = 0; # before creating the query...
 
   Currently the default value of odbc_default_bind_type = SQL_VARCHAR
-  which mimicks the current behavior.  If you set odbc_default_bind_type
+  which mimicks the current behaviour.  If you set odbc_default_bind_type
   to 0, then SQLDescribeParam will be called to determine the columen
   type.  Not ALL databases handle this correctly.  For example, Oracle
   returns SQL_VARCHAR for all types and attempts to convert to the correct

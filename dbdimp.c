@@ -2660,11 +2660,11 @@ int dbd_st_execute(
         TRACE1(imp_dbh, "    +dbd_st_execute(%p)\n", sth);
 
     if (SQL_NULL_HDBC == imp_dbh->hdbc) {
-		DBIh_SET_ERR_CHAR(sth, imp_xxh, Nullch, 1,
+        DBIh_SET_ERR_CHAR(sth, imp_xxh, Nullch, 1,
                           "Database handle has been disconnected",
                           Nullch, Nullch);
-		return -2;
-	}
+	return -2;
+    }
 
     /*
      * if the handle is active, we need to finish it here.
@@ -2985,7 +2985,16 @@ AV *dbd_st_fetch(SV *sth, imp_sth_t *imp_sth)
     /* that dbd_describe() executed sucessfuly so the memory buffers	*/
     /* are allocated and bound.						*/
     if ( !DBIc_ACTIVE(imp_sth) ) {
-        dbd_error(sth, DBDODBC_INTERNAL_ERROR, "no select statement currently executing");
+      /*dbd_error(sth, DBDODBC_INTERNAL_ERROR, "no select statement currently executing");*/
+	/* The following issues a warning (instead of the error above)
+	   when a selectall_* did not actually return a result-set e.g.,
+	   if someone passed a create table to selectall_*. There is some
+	   debate as to what should happen here. 
+	   See http://www.nntp.perl.org/group/perl.dbi.dev/2011/06/msg6606.html
+	   and rt 68720  and rt_68720.t */
+	  DBIh_SET_ERR_CHAR(sth, imp_xxh,
+		   "0", 0, "no select statement currently executing", "", "fetch");
+
         return Nullav;
     }
 

@@ -446,7 +446,7 @@ sub update
 
 }
 
-diag("\n\nNOTE: This is an experimental test. It does not test anything in DBD::ODBC specifically but it does test execute_array and execute_for_fetch which are implemented in DBI. If it fails it should not stop you installing DBD::ODBC but if it fails with an error other than something indicating 'connection busy' it would be worth rerunning it with TEST_VERBOSE set or using prove and sending the results to the dbi-users mailing list.\n\n");
+diag("\n\nNOTE: This is an experimental test. Originally it did not test anything in DBD::ODBC specifically but since DBD::ODBC added the execute_for_fetch method this is no longer true. If you fail this test and want to use DBI's execute_for_fetch or execute_array methods you should consider setting odbc_disable_array_operations to fall back to DBI's default handling of these methods. This is safer but not as quick. If it fails it should not stop you installing DBD::ODBC but if it fails with an error other than something indicating 'connection busy' it would be worth rerunning it with TEST_VERBOSE set or using prove and sending the results to the dbi-users mailing list.\n\n");
 $dbh = DBI->connect();
 unless($dbh) {
    BAIL_OUT("Unable to connect to the database $DBI::errstr\nTests skipped.\n");

@@ -68,9 +68,6 @@ $Revision: 10667 $
   and see what changes they are making (especially Makefile.PL) to see if we
   might need to include them.
 
-  See http://www.nntp.perl.org/group/perl.dbi.dev/2011/06/msg6606.html and
-  containing thread. Downgrade error to warning.
-
   DRIVER and DSN in ODBC connection attributes should be case insensitive
   and they are not - they are strcmped against DRIVER/DSN - check!
 
