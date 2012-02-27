@@ -6,6 +6,14 @@ As of $LastChangedDate$
 
 $Revision: 10667 $
 
+=head2 Changes in DBD::ODBC 1.34_6 February 27 2012
+
+  [BUG FIXES]
+
+  * Fixed some compiler warnings and a compile error highlighed by a
+    smoker using MS Visual C where some code come before a variable
+    definition.
+
 =head2 Changes in DBD::ODBC 1.34_5 February 17 2012
 
   [BUG FIXES]

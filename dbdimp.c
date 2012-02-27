@@ -1631,7 +1631,6 @@ int dbd_st_tables(
        SQLWCHAR *wtype = NULL;
        STRLEN wlen;
        SV *copy;
-       int i;
 
        if (SvOK(catalog)) {
            /*printf("CATALOG OK %d\n", SvCUR(catalog));*/
@@ -2989,7 +2988,7 @@ AV *dbd_st_fetch(SV *sth, imp_sth_t *imp_sth)
 	/* The following issues a warning (instead of the error above)
 	   when a selectall_* did not actually return a result-set e.g.,
 	   if someone passed a create table to selectall_*. There is some
-	   debate as to what should happen here. 
+	   debate as to what should happen here.
 	   See http://www.nntp.perl.org/group/perl.dbi.dev/2011/06/msg6606.html
 	   and rt 68720  and rt_68720.t */
 	  DBIh_SET_ERR_CHAR(sth, imp_xxh,
@@ -3102,7 +3101,7 @@ AV *dbd_st_fetch(SV *sth, imp_sth_t *imp_sth)
             /* XXX need to 'finish' here */
             /* MJE commented out the following in 1.34_3 as it prevents
                calling odbc_get
-            /*dbd_st_finish(sth, imp_sth);*/
+               dbd_st_finish(sth, imp_sth);*/
             return Nullav;
         }
     }
@@ -5967,7 +5966,6 @@ SV *column;
        SQLWCHAR *wcolumn = NULL;
        STRLEN wlen;
        SV *copy;
-       int i;
 
        if (SvOK(catalog)) {
            copy = sv_mortalcopy(catalog);
@@ -6697,9 +6695,10 @@ IV odbc_st_execute_for_fetch(
     }
     for (p = 1; p <= n_params; p++) {
         char name[32];
-        sprintf(name, "%u", p);
         SV **phs_svp;
         phs_t *phs;
+
+        sprintf(name, "%u", p);
 
         if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 4))
             TRACE2(imp_sth, "    Max size of p%d = %lu\n", p-1, maxlen[p-1]);
@@ -6721,7 +6720,7 @@ IV odbc_st_execute_for_fetch(
 	      (char *)safemalloc(maxlen[p-1] * count * sizeof(SQLWCHAR));
 #else
             phs->param_array_buf = (char *)safemalloc(maxlen[p-1] * count);
-#endif	    
+#endif
         } else {
             phs->param_array_buf = NULL;
         }
@@ -6875,7 +6874,6 @@ IV odbc_st_execute_for_fetch(
 
     {
         unsigned int row;
-        SQLSMALLINT rec_no = 1;
         char sqlstate[SQL_SQLSTATE_SIZE+1];
         SQLINTEGER native;
         char msg[256];
@@ -6991,7 +6989,7 @@ static int get_row_diag(SQLSMALLINT recno,
 
     if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 3))
         TRACE1(imp_sth, "    +get_row_diag for row %d\n", recno);
-  
+
     /*printf("get_row_diag %d\n", recno);*/
     /*
       SQLRETURN return_code;
