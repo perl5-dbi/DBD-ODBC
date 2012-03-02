@@ -6780,11 +6780,12 @@ IV odbc_st_execute_for_fetch(
 
         for (p = 1; p <= n_params; p++) {
             char name[32];
-            sprintf(name, "%u", p);
             SV **phs_svp;
             phs_t *phs;
             STRLEN sv_len;
             char *sv_val;
+
+            sprintf(name, "%u", p);
 
             phs_svp = hv_fetch(imp_sth->all_params_hv, name, strlen(name), 0);
             if (phs_svp == NULL) {
