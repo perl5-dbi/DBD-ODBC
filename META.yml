@@ -1,12 +1,12 @@
 --- #YAML:1.0
 name: DBD-ODBC
 abstract: ODBC DBD for Perl DBI
-version: 1.34_7
+version: 1.35
 version_from: ODBC.pm
 author:
+  - Martin J. Evans <mjevans@cpan.org>
   - Tim Bunce
   - Jeff Urlwin
-  - Martin J. Evans <mjevans@cpan.org>
 license: perl
 distribution_type: module
 dynamic_config : 1

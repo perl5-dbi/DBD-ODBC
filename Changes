@@ -6,6 +6,10 @@ As of $LastChangedDate$
 
 $Revision: 10667 $
 
+=head2 Changes in DBD::ODBC 1.35 March 6 2012
+
+  Full release of the 1.34 development releases
+
 =head2 Changes in DBD::ODBC 1.34_7 March 2 2012
 
   [BUG FIXES]
@@ -49,7 +53,7 @@ $Revision: 10667 $
 
   [DOCUMENTATION]
 
-  * dbc_getdiagfield was incorrectly named odbc_getdiagrec in the pod
+  * odbc_getdiagfield was incorrectly named odbc_getdiagrec in the pod
 
   * add DBI version required for StrictlyTyped and DiscardString to
     pod
