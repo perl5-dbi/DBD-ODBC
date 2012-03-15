@@ -6,6 +6,22 @@ As of $LastChangedDate$
 
 $Revision: 10667 $
 
+=head2 Changes in DBD::ODBC 1.36_1 March 8 2012
+
+  [DOCUMENTATION]
+
+  * Fixed ColAttributes example in pod which used a $dbh instead of a
+    $sth.
+
+  * Fixed DescribeCol example in pod which used a $dbh instead of a
+    $sth.
+
+  [OTHER]
+
+  * Reduced usage of D_imp_xxx to avoid calls to dbih_getcom2.  See
+    thread on dbi-dev at
+    http://www.mail-archive.com/dbi-dev@perl.org/msg06675.html
+
 =head2 Changes in DBD::ODBC 1.35 March 6 2012
 
   Full release of the 1.34 development releases

@@ -19,7 +19,7 @@ require 5.008;
 # see discussion on dbi-users at
 # http://www.nntp.perl.org/group/perl.dbi.dev/2010/07/msg6096.html and
 # http://www.dagolden.com/index.php/369/version-numbers-should-be-boring/
-$DBD::ODBC::VERSION = '1.35';
+$DBD::ODBC::VERSION = '1.36_1';
 
 {
     ## no critic (ProhibitMagicNumbers ProhibitExplicitISA)
@@ -184,37 +184,37 @@ $DBD::ODBC::VERSION = '1.35';
     }
 
     sub prepare {
-	my($dbh, $statement, @attribs)= @_;
+        my($dbh, $statement, @attribs)= @_;
 
-	# create a 'blank' sth
-	my $sth = DBI::_new_sth($dbh, {
-	    'Statement' => $statement,
+        # create a 'blank' sth
+        my $sth = DBI::_new_sth($dbh, {
+            'Statement' => $statement,
 	    });
 
-	# Call ODBC func in ODBC.xs file.
-	# (This will actually also call SQLPrepare for you.)
-	# and populate internal handle data.
+        # Call ODBC func in ODBC.xs file.
+        # (This will actually also call SQLPrepare for you.)
+        # and populate internal handle data.
 
-	DBD::ODBC::st::_prepare($sth, $statement, @attribs)
-	    or return;
+        DBD::ODBC::st::_prepare($sth, $statement, @attribs)
+              or return;
 
-	return $sth;
+        return $sth;
     }
 
     sub column_info {
-	my ($dbh, $catalog, $schema, $table, $column) = @_;
+        my ($dbh, $catalog, $schema, $table, $column) = @_;
 
-	$catalog = q{} if (!$catalog);
-	$schema = q{} if (!$schema);
-	$table = q{} if (!$table);
-	$column = q{} if (!$column);
-	# create a "blank" statement handle
-	my $sth = DBI::_new_sth($dbh, { 'Statement' => "SQLColumns" });
+        $catalog = q{} if (!$catalog);
+        $schema = q{} if (!$schema);
+        $table = q{} if (!$table);
+        $column = q{} if (!$column);
+        # create a "blank" statement handle
+        my $sth = DBI::_new_sth($dbh, { 'Statement' => "SQLColumns" });
 
-	_columns($dbh,$sth, $catalog, $schema, $table, $column)
-	    or return;
+        _columns($dbh,$sth, $catalog, $schema, $table, $column)
+            or return;
 
-	return $sth;
+        return $sth;
     }
 
     sub columns {
@@ -630,7 +630,7 @@ DBD::ODBC - ODBC Driver for DBI
 
 =head1 VERSION
 
-This documentation refers to DBD::ODBC version 1.35.
+This documentation refers to DBD::ODBC version 1.36_1.
 
 =head1 SYNOPSIS
 
@@ -1562,7 +1562,7 @@ NAME, TYPE, PRECISION, SCALE, NULLABLE etc).>
 See the ODBC specification for the SQLColAttributes API.
 You call SQLColAttributes like this:
 
-  $dbh->func($column, $ftype, "ColAttributes");
+  $sth->func($column, $ftype, "ColAttributes");
 
   SQL_COLUMN_COUNT = 0
   SQL_COLUMN_NAME = 1
@@ -1592,12 +1592,12 @@ use DBI's NAME and NAME_xx attributes for portability.
 =head3 DescribeCol
 
 B<This private function is now superceded by DBI's statement attributes
-NAME, TYPE, PRECISION, SCLARE, NULLABLE etc).>
+NAME, TYPE, PRECISION, SCALE, NULLABLE etc).>
 
 See the ODBC specification for the SQLDescribeCol API.
 You call SQLDescribeCol like this:
 
-  @info = $dbh->func($column, "DescribeCol");
+  @info = $sth->func($column, "DescribeCol");
 
 The returned array contains the column attributes in the order described
 in the ODBC specification for SQLDescribeCol.

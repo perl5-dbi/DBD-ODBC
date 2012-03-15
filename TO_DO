@@ -107,3 +107,9 @@ $Revision: 10667 $
 <mje> I'll look at it again - added to TO_DO - where does try_compile_and_link come from?
 <ribasushi> mje: it's all part of this makefile, it's a good read rather clean
 <mje> ignore - sorry
+
+  remove DescribeCol and odbc_describe_col - they've been deprecated for
+    ages and I doubt they work on 64 bit.
+  Same with GetTypeInfo
+  Cancel is not even documented
+  Same with ColAttributes

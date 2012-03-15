@@ -347,6 +347,7 @@ void odbc_getdiagfield(dbh, record, identifier)
 
     }
 
+# called from column_info
 void
 _columns(dbh, sth, catalog, schema, table, column)
 	SV *	dbh
