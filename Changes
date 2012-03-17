@@ -13,6 +13,9 @@ $Revision: 10667 $
   * Fixed 12blob.t skip count when driver does not have a big enough
     varchar column to run the test.
 
+  * Work around problems hit during the test suite in DB2 driver which
+    only allows rows of size up to the page size and varchars of 4K.
+
   [DOCUMENTATION]
 
   * Fixed ColAttributes example in pod which used a $dbh instead of a

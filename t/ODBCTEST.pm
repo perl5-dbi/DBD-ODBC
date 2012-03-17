@@ -101,6 +101,13 @@ require 5.004;
                    if ($row[0] eq 'VARCHAR') {
                        $fields .= "(4000)";
                    }
+               } elsif ($drvname =~ /libdb2/) {
+                   # in DB2 a row cannot be longer than the page size which is usually 32K
+                   # but can be as low as 4K
+                   if ($row[0] eq 'VARCHAR') {
+                       diag("This seems to be db2 and as far as I am aware, you cannot have a row greater than your page size. When I last looked db2 says a varchar can be 32672 but if we use that here the row will very likely be larger than your page size. Also, even if we reduce the varchar but keep it above 3962 db2 seems to complain so we mangle it here to 3962. It does not seem right to me that SQLGetTypeInfo says a varchar can be 32672 and then it is limited to 3962. If you know better, please let me know.");
+                       $fields .= "(3962)";
+                  }
                } else {
                    $fields .= "($row[2])"	 if ($row[5] =~ /LENGTH/i);
                    $fields .= "($row[2],0)" if ($row[5] =~ /PRECISION,SCALE/i);
