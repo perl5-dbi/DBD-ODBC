@@ -40,6 +40,7 @@ unless($dbh) {
 note("Using driver $dbh->{Driver}->{Name}");
 
 $ea = ExecuteArray->new($dbh, 0); # don't set odbc_disable_array_operations
+$dbh = $ea->dbh;
 
 $ea->drop_table($dbh);
 ok($ea->create_table($dbh), "create test table") or exit 1;

@@ -23,8 +23,15 @@ sub new {
     my ($class, $dbh, $dbi_version) = @_;
     my $self = {};
 
-    setup($dbh, $dbi_version);
+    $dbh = setup($dbh, $dbi_version);
+    $self->{_dbh} = $dbh;
+
     return bless ($self, $class);
+}
+
+sub dbh {
+    my $self = shift;
+    return $self->{_dbh};
 }
 
 sub setup {
@@ -40,6 +47,8 @@ sub setup {
     $dbh->{PrintError} = 0;
     $dbh->{ChopBlanks} = 1;
     $dbh->{AutoCommit} = 1;
+
+    return $dbh;
 }
 
 sub create_table
@@ -459,15 +468,15 @@ sub enable_mars {
     # if we recognise the driver and it supports MAS enable it
     my $driver_name = $dbh->get_info(6) || '';
     if (($driver_name eq 'libessqlsrv.so') ||
-	($driver_name =~ /libsqlncli/)) {
-	my $dsn = $ENV{DBI_DSN};
-	if ($dsn !~ /^dbi:ODBC:DSN=/ && $dsn !~ /DRIVER=/i) {
-	    my @a = split(q/:/, $ENV{DBI_DSN});
-	    $dsn = join(q/:/, @a[0..($#a - 1)]) . ":DSN=" . $a[-1];
-	}
-	$dsn .= ";MARS_Connection=yes";
-	$dbh->disconnect;
-	$dbh = DBI->connect($dsn, $ENV{DBI_USER}, $ENV{DBI_PASS});
+            ($driver_name =~ /libsqlncli/)) {
+        my $dsn = $ENV{DBI_DSN};
+        if ($dsn !~ /^dbi:ODBC:DSN=/ && $dsn !~ /DRIVER=/i) {
+            my @a = split(q/:/, $ENV{DBI_DSN});
+            $dsn = join(q/:/, @a[0..($#a - 1)]) . ":DSN=" . $a[-1];
+        }
+        $dsn .= ";MARS_Connection=yes";
+        $dbh->disconnect;
+        $dbh = DBI->connect($dsn, $ENV{DBI_USER}, $ENV{DBI_PASS});
     }
     return $dbh;
 }
