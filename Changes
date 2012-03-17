@@ -8,6 +8,11 @@ $Revision: 10667 $
 
 =head2 Changes in DBD::ODBC 1.36_1 March 8 2012
 
+  [BUG FIXES]
+
+  * Fixed 12blob.t skip count when driver does not have a big enough
+    varchar column to run the test.
+
   [DOCUMENTATION]
 
   * Fixed ColAttributes example in pod which used a $dbh instead of a

@@ -71,7 +71,7 @@ while (my @row = $sth->fetchrow) {
     }
 }
 SKIP: {
-    skip "ODBC Driver/Database has not got a big enough type", 18
+    skip "ODBC Driver/Database has not got a big enough type", 21
         if (!$type_name);
 
     #diag("Using type $type_name");
