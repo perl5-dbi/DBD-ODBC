@@ -457,6 +457,26 @@ sub update
 
 }
 
+sub enable_mars {
+    my $dbh = shift;
+
+    # this test uses multiple active statements
+    # if we recognise the driver and it supports MAS enable it
+    my $driver_name = $dbh->get_info(6) || '';
+    if (($driver_name eq 'libessqlsrv.so') ||
+	($driver_name =~ /libsqlncli/)) {
+	my $dsn = $ENV{DBI_DSN};
+	if ($dsn !~ /^dbi:ODBC:DSN=/ && $dsn !~ /DRIVER=/i) {
+	    my @a = split(q/:/, $ENV{DBI_DSN});
+	    $dsn = join(q/:/, @a[0..($#a - 1)]) . ":DSN=" . $a[-1];
+	}
+	$dsn .= ";MARS_Connection=yes";
+	$dbh->disconnect;
+	$dbh = DBI->connect($dsn, $ENV{DBI_USER}, $ENV{DBI_PASS});
+    }
+    return $dbh;
+}
+
 diag("\n\nNOTE: This is an experimental test. Originally it did not test anything in DBD::ODBC specifically but since DBD::ODBC added the execute_for_fetch method this is no longer true. If you fail this test and want to use DBI's execute_for_fetch or execute_array methods you should consider setting odbc_disable_array_operations to fall back to DBI's default handling of these methods. This is safer but not as quick. If it fails it should not stop you installing DBD::ODBC but if it fails with an error other than something indicating 'connection busy' it would be worth rerunning it with TEST_VERBOSE set or using prove and sending the results to the dbi-users mailing list.\n\n");
 $dbh = DBI->connect();
 unless($dbh) {
@@ -465,20 +485,7 @@ unless($dbh) {
 }
 note("Using driver $dbh->{Driver}->{Name}");
 
-# this test uses multiple active statements
-# if we recognise the driver and it supports MAS enable it
-my $driver_name = $dbh->get_info(6) || '';
-if (($driver_name eq 'libessqlsrv.so') ||
-    ($driver_name =~ /libsqlncli/)) {
-    my $dsn = $ENV{DBI_DSN};
-    if ($dsn !~ /^dbi:ODBC:DSN=/ && $dsn !~ /DRIVER=/i) {
-        my @a = split(q/:/, $ENV{DBI_DSN});
-        $dsn = join(q/:/, @a[0..($#a - 1)]) . ":DSN=" . $a[-1];
-    }
-    $dsn .= ";MARS_Connection=yes";
-    $dbh->disconnect;
-    $dbh = DBI->connect($dsn, $ENV{DBI_USER}, $ENV{DBI_PASS});
-}
+$dbh = enable_mars($dbh);
 
 #$dbh->{ora_verbose} = 5;
 $dbh->{RaiseError} = 1;
