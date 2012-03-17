@@ -127,6 +127,17 @@ sub check_tuple_status
 # insert might return 'mas' which means the caller said the test
 # required Multiple Active Statements and the driver appeared to not
 # support MAS.
+#
+# ref is a hash ref:
+#   error (0|1) whether we expect an error
+#   raise (0|1) means set RaiseError to this
+#   commit (0|1) do the inserts in a txn
+#   tuple arrayref of what we expect in the tuple status
+#      e.g., [1,1,1,1,[]]
+#      where the empty [] signifies we expect an error for this row
+#      where 1 signifies we the expect row count for this row
+#   affected - the total number of rows affected for insert/update
+#
 sub insert
 {
     my ($dbh, $sth, $ref) = @_;
