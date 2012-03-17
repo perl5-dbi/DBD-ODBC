@@ -30,6 +30,9 @@ $Revision: 10667 $
     thread on dbi-dev at
     http://www.mail-archive.com/dbi-dev@perl.org/msg06675.html
 
+  * Changed the 70execute_array.t test to run it twice, once using
+    DBI's methods and once using the native ones in DBD::ODBC.
+
 =head2 Changes in DBD::ODBC 1.35 March 6 2012
 
   Full release of the 1.34 development releases

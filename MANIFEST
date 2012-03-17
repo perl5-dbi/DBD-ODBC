@@ -19,7 +19,8 @@ examples/column_info.pl
 examples/DbiTest.pl
 examples/DbiTest2.pl
 examples/dml_counts.pl
-examples/execute_for_fetch.pl
+examples/execute_for_dbi.pl
+examples/execute_for_native.pl
 examples/getinfo.pl
 examples/identity.pl
 examples/joetest7.pl

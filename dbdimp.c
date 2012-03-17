@@ -4439,6 +4439,8 @@ int dbd_db_STORE_attrib(SV *dbh, imp_dbh_t *imp_dbh, SV *keysv, SV *valuesv)
                    "    !!DBD::ODBC unsupported attribute passed (%s)\n", key);
 
         return FALSE;
+    } else if (DBIc_TRACE(imp_dbh, DBD_TRACING, 0, 3)) {
+	  TRACE1(imp_dbh, "    setting %s\n", key);
     }
 
     bSetSQLConnectionOption = TRUE;
