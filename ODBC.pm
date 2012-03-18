@@ -598,7 +598,7 @@ $DBD::ODBC::VERSION = '1.36_1';
                 foreach (@$tuple_batch_status) {
                     $tuple_count++ unless $_ == 7; # SQL_PARAM_UNUSED
                     next if ref($_);
-		    $_ = -1;	# we don't know individual row counts
+                    $_ = -1;	# we don't know individual row counts
                 }
 		if ($tuple_status) {
 		    push @$tuple_status, @$tuple_batch_status
@@ -1892,6 +1892,21 @@ you may hit memory limits. If you use DBI's execute_for_fetch
 DBD::ODBC uses the ODBC API SQLPutData (see L</odbc_putdata_start>)
 which does not require large amounts of memory as large columns are
 sent in pieces.
+
+o A lot of drivers have bugs with arrays of parameters (see the ODBC
+FAQ). e.g., as of 18-MAR-2012 I've seen the latest SQLite ODBC driver
+seg fault and freeTDS 8/0.91 returns the wrong row count for batches.
+
+o B<DO NOT> attempt to do an insert/update/delete and a select in the
+same SQL with execute_array e.g.,
+
+  SET IDENTITY_INSERT mytable ON
+  insert into mytable (id, name) values (?,?)
+  SET IDENTITY_INSERT mytable OFF
+  SELECT SCOPE_IDENTITY()
+
+It just won't/can't work although you may not have noticed when using
+DBI's inbuilt execute_* methods. See rt 75687.
 
 =head3 type_info_all
 
