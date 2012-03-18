@@ -1377,13 +1377,13 @@ future e.g., it may support automatic concatenation of the lob
 parts onto the end of the C<$lob> with the addition of an extra flag
 or destination offset as in DBI's undocumented blob_read.
 
-The type the lob is retrieved as may be overriden in C<%attr> using
-C<TYPE =E<gt> sql_type>. C<%attr> is optional and if omitted defaults to
-SQL_C_BINARY for binary columns and SQL_C_CHAR/SQL_C_WCHAR for other
-column types depending on whether DBD::ODBC is built with unicode
-support. C<$chrs_or_bytes_read> will by the bytes read when the column
-types SQL_C_CHAR or SQL_C_BINARY are used and characters read if the
-column type is SQL_C_WCHAR.
+The type the lob is retrieved as may be overridden in C<%attr> using
+C<TYPE =E<gt> sql_type>. C<%attr> is optional and if omitted defaults
+to SQL_C_BINARY for binary columns and SQL_C_CHAR/SQL_C_WCHAR for
+other column types depending on whether DBD::ODBC is built with
+unicode support. C<$chrs_or_bytes_read> will by the bytes read when
+the column types SQL_C_CHAR or SQL_C_BINARY are used and characters
+read if the column type is SQL_C_WCHAR.
 
 When built with unicode support C<$length> specifes the amount of
 buffer space to be used when retrieving the lob data but as it is

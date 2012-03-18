@@ -40,6 +40,8 @@ $Revision: 10667 $
 
   * new FAQ on SQLRowCount, freeTDS and execute_for_fetch
 
+  * Fix typo shown in rt 75860.
+
   [OTHER]
 
   * Reduced usage of D_imp_xxx to avoid calls to dbih_getcom2.  See
