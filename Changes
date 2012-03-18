@@ -38,6 +38,8 @@ $Revision: 10667 $
   * Fixed DescribeCol example in pod which used a $dbh instead of a
     $sth.
 
+  * new FAQ on SQLRowCount, freeTDS and execute_for_fetch
+
   [OTHER]
 
   * Reduced usage of D_imp_xxx to avoid calls to dbih_getcom2.  See
