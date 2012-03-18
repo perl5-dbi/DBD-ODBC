@@ -6553,7 +6553,7 @@ IV odbc_st_execute_for_fetch(
     SV *sth,
     SV *tuples,			/* the actual data to bind */
     IV count,			/* count of rows */
-    SV *tuple_status)		/* returned tupe status */
+    SV *tuple_status)		/* returned tuple status */
 {
     D_imp_sth(sth);
     D_imp_dbh_from_sth;
@@ -6936,12 +6936,12 @@ IV odbc_st_execute_for_fetch(
                 /* We'll never get SQL_PARAM_IGNORE as we never set a row operations array */
                 /* DBI requires us to set each tuple_status to the rows
                  * affected but we don't know it on a per row basis so. In any case in
-		 * order to count which tuples were executed and which were not we need
-		 * to return SQL_PARAM_SUCCES/SQL_PARAM_UNUSED - obviously any rows in
-		 * error were executed. The code above needs to translate ODBC statuses.*/
+                 * order to count which tuples were executed and which were not we need
+                 * to return SQL_PARAM_SUCCES/SQL_PARAM_UNUSED - obviously any rows in
+                 * error were executed. The code above needs to translate ODBC statuses.*/
                 if (SvTRUE(tuple_status)){
-		    av_store(tuples_status_av, row,
-			     newSViv((IV) imp_sth->param_status_array[row]));
+                    av_store(tuples_status_av, row,
+                             newSViv((IV) imp_sth->param_status_array[row]));
                     /*av_store(tuples_status_av, row, newSViv((IV)-1));*/
                 }
             } else {		/* SQL_PARAM_ERROR or SQL_PARAM_SUCCESS_WITH_INFO */
@@ -6983,6 +6983,8 @@ IV odbc_st_execute_for_fetch(
                    (SQLPOINTER)NULL, 0);
 
     rc = SQLRowCount(imp_sth->hstmt, &imp_sth->RowCount);
+    if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 3))
+        TRACE2(imp_sth, "    SQLRowCount=%d (rows=%ld)\n", rc, imp_sth->RowCount);
     if (rc != SQL_SUCCESS) {
         /* TO_DO free strlen_or_ind_array */
         /* on the other hand since batch_size is always constant we could
@@ -6992,6 +6994,7 @@ IV odbc_st_execute_for_fetch(
         dbd_error(sth, rc, "odbc_st_execute_for_fetch/SQLRowCount");
         return -2;
     }
+
     /* why does this break stuff  imp_sth->param_status_array = NULL; */
     if (err_seen) {
         return -2;
