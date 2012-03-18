@@ -16,6 +16,20 @@ $Revision: 10667 $
   * Work around problems hit during the test suite in DB2 driver which
     only allows rows of size up to the page size and varchars of 4K.
 
+  * Fix bug in execute_for_fetch where it would ignore the parameters
+    processed when creating the ArrayTupleStatus and hence could
+    attempt to call SQLGetDiagRec on a parameter row which was not
+    executed.
+
+  * The code wasn't catching success with info from SQLExecute in
+    execute_for_fetch.
+
+  [CHANGE IN BEHAVIOUR]
+
+  * In execute_for_fetch set the parameter status array to all 9999
+    (which is invalid) so we can see if the ODBC driver actually sets
+    them and we can warn if they don't.
+
   [DOCUMENTATION]
 
   * Fixed ColAttributes example in pod which used a $dbh instead of a
