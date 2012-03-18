@@ -1247,6 +1247,17 @@ this. Instead, either rollback or commit at the end of the block or
 leave AutoCommit alone and call begin_work/commit/rollback yourself in
 the block.
 
+=head2 Why do I get the wrong row count from execute_for_fetch?
+
+Some drivers don't return the correct value from SQLRowCount when
+binding arrays of parameters. e.g., freeTDS 8 and 0.91 seems to return
+a 1 for each batch. e.g., if you run a SQL insert to insert 15 rows
+and pass an array of 15 rows to execute_array with the default array
+size of 10 it takes 2 batches to execute all the parameters and
+freeTDS will return 1 row affected for each batch hence returns 2
+instead of 15.
+
+See rt 75687.
 
 =head1 AUTHOR
 
