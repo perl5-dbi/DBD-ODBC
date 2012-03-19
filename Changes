@@ -30,6 +30,9 @@ $Revision: 10667 $
     SQL_PARC_NO_BATCH from SQLGetInfo(SQL_PARAM_ARRAY_ROW_COUNTS)
     might do this.
 
+  * Fix test code for execute_for_fetch to a) handle drivers doing
+    SQL_PARC_NO_BATCH and b) add "not null" to primary key fields for
+    drivers like DB2 which require it.
 
   [CHANGE IN BEHAVIOUR]
 

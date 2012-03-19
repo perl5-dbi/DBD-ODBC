@@ -26,6 +26,21 @@ sub new {
     $dbh = setup($dbh, $dbi_version);
     $self->{_dbh} = $dbh;
 
+    # find out how the driver supports row counts and parameter status
+    $self->{_param_array_row_counts} = $dbh->get_info(153);
+    # a return of 1 is SQL_PARC_BATCH which means:
+    #   Individual row counts are available for each set of parameters. This is
+    #   conceptually equivalent to the driver generating a batch of SQL
+    #   statements, one for each parameter set in the array. Extended error
+    #   information can be retrieved by using the SQL_PARAM_STATUS_PTR
+    #   descriptor field.
+    # a return of 2 is SQL_PARC_NO_BATCH which means:
+    #   There is only one row count available, which is the cumulative row
+    #   count resulting from the execution of the statement for the entire
+    #   array of parameters. This is conceptually equivalent to treating
+    #   the statement together with the complete parameter array as one
+    #   atomic unit. Errors are handled the same as if one statement
+    #   were executed.
     return bless ($self, $class);
 }
 
@@ -40,7 +55,7 @@ sub setup {
     $dbh = enable_mars($dbh, $native);
     $dbh->{HandleError} = \&error_handler;
     if ($dbi_version) {
-	$dbh->{odbc_disable_array_operations} = 1;
+        $dbh->{odbc_disable_array_operations} = 1;
     }
     #$dbh->{ora_verbose} = 5;
     $dbh->{RaiseError} = 1;
@@ -56,14 +71,14 @@ sub create_table
     my ($self, $dbh) = @_;
 
     eval {
-        $dbh->do(qq/create table $table (a integer primary key, b char(20))/);
+        $dbh->do(qq/create table $table (a integer not null primary key, b char(20))/);
     };
     if ($@) {
         diag("Failed to create test table $table - $@");
         return 0;
     }
     eval {
-        $dbh->do(qq/create table $table2 (a integer primary key, b char(20))/);
+        $dbh->do(qq/create table $table2 (a integer not null primary key, b char(20))/);
     };
     if ($@) {
         diag("Failed to create test table $table2 - $@");
@@ -111,14 +126,16 @@ sub check_data
 
 sub check_tuple_status
 {
-    my ($tsts, $expected) = @_;
+    my ($self, $tsts, $expected) = @_;
 
     note(Data::Dumper->Dump([$tsts], [qw(ArrayTupleStatus)]));
     my $row = 0;
     foreach my $s (@$tsts) {
         if (ref($expected->[$row])) {
-            is(ref($s), 'ARRAY', 'array in array tuple status');
-            is(scalar(@$s), 3, '3 elements in array tuple status error');
+            unless ($self->{_param_array_row_counts} == 2) {
+                is(ref($s), 'ARRAY', 'array in array tuple status');
+                is(scalar(@$s), 3, '3 elements in array tuple status error');
+            }
         } else {
             if ($s == -1) {
                 pass("row $row tuple status unknown");
@@ -146,7 +163,7 @@ sub check_tuple_status
 #
 sub insert
 {
-    my ($dbh, $sth, $ref) = @_;
+    my ($self, $dbh, $sth, $ref) = @_;
 
     die "need hashref arg" if (!$ref || (ref($ref) ne 'HASH'));
     note("insert " . join(", ", map {"$_ = ". DBI::neat($ref->{$_})} keys %$ref ));
@@ -232,7 +249,7 @@ sub insert
            "$ref->{sts} rows in tuple_status");
     }
     if ($ref->{tuple}) {
-        check_tuple_status(\@tuple_status, $ref->{tuple});
+        $self->check_tuple_status(\@tuple_status, $ref->{tuple});
     }
     return;
 }
@@ -261,9 +278,9 @@ sub simple
         my $sth = $dbh->prepare(qq/insert into $table values(?,?)/);
         $sth->bind_param_array(1, \@p1);
         $sth->bind_param_array(2, \@p2);
-        insert($dbh, $sth,
-               { commit => !$commit, error => 0, sts => 5, affected => 5,
-                 tuple => [1, 1, 1, 1, 1], %$ref});
+        $self->insert($dbh, $sth,
+                      { commit => !$commit, error => 0, sts => 5, affected => 5,
+                        tuple => [1, 1, 1, 1, 1], %$ref});
         check_data($dbh, \@p1, \@p2);
     }
 
@@ -273,29 +290,29 @@ sub simple
 
     $sth->bind_param_array(1, \@p1);
     $sth->bind_param_array(2, [qw(one)]);
-    insert($dbh, $sth, {commit => 0, error => 0,
-                        raise => 1, sts => 5, affected => 5,
-                        tuple => [1, 1, 1, 1, 1], %$ref});
+    $self->insert($dbh, $sth, {commit => 0, error => 0,
+                               raise => 1, sts => 5, affected => 5,
+                               tuple => [1, 1, 1, 1, 1], %$ref});
     check_data($dbh, \@p1, ['one', undef, undef, undef, undef]);
 
     note "  Not all param arrays the same size with bind on execute_array";
     clear_table($dbh, $table);
     $sth = $dbh->prepare(qq/insert into $table values(?,?)/);
 
-    insert($dbh, $sth, {commit => 0, error => 0,
-                        raise => 1, sts => 5, affected => 5,
-                        tuple => [1, 1, 1, 1, 1], %$ref,
-                        params => [\@p1, [qw(one)]]});
+    $self->insert($dbh, $sth, {commit => 0, error => 0,
+                               raise => 1, sts => 5, affected => 5,
+                               tuple => [1, 1, 1, 1, 1], %$ref,
+                               params => [\@p1, [qw(one)]]});
     check_data($dbh, \@p1, ['one', undef, undef, undef, undef]);
 
     note "  no parameters";
     clear_table($dbh, $table);
     $sth = $dbh->prepare(qq/insert into $table values(?,?)/);
 
-    insert($dbh, $sth, {commit => 0, error => 0,
-                        raise => 1, sts => '0E0', affected => 0,
-                        tuple => [], %$ref,
-                        params => [[], []]});
+    $self->insert($dbh, $sth, {commit => 0, error => 0,
+                               raise => 1, sts => '0E0', affected => 0,
+                               tuple => [], %$ref,
+                               params => [[], []]});
     check_data($dbh, \@p1, ['one', undef, undef, undef, undef]);
 }
 
@@ -328,9 +345,9 @@ sub error
         $pe1[-1] = 1;
         $sth->bind_param_array(1, \@pe1);
         $sth->bind_param_array(2, \@p2);
-        insert($dbh, $sth, {commit => 0, error => 1, sts => undef,
-                            affected => undef, tuple => [1, 1, 1, 1, []],
-                            %$ref});
+        $self->insert($dbh, $sth, {commit => 0, error => 1, sts => undef,
+                                   affected => undef, tuple => [1, 1, 1, 1, []],
+                                   %$ref});
         check_data($dbh, [@pe1[0..4]], [@p2[0..4]]);
     }
 
@@ -342,8 +359,8 @@ sub error
         $pe1[-2] = 1;
         $sth->bind_param_array(1, \@pe1);
         $sth->bind_param_array(2, \@p2);
-        insert($dbh, $sth, {commit => 0, error => 1, sts => undef,
-                            affected => undef, tuple => [1, 1, 1, [], 1], %$ref});
+        $self->insert($dbh, $sth, {commit => 0, error => 1, sts => undef,
+                                   affected => undef, tuple => [1, 1, 1, [], 1], %$ref});
         check_data($dbh, [@pe1[0..2],$pe1[4]], [@p2[0..2], $p2[4]]);
     }
 }
@@ -372,10 +389,10 @@ sub row_wise
     $fetch_row = 0;             # reset fetch_sub to start with first row
     clear_table($dbh, $table);
     my $sth = $dbh->prepare(qq/insert into $table values(?,?)/);
-    insert($dbh, $sth,
-           {commit => 0, error => 0, sts => 5, affected => 5,
-            tuple => [1, 1, 1, 1, 1], %$ref,
-            fetch => \&fetch_sub});
+    $self->insert($dbh, $sth,
+                  {commit => 0, error => 0, sts => 5, affected => 5,
+                   tuple => [1, 1, 1, 1, 1], %$ref,
+                   fetch => \&fetch_sub});
 
     # NOTE: The following test requires Multiple Active Statements. Although
     # I can find ODBC drivers which do this it is not easy (if at all possible)
@@ -400,7 +417,7 @@ sub row_wise
     $sth->{Warn} = 0;
     ok($sth2->execute, 'execute on second table') or diag($sth2->errstr);
     ok($sth2->{Executed}, 'second statement is in executed state');
-    my $res = insert($dbh, $sth,
+    my $res = $self->insert($dbh, $sth,
            {commit => 0, error => 0, sts => 5, affected => 5,
             tuple => [1, 1, 1, 1, 1], %$ref,
             fetch => $sth2, requires_mas => 1});
@@ -420,10 +437,10 @@ sub update
     $fetch_row = 0;
     clear_table($dbh, $table);
     my $sth = $dbh->prepare(qq/insert into $table values(?,?)/);
-    insert($dbh, $sth,
-           {commit => 0, error => 0, sts => 5, affected => 5,
-            tuple => [1, 1, 1, 1, 1], %$ref,
-            fetch => \&fetch_sub});
+    $self->insert($dbh, $sth,
+                  {commit => 0, error => 0, sts => 5, affected => 5,
+                   tuple => [1, 1, 1, 1, 1], %$ref,
+                   fetch => \&fetch_sub});
     check_data($dbh, \@p1, \@p2);
 
     # update all rows b column to 'fred' checking rows affected is 5
@@ -431,9 +448,9 @@ sub update
     # NOTE, this also checks you can pass a scalar to bind_param_array
     $sth->bind_param_array(1, 'fred');
     $sth->bind_param_array(2, \@p1);
-    insert($dbh, $sth,
-           {commit => 0, error => 0, sts => 5, affected => 5,
-            tuple => [1, 1, 1, 1, 1], %$ref});
+    $self->insert($dbh, $sth,
+                  {commit => 0, error => 0, sts => 5, affected => 5,
+                   tuple => [1, 1, 1, 1, 1], %$ref});
     check_data($dbh, \@p1, [qw(fred fred fred fred fred)]);
 
     # update 4 rows column b to 'dave' checking rows affected is 4
@@ -443,9 +460,9 @@ sub update
     my @pe1 = @p1;
     $pe1[-1] = 10;              # non-existant row
     $sth->bind_param_array(2, \@pe1);
-    insert($dbh, $sth,
-           {commit => 0, error => 0, sts => 5, affected => 4,
-            tuple => [1, 1, 1, 1, '0E0'], %$ref});
+    $self->insert($dbh, $sth,
+                  {commit => 0, error => 0, sts => 5, affected => 4,
+                   tuple => [1, 1, 1, 1, '0E0'], %$ref});
     check_data($dbh, \@p1, [qw(dave dave dave dave fred)]);
 
     # now change all rows b column to 'pete' - this will change all 5
@@ -455,9 +472,9 @@ sub update
     # NOTE, this also checks you can pass a scalar to bind_param_array
     $sth->bind_param_array(1, 'pete');
     $sth->bind_param_array(2, ['dave%', 'fred%']);
-    insert($dbh, $sth,
-           {commit => 0, error => 0, sts => 2, affected => 5,
-            tuple => [4, 1], %$ref});
+    $self->insert($dbh, $sth,
+                  {commit => 0, error => 0, sts => 2, affected => 5,
+                   tuple => [4, 1], %$ref});
     check_data($dbh, \@p1, [qw(pete pete pete pete pete)]);
 }
 
