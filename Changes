@@ -19,7 +19,8 @@ $Revision: 10667 $
   * Fix bug in execute_for_fetch where it would ignore the parameters
     processed when creating the ArrayTupleStatus and hence could
     attempt to call SQLGetDiagRec on a parameter row which was not
-    executed.
+    executed. See the logs in rt 75687 which show this although this
+    is not a fix for this rt.
 
   * The code wasn't catching success with info from SQLExecute in
     execute_for_fetch.
