@@ -24,6 +24,13 @@ $Revision: 10667 $
   * The code wasn't catching success with info from SQLExecute in
     execute_for_fetch.
 
+  * Add support for drivers (DB2 in this case) which return
+    SQL_PARAM_DIAG_UNAVAILABLE in bound parameter status array when
+    running execute_for_fetch. Any driver returning doing
+    SQL_PARC_NO_BATCH from SQLGetInfo(SQL_PARAM_ARRAY_ROW_COUNTS)
+    might do this.
+
+
   [CHANGE IN BEHAVIOUR]
 
   * In execute_for_fetch set the parameter status array to all 9999

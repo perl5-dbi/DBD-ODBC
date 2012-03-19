@@ -6902,24 +6902,24 @@ IV odbc_st_execute_for_fetch(
            it with the values in SQL_ATTR_PARAM_STATUS_PTR which are:
            SQL_PARAM_SUCCESS, SQL_PARAM_SUCCESS_WITH_INFO, SQL_PARAM_ERROR,
            SQL_PARAM_UNUSED, SQL_PARAM_IGNORE - but we do what DBI says */
-	/* Don't step beyond Params Processed as if the driver says it has
-	   processed N rows and we step past N, the values could be rubbish -
-	   the driver probably hasn't even written them. In particular, if
-	   we look at param status array after params processed the values
-	   will probably be junk (randon values in the malloced data) and it
-	   will lead us to think they are not successful - assuming they are
-	   not 0 = SQL_PARAM_SUCCESS */
+        /* Don't step beyond Params Processed as if the driver says it has
+           processed N rows and we step past N, the values could be rubbish -
+           the driver probably hasn't even written them. In particular, if
+           we look at param status array after params processed the values
+           will probably be junk (randon values in the malloced data) and it
+           will lead us to think they are not successful - assuming they are
+           not 0 = SQL_PARAM_SUCCESS */
         for (row = 0; row < count; row++) {
             if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 3))
                 TRACE2(imp_sth, "    row %d, parameter status = %u\n",
                        row, imp_sth->param_status_array[row]);
-	    if (imp_sth->params_processed <= row) {
-	      /* parameter was not processed so no point in looking at parameter
-		 status array */
-	        av_store(tuples_status_av, row,
-			 newSViv((IV) -1));
-	    } else if (imp_sth->param_status_array[row] == 9999) {
-	      SV *err_svs[3];
+            if (imp_sth->params_processed <= row) {
+                /* parameter was not processed so no point in looking at parameter
+                   status array */
+                av_store(tuples_status_av, row,
+                         newSViv((IV) -1));
+            } else if (imp_sth->param_status_array[row] == 9999) {
+                SV *err_svs[3];
                 if (SvTRUE(tuple_status)){
                     err_svs[0] = newSViv((IV)1);
                     err_svs[1] = newSVpv("warning: parameter status was not returned", 0);
@@ -6929,11 +6929,16 @@ IV odbc_st_execute_for_fetch(
                              newRV_noinc((SV *)(av_make(3, err_svs))));
                 }
                 DBIh_SET_ERR_SV(sth, (imp_xxh_t*)imp_sth, newSVpv("",0), err_svs[1],
-                                  err_svs[2], &PL_sv_undef);
+                                err_svs[2], &PL_sv_undef);
 
-	    } else if ((imp_sth->param_status_array[row] == SQL_PARAM_SUCCESS) ||
-                (imp_sth->param_status_array[row] == SQL_PARAM_UNUSED)) {
+            } else if ((imp_sth->param_status_array[row] == SQL_PARAM_SUCCESS) ||
+                       (imp_sth->param_status_array[row] == SQL_PARAM_UNUSED) ||
+                       (imp_sth->param_status_array[row] == SQL_PARAM_DIAG_UNAVAILABLE)) {
                 /* We'll never get SQL_PARAM_IGNORE as we never set a row operations array */
+                /* Some drivers which do SQL_PARC_NO_BATCH will set
+                   SQL_PARAM_DIAG_UNAVAILABLE for every row as they cannot tell
+                   us on a per row basis. Treat these as success as they are since
+                   the call the SQLExecute above would have failed otherwise. */
                 /* DBI requires us to set each tuple_status to the rows
                  * affected but we don't know it on a per row basis so. In any case in
                  * order to count which tuples were executed and which were not we need
