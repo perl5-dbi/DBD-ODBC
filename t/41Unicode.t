@@ -33,7 +33,7 @@ BEGIN {
 	utf8::is_utf8($data[1]) or die "Perl did not set UTF8 flag on unicode string constant";
 	utf8::is_utf8($data[2]) and die "Perl set UTF8 flag on non-unicode string constant";
 	utf8::is_utf8($data[3]) or die "Perl did not set UTF8 flag on unicode string constant";
-	
+
 	$data_tests=12*@data;
         $other_tests = 7;
         $tests = $other_tests + $data_tests;
@@ -71,6 +71,8 @@ SKIP: {
 		($NVARCHAR)=('VARCHAR(1000)');
 	} elsif ($dbname=~/ACCESS/i) {
 		($NVARCHAR)=('MEMO');
+	} elsif ($dbname=~/DB2/i) {
+		($NVARCHAR)=('VARGRAPHIC(500)');
 	} else {
 		skip "Tests not supported using $dbname",
 			$data_tests + $other_tests - 1;
@@ -87,21 +89,21 @@ SKIP: {
 	pass("Drop old test table");
 
 	$dbh->{RaiseError} = 1;
-	
+
 	$dbh->do(<<__SQL__);
-CREATE TABLE 
+CREATE TABLE
 	PERL_DBD_TABLE1
 	(
-		i INTEGER PRIMARY KEY,
-		nva $NVARCHAR, 
-		nvb $NVARCHAR, 
+		i INTEGER NOT NULL PRIMARY KEY,
+		nva $NVARCHAR,
+		nvb $NVARCHAR,
 		nvc $NVARCHAR
 	)
 __SQL__
-	
+
 	pass("Create test table");
 
-	
+
 	# Insert records into the database:
 	$sth=$dbh->prepare("INSERT INTO PERL_DBD_TABLE1 (i,nva,nvb,nvc) values (?,?,?,?)");
 	ok(defined($sth),"prepare insert statement");
@@ -130,28 +132,28 @@ __SQL__
 		pass("fetch select statement $info");
 		cmp_ok(utf8::is_utf8($nva),'>=',utf8::is_utf8($data[$i]),"utf8 flag $info col1");
 		utf_eq_ok($nva,$data[$i],"value matches $info col1");
-		
+
 		cmp_ok(utf8::is_utf8($nvb),'>=',utf8::is_utf8($data[$i]),"utf8 flag $info col2");
 		utf_eq_ok($nva,$data[$i],"value matches $info col2");
 
 		cmp_ok(utf8::is_utf8($nvc),'>=',utf8::is_utf8($data[$i]),"utf8 flag $info col3");
 		utf_eq_ok($nva,$data[$i],"value matches $info col3");
 	}
-	
+
 	$WAIT && eval {
 		print "you may want to look at the table now, the unicode data is damaged!\nHit Enter to continue\n";
 		$_=<STDIN>;
-		
+
 	};
-	
+
 	# eval {
 	# 	local $dbh->{RaiseError} = 0;
 	# 	$dbh->do("DROP TABLE PERL_DBD_TABLE1");
 	# };
 
 	$dbh->disconnect;
-	
+
 	pass("all done");
-}      
+}
 };
 exit 0;

@@ -81,6 +81,8 @@ SKIP: {
         ($len,$fromdual,$skipempty)=('LENGTH','',0);
 	} elsif ($dbname=~/ACCESS/i) {
 		($len,$fromdual,$skipempty)=('LEN','',0);
+    } elsif ($dbname =~ /DB2/i) {
+        ($len, $fromdual, $skipempty) = ('LENGTH', 'FROM SYSIBM.SYSDUMMY1', 0);
 	} else {
 		skip "Tests not supported using $dbname",$data_tests;
 	}
