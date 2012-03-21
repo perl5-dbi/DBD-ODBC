@@ -202,13 +202,13 @@ sub Multiple_concurrent_stmts {
    $sth->execute;
    my @row;
    eval {
-      while (@row = $sth->fetchrow_array()) {
-	 my $sth2 = $dbh->prepare("select * from $ODBCTEST::table_name");
-	 $sth2->execute;
-	 my @row2;
-	 while (@row2 = $sth2->fetchrow_array()) {
-	 }
-      }
+       while (@row = $sth->fetchrow_array()) {
+           my $sth2 = $dbh->prepare("select * from $ODBCTEST::table_name");
+           $sth2->execute;
+           my @row2;
+           while (@row2 = $sth2->fetchrow_array()) {
+           }
+       }
    };
 
    if ($@) {
@@ -656,8 +656,14 @@ AS
    # need the finish if there are print statements (for now)
    #$sth2->finish;
    $dbh->{odbc_err_handler} = undef;
-   $dbh->do("insert into PERL_DBD_TABLE1 (i, j) values (1, 2)");
-   $dbh->do("insert into PERL_DBD_TABLE1 (i, j) values (3, 4)");
+   # We need to make sure there is sufficient data returned to
+   # overflow the TDS buffer. If all the results fit into one buffer
+   # the tests checking for MAS not working work succeed.
+   for (my $i = 1; $i < 1000; $i += 2) {
+       $dbh->do('insert into PERL_DBD_TABLE1 (i, j) values (?, ?)', undef, $i, $i+1);
+   }
+   #$dbh->do("insert into PERL_DBD_TABLE1 (i, j) values (1, 2)");
+   #$dbh->do("insert into PERL_DBD_TABLE1 (i, j) values (3, 4)");
 
    $dbh->disconnect;
 

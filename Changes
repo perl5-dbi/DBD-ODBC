@@ -6,7 +6,7 @@ As of $LastChangedDate$
 
 $Revision: 10667 $
 
-=head2 Changes in DBD::ODBC 1.36_1 March 8 2012
+=head2 Changes in DBD::ODBC 1.36_1 March 21 2012
 
   [BUG FIXES]
 
@@ -41,6 +41,20 @@ $Revision: 10667 $
     (which is invalid) so we can see if the ODBC driver actually sets
     them and we can warn if they don't.
 
+  * For freeTDS default odbc_disable_array_operations to 1 as no
+    version of the freeTDS driver can be found that works. I was
+    requested to do this by the dbix-class guys. I may revert this
+    later if freeTDS is fixed.
+
+  * as above for MS Access. It is a shame I cannot find any way of
+    finding out if a driver is capable of array operations.
+
+  [ENHANCEMENTS]
+
+  * execute_for_fetch code now checks the
+    ODBC_DISABLE_ARRAY_OPERATIONS environment variable which can
+    be set to 1 or 0 to override the internal default.
+
   [DOCUMENTATION]
 
   * Fixed ColAttributes example in pod which used a $dbh instead of a
@@ -60,9 +74,9 @@ $Revision: 10667 $
     http://www.mail-archive.com/dbi-dev@perl.org/msg06675.html
 
   * Changed the 70execute_array.t test to run it twice, once using
-    DBI's methods and once using the native ones in DBD::ODBC.
+    DBI's methods and once using the native one in DBD::ODBC.
 
-  * Made the 2 unicode tests work with DB2 ODB driver.
+  * Made the 2 unicode tests work with DB2 ODBC driver.
 
 =head2 Changes in DBD::ODBC 1.35 March 6 2012
 

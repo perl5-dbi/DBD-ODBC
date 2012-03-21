@@ -177,10 +177,10 @@ $DBD::ODBC::VERSION = '1.36_1';
             odbc_putdata_start             => undef, # sth and dbh
             odbc_column_display_size       => undef, # sth and dbh
             odbc_utf8_on                   => undef, # sth and dbh
-	    odbc_driver_complete           => undef,
-	    odbc_batch_size                => undef,
+            odbc_driver_complete           => undef,
+            odbc_batch_size                => undef,
             odbc_disable_array_operations  => undef, # sth and dbh
-               };
+        };
     }
 
     sub prepare {
@@ -565,7 +565,11 @@ $DBD::ODBC::VERSION = '1.36_1';
                             ($tuple_status ? $tuple_status : 'undef') .
                                 ") batch_size = $batch_size\n", 4);
         # Use DBI's execute_for_fetch if ours is disabled
-        if ($sth->FETCH('odbc_disable_array_operations')) {
+        my $override = (defined($ENV{ODBC_DISABLE_ARRAY_OPERATIONS}) ?
+                            $ENV{ODBC_DISABLE_ARRAY_OPERATIONS} : -1);
+        if ((($sth->FETCH('odbc_disable_array_operations') == 1) &&
+                 ($override != 0)) ||
+                     $override == 1) {
             $sth->trace_msg("array operations disabled\n", 4);
             my $sth = shift;
             return $sth->SUPER::execute_for_fetch(@_);

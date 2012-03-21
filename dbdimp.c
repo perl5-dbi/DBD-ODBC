@@ -2862,6 +2862,31 @@ int dbd_st_execute(
                    "    SQL_NO_DATA...resetting done_desc!\n");
         imp_sth->done_desc = 0;
         imp_sth->RowCount = 0;
+        /* Strictly speaking a driver should only return SQL_NO_DATA
+           when a searched insert/update/delete affects no rows and
+           so it is pointless continuing below and calling SQLNumResultCols.
+
+           However, if you run a procedure such as this:
+           CREATE PROCEDURE PERL_DBD_PROC1 (\@i INT) AS
+           DECLARE \@result INT;
+           BEGIN
+             SET \@result = \@i;
+             IF (\@i = 99)
+             BEGIN
+	           UPDATE PERL_DBD_TABLE1 SET i=\@i;
+	           SET \@result = \@i + 1;
+             END;
+             SELECT \@result;
+           END
+
+           to MS SQL Server, it will return SQL_NO_DATA but then
+           SQLNumResultCols will be successful and return 1 column
+           for the result set. As a result, we need to continue below.
+
+           Some versions of freeTDS will return SQLNumResultCols = 1 after a
+           "delete from table" but then give a function sequence error
+           when SQLDescribeCol called. It would have been handy to return 0
+           here to workaround that bug but the above does not allow us to. */
     }
 
     /*
@@ -6225,13 +6250,16 @@ static int post_connect(
             imp_dbh->driver_type = DT_ES_OOB;
         } else if (strcmp(imp_dbh->odbc_driver_name, "OdbcFb") == 0) {
             imp_dbh->driver_type = DT_FIREBIRD;
+        } else if (memcmp(imp_dbh->odbc_driver_name, "libtdsodbc", 10) == 0) {
+            imp_dbh->driver_type = DT_FREETDS;
         } else {
             imp_dbh->driver_type = DT_DONT_CARE;
         }
     }
 
     if (DBIc_TRACE(imp_dbh, CONNECTION_TRACING, 0, 0))
-        TRACE1(imp_dbh, "DRIVER_NAME = %s\n", imp_dbh->odbc_driver_name);
+        TRACE2(imp_dbh, "DRIVER_NAME = %s, type=%d\n",
+               imp_dbh->odbc_driver_name, imp_dbh->driver_type);
 
     rc = SQLGetInfo(imp_dbh->hdbc, SQL_DRIVER_VER,
                     &imp_dbh->odbc_driver_version,
@@ -6285,6 +6313,14 @@ static int post_connect(
     /* default ignoring named parameters to false */
     imp_dbh->odbc_ignore_named_placeholders = 0;
     imp_dbh->odbc_disable_array_operations = 0;
+
+    /* Disable array operations by default for some drivers as no version
+       I've ever seen works and it annoys the dbix-class guys */
+    if (imp_dbh->driver_type == DT_FREETDS ||
+        imp_dbh->driver_type == DT_MS_ACCESS_JET ||
+        imp_dbh->driver_type == DT_MS_ACCESS_ACE) {
+        imp_dbh->odbc_disable_array_operations = 1;
+    }
 
 #ifdef WITH_UNICODE
     imp_dbh->odbc_has_unicode = 1;
@@ -6885,7 +6921,7 @@ IV odbc_st_execute_for_fetch(
         return -2;
     } else if (rc == SQL_SUCCESS_WITH_INFO) {
         dbd_error(sth, rc, "odbc_st_execute_for_fetch/SQLExecute");
-    }      
+    }
 
     if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 4))
         TRACE1(imp_sth, "    params processed = %lu\n",

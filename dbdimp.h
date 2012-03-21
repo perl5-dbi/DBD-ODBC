@@ -5,7 +5,7 @@
  * portions Copyright (c) 1994,1995,1996  Tim Bunce
  * portions Copyright (c) 1997-2001 Jeff Urlwin
  * portions Copyright (c) 2001 Dean Arnold
- * portions Copyright (c) 2007-2011 Martin J. Evans
+ * portions Copyright (c) 2007-2012 Martin J. Evans
  *
  * You may distribute under the terms of either the GNU General Public
  * License or the Artistic License, as specified in the Perl README file.
@@ -108,7 +108,8 @@ struct imp_dbh_st {
         DT_MS_ACCESS_JET,                          /* odbcjt32.dll */
         DT_MS_ACCESS_ACE,                          /* ACEODBC.DLL */
         DT_ES_OOB,                                 /* Easysoft OOB */
-        DT_FIREBIRD                                /* Firebird OdbcFb */
+        DT_FIREBIRD,                                /* Firebird OdbcFb */
+        DT_FREETDS                                 /* freeTDS libtdsodbc.so */
     } driver_type;
     char odbc_driver_name[80];
     char odbc_driver_version[20];
