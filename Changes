@@ -8,16 +8,25 @@ $Revision: 10667 $
 
 =head2 Changes in DBD::ODBC 1.36_2 March 31 2012
 
+  [BUG FIXES]
+
+  * not strictly a bug fix, more a workaround. MS Access mdb driver
+    reports 22 for the size of doubles but then returns an empty string
+    for long doubles that still fit in 22 chrs. rt 69864.
+
   [CHANGE IN BEHAVIOUR]
 
   * The odbc_disable_array_operations has been replaced with
     odbc_array_operations and the default for array operations is off.
-    Sorry, but I warned this was experimental.
+    Sorry, but I warned this was experimental. The
+    ODBC_DISABLE_ARRAY_OPERATIONS env var remains.
 
   [DOCUMENTATION]
 
   * Rewrote parts of "Unicode implementation in DBD::ODBC" to describe
     UTF-16/UCS-2 internal implementation.
+
+  * Changed ordering of some of the pod sections.
 
 =head2 Changes in DBD::ODBC 1.36_1 March 21 2012
 
