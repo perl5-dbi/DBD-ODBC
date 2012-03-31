@@ -47,8 +47,8 @@ BEGIN {
 	    $has_test_nowarnings = 1;
 	}
 	$tests += 1 if $has_test_nowarnings;
-	diag("Total Tests : $tests");
-        plan tests => $tests;
+	#diag("Total Tests : $tests");
+    plan tests => $tests;
 }
 
 END {
