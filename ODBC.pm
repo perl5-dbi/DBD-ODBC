@@ -604,10 +604,10 @@ $DBD::ODBC::VERSION = '1.36_1';
                     next if ref($_);
                     $_ = -1;	# we don't know individual row counts
                 }
-		if ($tuple_status) {
-		    push @$tuple_status, @$tuple_batch_status
-			if defined($tuple_status);
-		}
+                if ($tuple_status) {
+                    push @$tuple_status, @$tuple_batch_status
+                        if defined($tuple_status);
+                }
             }
             if (!defined($res)) {	# error
                 $row_count = undef;

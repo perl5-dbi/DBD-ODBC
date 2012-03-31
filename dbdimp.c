@@ -6855,10 +6855,10 @@ IV odbc_st_execute_for_fetch(
             }
             else {
 #if defined(WITH_UNICODE)
-		SV_toWCHAR(sv);
+                SV_toWCHAR(sv);
                 sv_val = SvPV(sv, sv_len);
-		memcpy((char *)(phs->param_array_buf + (row * maxlen[p-1] * sizeof(SQLWCHAR))), sv_val,
-		       sv_len);
+                memcpy((char *)(phs->param_array_buf + (row * maxlen[p-1] * sizeof(SQLWCHAR))),
+                       sv_val, sv_len);
                 phs->strlen_or_ind_array[row] = sv_len;
 #else
                 sv_val = SvPV(sv, sv_len);

@@ -21,11 +21,11 @@ odbc_execute_for_fetch(sth, tuples, count, tuple_status)
         ret = odbc_st_execute_for_fetch(sth, tuples, count, tuple_status);
 
 	if (ret == 0)
-	  XST_mPV(0, "0E0");
-        else if (ret < -1)	/* Error */
-          XST_mUNDEF(0);
-        else
-          XST_mIV(0, ret);
+	    XST_mPV(0, "0E0");
+    else if (ret < -1)	/* Error */
+        XST_mUNDEF(0);
+    else
+       XST_mIV(0, ret);
 
 void odbc_getdiagrec(sth, record)
     SV * sth
