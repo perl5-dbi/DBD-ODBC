@@ -2395,6 +2395,15 @@ int dbd_describe(SV *sth, imp_sth_t *imp_sth, int more)
             fbh->ColDisplaySize = 30;
         }
 
+        /* For MS Access SQL_COLUMN_DISPLAY_SIZE is 22 for doubles
+           and it differs from SQLDescribeCol which says 53 - use the latter
+           or some long numbers get squished. Doesn't seem to fix accdb
+           driver. See rt 69864. */
+        if ((imp_dbh->driver_type == DT_MS_ACCESS_JET) &&
+            (fbh->ColSqlType == SQL_DOUBLE)) {
+            fbh->ColDisplaySize = fbh->ColDef + 1;
+        }
+
 #ifdef SQL_DESC_LENGTH
         rc = SQLColAttribute(imp_sth->hstmt,(SQLSMALLINT)(column_n + 1),
                              SQL_DESC_LENGTH,
