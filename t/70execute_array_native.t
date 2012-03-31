@@ -32,17 +32,25 @@ END {
     done_testing();
 }
 
-diag("\n\nNOTE: This is an experimental test. Since DBD::ODBC added the execute_for_fetch method this tests the native method and not DBI's fallback method. If you fail this test it probably means the ODBC driver you are using does not have sufficient support (or is buggy) for array operations. If you pass this test your ODBC Driver seems ok and you can get faster insert/update/delete operations using DBI's execute_array or execute_for_fetch methods by setting the odbc_array_operations to true.
-
-If this test fails it should not stop you installing DBD::ODBC but if it fails with an error other than something indicating 'connection busy' I'd strongly suggest you don't set odbc_array_operations and stick with DBI's default implementation.
-
-If this test fails for your driver I'd like to hear about it so I can compile a list of working drivers and perhaps pass bug reports on to the maintainers. Please rerun this test with TEST_VERBOSE set or using prove and send the results to the dbi-users mailing list.\n\n");
 $dbh = DBI->connect();
 unless($dbh) {
    BAIL_OUT("Unable to connect to the database $DBI::errstr\nTests skipped.\n");
    exit 0;
 }
 {
+    my $driver_name = DBI::neat($dbh->get_info(6));
+    if (($driver_name =~ /odbcjt32.dll/i) ||
+            ($driver_name =~ /ACEODBC.DLL/i)) {
+        $has_test_nowarnings = 0;
+        plan skip_all => 'MS Access does not support array operations'
+    }
+
+    diag("\n\nNOTE: This is an experimental test. Since DBD::ODBC added the execute_for_fetch method this tests the native method and not DBI's fallback method. If you fail this test it probably means the ODBC driver you are using does not have sufficient support (or is buggy) for array operations. If you pass this test your ODBC Driver seems ok and you can get faster insert/update/delete operations using DBI's execute_array or execute_for_fetch methods by setting the odbc_array_operations to true.
+
+If this test fails it should not stop you installing DBD::ODBC but if it fails with an error other than something indicating 'connection busy' I'd strongly suggest you don't set odbc_array_operations and stick with DBI's default implementation.
+
+If this test fails for your driver I'd like to hear about it so I can compile a list of working drivers and perhaps pass bug reports on to the maintainers. Please rerun this test with TEST_VERBOSE set or using prove and send the results to the dbi-users mailing list.\n\n");
+
     diag("\n");
     diag("Perl $Config{PERL_REVISION}.$Config{PERL_VERSION}.$Config{PERL_SUBVERSION}\n");
     diag("osname=$Config{osname}, osvers=$Config{osvers}, archname=$Config{archname}\n");
@@ -50,10 +58,10 @@ unless($dbh) {
     diag("Using DBD::ODBC $DBD::ODBC::VERSION\n");
     diag("Using DBMS_NAME " . DBI::neat($dbh->get_info(17)) . "\n");
     diag("Using DBMS_VER " . DBI::neat($dbh->get_info(18)) . "\n");
-    my $driver_name = DBI::neat($dbh->get_info(6));
     diag("Using DRIVER_NAME $driver_name\n");
     diag("Using DRIVER_VER " . DBI::neat($dbh->get_info(7)) . "\n");
     diag("odbc_has_unicode " . $dbh->{odbc_has_unicode} . "\n");
+
 }
 
 note("Using driver $dbh->{Driver}->{Name}");
