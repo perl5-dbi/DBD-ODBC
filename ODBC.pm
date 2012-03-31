@@ -1254,6 +1254,13 @@ with using DBI's default implementation. If these difference cause you
 a problem you can set odbc_array_operations to false and DBD::ODBC
 will revert to DBI's implementations of the array methods.
 
+You can use the environment variable ODBC_DISABLE_ARRAY_OPERATIONS to
+switch array operations on/off too. When set to 1 array operations are
+disabled. When not set the default is used (which currently is off).
+When set to 0 array operations are used no matter what. I know this is
+slightly counter intuitive but I've found it difficult to change the
+name (it got picked up and used in a few places very quickly).
+
 =head2 Private statement attributes
 
 =head3 odbc_more_results
