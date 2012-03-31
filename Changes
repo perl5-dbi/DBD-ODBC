@@ -6,6 +6,19 @@ As of $LastChangedDate$
 
 $Revision: 10667 $
 
+=head2 Changes in DBD::ODBC 1.36_2 March 31 2012
+
+  [CHANGE IN BEHAVIOUR]
+
+  * The odbc_disable_array_operations has been replaced with
+    odbc_array_operations and the default for array operations is off.
+    Sorry, but I warned this was experimental.
+
+  [DOCUMENTATION]
+
+  * Rewrote parts of "Unicode implementation in DBD::ODBC" to describe
+    UTF-16/UCS-2 internal implementation.
+
 =head2 Changes in DBD::ODBC 1.36_1 March 21 2012
 
   [BUG FIXES]
@@ -247,7 +260,6 @@ $Revision: 10667 $
   * DBD::ODBC now allows unicode catalog/schema/table parameters to be
     passed to table_info. Of course they will only reliably work with
     a supporting Unicode ODBC driver.
-
 
 =head2 Changes in DBD::ODBC 1.32_2 October 22 2011
 

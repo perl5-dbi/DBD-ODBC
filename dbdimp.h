@@ -116,7 +116,7 @@ struct imp_dbh_st {
     char odbc_dbms_name[80];
     char odbc_dbms_version[80];
     int odbc_batch_size;	/* rows in a batch operation */
-    int odbc_disable_array_operations;	/* disable inbuilt execute_for_fetch etc */
+    int odbc_array_operations;	/* enable/disable inbuilt execute_for_fetch etc */
 };
 
 /* Define sth implementor data structure */
@@ -169,7 +169,7 @@ struct imp_sth_st {
     SQLUSMALLINT *param_status_array; /* array for execute_for_fetch parameter status */
     SQLULEN params_processed;	      /* for execute_for_fetch */
     int odbc_batch_size;	/* rows in a batch operation */
-    int odbc_disable_array_operations;	/* disable inbuilt execute_for_fetch etc */
+    int odbc_array_operations;	/* enable/disable inbuilt execute_for_fetch etc */
     int allocated_batch_size;		/* size used for last batch */
 };
 #define IMP_STH_EXECUTING	0x0001

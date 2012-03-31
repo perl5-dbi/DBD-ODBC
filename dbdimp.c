@@ -151,7 +151,7 @@ int dbd_st_finish(SV *sth, imp_sth_t *imp_sth);
 #define ODBC_DESCRIBE_PARAMETERS       0x8344
 #define ODBC_DRIVER_COMPLETE           0x8345
 #define ODBC_BATCH_SIZE                0x8346
-#define ODBC_DISABLE_ARRAY_OPERATIONS  0x8347
+#define ODBC_ARRAY_OPERATIONS          0x8347
 
 /* This is the bind type for parameters we fall back to if the bind_param
    method was not given a parameter type and SQLDescribeParam is not supported
@@ -1966,8 +1966,7 @@ int odbc_st_prepare_sv(
    imp_sth->odbc_old_unicode = imp_dbh->odbc_old_unicode;
    imp_sth->odbc_describe_parameters = imp_dbh->odbc_describe_parameters;
    imp_sth->odbc_batch_size = imp_dbh->odbc_batch_size;
-   imp_sth->odbc_disable_array_operations =
-       imp_dbh->odbc_disable_array_operations;
+   imp_sth->odbc_array_operations = imp_dbh->odbc_array_operations;
    imp_sth->param_status_array = NULL;
 
    if (DBIc_TRACE(imp_dbh, DBD_TRACING, 0, 5)) {
@@ -4373,7 +4372,7 @@ static db_params S_db_storeOptions[] =  {
    { "odbc_old_unicode", ODBC_OLD_UNICODE },
    { "odbc_describe_parameters", ODBC_DESCRIBE_PARAMETERS },
    { "odbc_batch_size", ODBC_BATCH_SIZE },
-   { "odbc_disable_array_operations", ODBC_DISABLE_ARRAY_OPERATIONS },
+   { "odbc_array_operations", ODBC_ARRAY_OPERATIONS },
    { NULL },
 };
 
@@ -4399,7 +4398,7 @@ static db_params S_db_fetchOptions[] =  {
    { "odbc_describe_parameters", ODBC_DESCRIBE_PARAMETERS},
    { "odbc_driver_complete", ODBC_DRIVER_COMPLETE },
    { "odbc_batch_size", ODBC_BATCH_SIZE},
-   { "odbc_disable_array_operations", ODBC_DISABLE_ARRAY_OPERATIONS },
+   { "odbc_array_operations", ODBC_ARRAY_OPERATIONS },
    { NULL }
 };
 
@@ -4490,13 +4489,13 @@ int dbd_db_STORE_attrib(SV *dbh, imp_dbh_t *imp_dbh, SV *keysv, SV *valuesv)
         imp_dbh->odbc_ignore_named_placeholders = SvTRUE(valuesv);
         break;
 
-      case ODBC_DISABLE_ARRAY_OPERATIONS:
+      case ODBC_ARRAY_OPERATIONS:
         bSetSQLConnectionOption = FALSE;
         /*
          * set value to ignore placeholders.  Will affect all
          * statements from here on.
          */
-        imp_dbh->odbc_disable_array_operations = SvTRUE(valuesv);
+        imp_dbh->odbc_array_operations = SvTRUE(valuesv);
         break;
 
       case ODBC_DEFAULT_BIND_TYPE:
@@ -4776,8 +4775,8 @@ SV *dbd_db_FETCH_attrib(SV *dbh, imp_dbh_t *imp_dbh, SV *keysv)
         retsv = newSViv(imp_dbh->odbc_ignore_named_placeholders);
         break;
 
-      case ODBC_DISABLE_ARRAY_OPERATIONS:
-        retsv = newSViv(imp_dbh->odbc_disable_array_operations);
+      case ODBC_ARRAY_OPERATIONS:
+        retsv = newSViv(imp_dbh->odbc_array_operations);
         break;
 
       case ODBC_QUERY_TIMEOUT:
@@ -4962,7 +4961,7 @@ static T_st_params S_st_fetch_params[] =
    s_A("odbc_column_display_size",0),	/* 19 */
    s_A("odbc_force_bind_type",0),             /* 20 */
    s_A("odbc_batch_size",0),	/* 21 */
-   s_A("odbc_disable_array_operations",0),	/* 22 */
+   s_A("odbc_array_operations",0),	/* 22 */
    s_A("",0),			/* END */
 };
 
@@ -4976,7 +4975,7 @@ static T_st_params S_st_store_params[] =
    s_A("odbc_column_display_size",0),	/* 5 */
    s_A("odbc_force_bind_type",0),	/* 6 */
    s_A("odbc_batch_size",0),	/* 7 */
-   s_A("odbc_disable_array_operations",0),	/* 8 */
+   s_A("odbc_array_operations",0),	/* 8 */
    s_A("",0),			/* END */
 };
 #undef s_A
@@ -5217,8 +5216,8 @@ SV *dbd_st_FETCH_attrib(SV *sth, imp_sth_t *imp_sth, SV *keysv)
       case 21: /* odbc_batch_size */
         retsv = newSViv(imp_sth->odbc_batch_size);
         break;
-      case 22: /* odbc_disable_array_operations */
-	 retsv = newSViv(imp_sth->odbc_disable_array_operations);
+      case 22: /* odbc_array_operations */
+	 retsv = newSViv(imp_sth->odbc_array_operations);
 	 break;
       default:
 	 return Nullsv;
@@ -5292,7 +5291,7 @@ int dbd_st_STORE_attrib(SV *sth, imp_sth_t *imp_sth, SV *keysv, SV *valuesv)
          break;
 
       case 8:
-	 imp_sth->odbc_disable_array_operations = SvTRUE(valuesv);
+	 imp_sth->odbc_array_operations = SvTRUE(valuesv);
 	 return TRUE;
 
    }
@@ -6310,17 +6309,19 @@ static int post_connect(
             "Max column name length pegged at 512", Nullch, Nullch);
     }
 
-    /* default ignoring named parameters to false */
+    /* default ignoring named parameters and array operations to false */
     imp_dbh->odbc_ignore_named_placeholders = 0;
-    imp_dbh->odbc_disable_array_operations = 0;
+    imp_dbh->odbc_array_operations = 0;
 
+#ifdef DEFAULT_IS_OFF_NOW_SO_THIS_IS_NOT_REQUIRED
     /* Disable array operations by default for some drivers as no version
        I've ever seen works and it annoys the dbix-class guys */
     if (imp_dbh->driver_type == DT_FREETDS ||
         imp_dbh->driver_type == DT_MS_ACCESS_JET ||
         imp_dbh->driver_type == DT_MS_ACCESS_ACE) {
-        imp_dbh->odbc_disable_array_operations = 1;
+        imp_dbh->odbc_array_operations = 0;
     }
+#endif
 
 #ifdef WITH_UNICODE
     imp_dbh->odbc_has_unicode = 1;
