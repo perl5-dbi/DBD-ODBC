@@ -39,6 +39,7 @@ unless($dbh) {
 }
 note("Using driver $dbh->{Driver}->{Name}");
 
+$ENV{ODBC_DISABLE_ARRAY_OPERATIONS} = 0; # force array ops
 $ea = ExecuteArray->new($dbh, 0); # don't set odbc_disable_array_operations
 $dbh = $ea->dbh;
 
