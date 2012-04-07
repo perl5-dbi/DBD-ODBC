@@ -6,6 +6,12 @@ As of $LastChangedDate$
 
 $Revision: 10667 $
 
+=head2 Changes in DBD::ODBC 1.37 April 7 2012
+
+  A full release of the 1.36 dev releases.
+
+  Please note the changes in behaviour below.
+
 =head2 Changes in DBD::ODBC 1.36_2 March 31 2012
 
   [BUG FIXES]
