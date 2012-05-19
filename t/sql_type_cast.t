@@ -58,7 +58,7 @@ sub is_iv {
    my $flags = $sv->FLAGS;
 
    # See http://www.perlmonks.org/?node_id=971411
-   my $x = $sv->can('PVX') ? $sv->PVX : undef;
+   my $x = $sv->can('PV') ? $sv->PV : undef;
 
    if (wantarray) {
        return ($flags & SVf_IOK, $x);
