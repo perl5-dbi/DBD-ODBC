@@ -57,8 +57,9 @@ sub is_iv {
    my $sv = svref_2object(my $ref = \$_[0]);
    my $flags = $sv->FLAGS;
 
-   my $x = $sv->PV;
-  
+   # See http://www.perlmonks.org/?node_id=971411
+   my $x = $sv->can('PVX') ? $sv->PVX : undef;
+
    if (wantarray) {
        return ($flags & SVf_IOK, $x);
    } else {
@@ -146,7 +147,7 @@ is($r, 100, "correct value returned SQL_INTEGER") or Dump($r);
 my ($iv, $pv) = is_iv($r);
 ok($iv, "ivok bind integer") or Dump($r);
 # since post DBD::ODBC 1.37 the following will not return a pv
-ok(!$pv, "pv not null bind integer") or Dump($r);
+ok(!$pv, "not PV bind integer") or Dump($r);
 
 #
 # try binding specifying an integer type and say discard the pv
@@ -160,7 +161,7 @@ is($r, 100, "correct value returned SQL_INTEGER|DiscardString");
 #my $j2 = encode_json [$r];
 ($iv, $pv) = is_iv($r);
 ok($iv, "ivok bind integer discard") or Dump($r);
-ok(!$pv, "pv null bind integer discard") or Dump($r);
+ok(!$pv, "not PV bind integer discard") or Dump($r);
 
 # cannot do the following since the driver will whinge the type cannot
 # be cast to an integer
