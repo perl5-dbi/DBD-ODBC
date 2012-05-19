@@ -3275,10 +3275,6 @@ AV *dbd_st_fetch(SV *sth, imp_sth_t *imp_sth)
               default:
                 /* If we requested an SQL_INTEGER we've got a 4 byte integer */
                 if (fbh->req_type == SQL_INTEGER) {
-
-                    long *p = (long *)fbh->data;
-                    printf("long=%ld, flags=%lx\n", *p, fbh->bind_flags);
-
                     sv_setiv(sv, *((long *)fbh->data));
                     break;
                 }
