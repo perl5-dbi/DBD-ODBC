@@ -37,7 +37,7 @@ unless($dbh) {
 
 SKIP:
 {
-   skip "SQLDescribeParam not supported using " . $dbh->get_info(17) . "\n", 3, unless $dbh->func(58, 'GetFunctions');
+   #skip "SQLDescribeParam not supported using " . $dbh->get_info(6) . "\n", 3, unless $dbh->func(58, 'GetFunctions');
 
    $dbh->{RaiseError} = 0;
    $dbh->{PrintError} = 0;

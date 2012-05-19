@@ -21,7 +21,7 @@ $| = 1;
 my $has_test_nowarnings = 1;
 eval "require Test::NoWarnings";
 $has_test_nowarnings = undef if $@;
-my $tests = 9;
+my $tests = 13;
 $tests += 1 if $has_test_nowarnings;
 plan tests => $tests;
 
@@ -117,6 +117,7 @@ BAIL_OUT("Failed to insert test data") if $ev;
 $sth = $dbh->prepare(q/select a from PERL_DBD_drop_me/);
 $sth->execute;
 my ($r) = $sth->fetchrow;
+is($r, 100, "correct value returned");
 
 #my $j1 = encode_json [$r];
 is(is_iv($r), 0, "! ivok no bind") or Dump($r);
@@ -128,6 +129,7 @@ is(is_iv($r), 0, "! ivok no bind") or Dump($r);
 $sth->bind_col(1, \$r);
 $sth->execute;
 $sth->fetch;
+is($r, 100, "correct value returned Bind");
 #my $j2 = encode_json [$r];
 is(is_iv($r), 0, "! ivok bind") or Dump($r);
 
@@ -135,21 +137,26 @@ is(is_iv($r), 0, "! ivok bind") or Dump($r);
 # try binding specifying an integer type
 # expect IOK
 #
-$sth->bind_col(1, \$r, {TYPE => SQL_INTEGER});
+$sth = $dbh->prepare(q/select a from PERL_DBD_drop_me/);
 $sth->execute;
+$sth->bind_col(1, \$r, {TYPE => SQL_INTEGER});
 $sth->fetch;
+is($r, 100, "correct value returned SQL_INTEGER") or Dump($r);
 #my $j2 = encode_json [$r];
 my ($iv, $pv) = is_iv($r);
 ok($iv, "ivok bind integer") or Dump($r);
-ok($pv, "pv not null bind integer") or Dump($r);
+# since post DBD::ODBC 1.37 the following will not return a pv
+ok(!$pv, "pv not null bind integer") or Dump($r);
 
 #
 # try binding specifying an integer type and say discard the pv
 # expect IOK
 #
-$sth->bind_col(1, \$r, {TYPE => SQL_INTEGER, DiscardString => 1});
+$sth = $dbh->prepare(q/select a from PERL_DBD_drop_me/);
 $sth->execute;
+$sth->bind_col(1, \$r, {TYPE => SQL_INTEGER, DiscardString => 1});
 $sth->fetch;
+is($r, 100, "correct value returned SQL_INTEGER|DiscardString");
 #my $j2 = encode_json [$r];
 ($iv, $pv) = is_iv($r);
 ok($iv, "ivok bind integer discard") or Dump($r);

@@ -87,6 +87,7 @@
    calling SQLError as the error is internal */
 #define DBDODBC_INTERNAL_ERROR -999
 
+static IV override_bind_type(IV req_type);
 static int get_row_diag(SQLSMALLINT recno,
 			imp_sth_t *imp_sth,
 			char *state,
@@ -2185,15 +2186,27 @@ static const char *S_SqlCTypeToString (SWORD sqltype)
 #define s_c(x) case x: return #x
    switch(sqltype) {
       s_c(SQL_C_CHAR);
+      s_c(SQL_C_LONG);
+      s_c(SQL_C_SLONG);
+      s_c(SQL_C_ULONG);
       s_c(SQL_C_WCHAR);
       s_c(SQL_C_BIT);
+      s_c(SQL_C_TINYINT);
       s_c(SQL_C_STINYINT);
       s_c(SQL_C_UTINYINT);
+      s_c(SQL_C_SHORT);
       s_c(SQL_C_SSHORT);
       s_c(SQL_C_USHORT);
+      s_c(SQL_C_NUMERIC);
+      s_c(SQL_C_DEFAULT);
+      s_c(SQL_C_SBIGINT);
+      s_c(SQL_C_UBIGINT);
+/*      s_c(SQL_C_BOOKMARK); duplicate case */
+      s_c(SQL_C_GUID);
       s_c(SQL_C_FLOAT);
       s_c(SQL_C_DOUBLE);
       s_c(SQL_C_BINARY);
+/*      s_c(SQL_C_VARBOOKMARK); duplicate case */
       s_c(SQL_C_DATE);
       s_c(SQL_C_TIME);
       s_c(SQL_C_TIMESTAMP);
@@ -2529,8 +2542,8 @@ int dbd_describe(SV *sth, imp_sth_t *imp_sth, int more)
 #ifdef TIMESTAMP_STRUCT	/* XXX! */
           case SQL_TIMESTAMP:
           case SQL_TYPE_TIMESTAMP:
-	    fbh->ftype = SQL_C_TIMESTAMP;
-	    fbh->ColDisplaySize = sizeof(TIMESTAMP_STRUCT);
+            fbh->ftype = SQL_C_TIMESTAMP;
+            fbh->ColDisplaySize = sizeof(TIMESTAMP_STRUCT);
 	    break;
 #endif
         }
@@ -2599,10 +2612,15 @@ static SQLRETURN bind_columns(
         i < num_fields && SQL_SUCCEEDED(rc); i++, fbh++)
     {
         if (fbh->req_type != 0) {
-            if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 5))
-                TRACE2(imp_sth, "     Overriding bound sql type %d with requested type %"IVdf"\n",
-                       fbh->ftype, fbh->req_type);
-            fbh->ftype = (SWORD)fbh->req_type;
+            IV override = override_bind_type(fbh->req_type);
+
+            if (override) {
+                if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 5))
+                    TRACE3(imp_sth,
+                           "     Overriding bound sql type %d with requested type %"IVdf" flags=%lx\n",
+                           fbh->ftype, fbh->req_type, fbh->bind_flags);
+                fbh->ftype = (SWORD)override;
+            }
         }
 
         if (!(fbh->bind_flags & ODBC_TREAT_AS_LOB)) {
@@ -2629,8 +2647,11 @@ static SQLRETURN bind_columns(
                 dbd_error(h, rc, "describe/SQLBindCol");
                 break;
             }
+            /* Save the fact this column is now bound and hence the type
+               can not be changed */
+            fbh->bound = 1;
         } else if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 4)) {
-            TRACE1(imp_sth, "      TreatAsLOB bind_flags = %lu\n",
+            TRACE1(imp_sth, "      TreatAsLOB bind_flags = %lx\n",
                    fbh->bind_flags);
         }
     }
@@ -3252,6 +3273,16 @@ AV *dbd_st_fetch(SV *sth, imp_sth_t *imp_sth)
                 break;
 #endif /* WITH_UNICODE */
               default:
+                /* If we requested an SQL_INTEGER we've got a 4 byte integer */
+                if (fbh->req_type == SQL_INTEGER) {
+
+                    long *p = (long *)fbh->data;
+                    printf("long=%ld, flags=%lx\n", *p, fbh->bind_flags);
+
+                    sv_setiv(sv, *((long *)fbh->data));
+                    break;
+                }
+
                 if (ChopBlanks && fbh->datalen > 0 &&
                     ((fbh->ColSqlType == SQL_CHAR) ||
                      (fbh->ColSqlType == SQL_WCHAR))) {
@@ -3287,8 +3318,16 @@ AV *dbd_st_fetch(SV *sth, imp_sth_t *imp_sth)
             int sts;
             char errstr[256];
 
+            if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 4))
+                TRACE3(imp_sth, "    sql_type_case %s %"IVdf" %lx\n",  neatsvpv(sv, fbh->datalen+5), fbh->req_type, fbh->bind_flags);
+
+
             sts = DBIc_DBISTATE(imp_sth)->sql_type_cast_svpv(
-                aTHX_ sv, fbh->req_type, fbh->bind_flags, NULL);
+                aTHX_ sv, fbh->req_type, (U32)fbh->bind_flags, NULL);
+
+            if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 4))
+                TRACE1(imp_sth, "    sql_type_cast=%d\n",  sts);
+
             if (sts == 0) {
                 sprintf(errstr,
                         "over/under flow converting column %d to type %"IVdf"",
@@ -3299,7 +3338,7 @@ AV *dbd_st_fetch(SV *sth, imp_sth_t *imp_sth)
             }
             else if (sts == -2) {
                 sprintf(errstr,
-                        "unsupported bind type %"IVdf" for column %d",
+                        "unsupported bind type %"IVdf" for column %d in sql_type_cast_svpv",
                         fbh->req_type, i+1);
                 DBIh_SET_ERR_CHAR(sth, (imp_xxh_t*)imp_sth, Nullch, 1,
                                   errstr, Nullch, Nullch);
@@ -4107,6 +4146,46 @@ int dbd_st_bind_col(
         croak("cannot bind to non-existent field %d", field);
     }
 
+    /* Don't allow anyone to change the bound type after the column is bound
+       or horrible things could happen e.g., say you just call SQLBindCol
+       without a type it will probably default to SQL_C_CHAR but if you
+       later called bind_col specifying SQL_INTEGER the code here would
+       interpret the buffer as a 4 byte integer but in reality it would be
+       written as a char*.
+
+       We issue a warning but don't change the actual type.
+    */
+
+    if (imp_sth->fbh[field-1].bound && type && imp_sth->fbh[field-1].bound != type) {
+        DBIh_SET_ERR_CHAR(
+            sth, (imp_xxh_t*)imp_sth,
+            "0", 0, "you cannot change the bind column type after the column is bound",
+            "", "fetch");
+        return 1;
+    }
+
+    /* The first problem we have is that SQL_xxx values DBI defines are not
+       the same as SQL_C_xxx values we pass the SQLBindCol and in some cases
+       there is no C equivalent e.g., SQL_DECIMAL - there is no C type for these.
+
+       The second problem we have is that values passed to SQLBindCol cause the
+       ODBC driver to return different C types OR structures e.g., SQL_NUMERIC
+       returns a structure.
+
+       We're not binding columns as C structures as they are too hard to convert
+       into Perl scalars - we'll just use SQL_C_CHAR/SQL_C_WCHAR for these.
+
+       There is an exception for timestamps as the code later will bind as a
+       timestamp if it spots the column is a timestamp and pull the structure
+       apart.
+
+       So, basically, you can only override the bound column type if it
+       is SQL_INTEGER or SQL_SMALLINT as these are the only ones we bind as
+       anything other than chars. See override_bind_type(). However, we still
+       store the requested type as if it say SQL_DECIMAL/SQL_NUMERIC we can
+       use sql_type_cast_svpv.
+    */
+
     imp_sth->fbh[field-1].req_type = type;
     imp_sth->fbh[field-1].bind_flags = 0; /* default to none */
 
@@ -4238,7 +4317,7 @@ int dbd_bind_ph(
    } else if (maxlen && maxlen > phs->maxlen) {
        if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 4))
            PerlIO_printf(DBIc_LOGPIO(imp_dbh),
-                         "!attempt to change param %s maxlen (%ld->%ld)\n",
+                         "!attempt to change param %s maxlen (%"IVdf"->%"IVdf")\n",
                          phs->name, phs->maxlen, maxlen);
        croak("Can't change param %s maxlen (%ld->%ld) after first bind",
              phs->name, phs->maxlen, maxlen);
@@ -6795,7 +6874,7 @@ IV odbc_st_execute_for_fetch(
         }
         if (!phs->strlen_or_ind_array) {
             if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 4))
-                TRACE2(imp_sth, "    allocating %ld for p%d ind array\n",
+                TRACE2(imp_sth, "    allocating %ld for p%u ind array\n",
                        count * sizeof(SQLULEN), p);
             phs->strlen_or_ind_array = (SQLLEN *)safemalloc(count * 2 * sizeof(SQLLEN));
         }
@@ -7147,4 +7226,19 @@ static int get_row_diag(SQLSMALLINT recno,
     return 0;
 
 }
+
+
+
+/* Only allow certain bind_col TYPEs to override the type we actually
+   use to call SQLBindCol */
+static IV override_bind_type(IV req_type) {
+    if (req_type == SQL_INTEGER ||
+        req_type == SQL_SMALLINT) {
+        return SQL_C_LONG;
+    } else {
+        return 0;
+    }
+}
+
+
 /* end */

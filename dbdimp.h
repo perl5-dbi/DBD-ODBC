@@ -176,7 +176,7 @@ struct imp_sth_st {
 
 
 struct imp_fbh_st { 	/* field buffer EXPERIMENTAL */
-   imp_sth_t *imp_sth;	/* 'parent' statement */
+    imp_sth_t *imp_sth;	/* 'parent' statement */
     /* field description - SQLDescribeCol() */
     UCHAR *ColName;		/* zero-terminated column name */
     SQLSMALLINT ColNameLen;
@@ -194,11 +194,14 @@ struct imp_fbh_st { 	/* field buffer EXPERIMENTAL */
     UCHAR *data;		/* points into sth->RowBuffer */
     SQLLEN datalen;		/* length returned from fetch for single row. */
     unsigned long bind_flags;   /* flags passed to bind_col */
-    /* Be careful: bind_flags mix out flags like ODBC_TREAT_AS_LOB with
+    /* Be careful: bind_flags mix our flags like ODBC_TREAT_AS_LOB with
        DBI's DBIstcf_DISCARD_STRING and DBIstcf_STRICT. If you add a
        flag make sure it does not clash */
 #define ODBC_TREAT_AS_LOB 0x100
     IV req_type;                /* type passed to bind_col */
+    /* have we already bound this column because if we have you cannot change
+       the type afterwards as it is not rebound */
+    unsigned int bound;
 };
 
 

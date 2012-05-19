@@ -6,6 +6,32 @@ As of $LastChangedDate$
 
 $Revision: 10667 $
 
+=head2 Changes in DBD::ODBC 1.38_1 May 19 2012
+
+  [BUG FIXES]
+
+  Fixed rt 77283. If you overrode the bind type as SQL_INTEGER in a bind_col
+  call AFTER previously binding as another type (or not specifying a type)
+  you would not get the right value back. This also fixes the DiscardString
+  bind_col attribute for SQL_INTEGER binds.
+
+  Fixed some format specifiers in trace calls.
+
+  [CHANGE IN BEHAVIOUR]
+
+  DBD::ODBC allowed you to change the bound column type in bind_col
+  after the column was already bound. It now does not allow this now
+  and issues a warning. This could lead to problems - see above.
+
+  [OTHER]
+
+  Added some missing SQL_C_xxx types to S_SqlCTypeToString internal
+  function. This only affects tracing.
+
+  Some tests in 08bind were skipped when they did not need to be.
+
+  sql_type_cast tests rewritten due to fixes above.
+
 =head2 Changes in DBD::ODBC 1.37 April 7 2012
 
   A full release of the 1.36 dev releases.

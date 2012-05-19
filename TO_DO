@@ -113,3 +113,6 @@ $Revision: 10667 $
   Same with GetTypeInfo
   Cancel is not even documented
   Same with ColAttributes
+
+ODBC 3.8:
+http://msdn.microsoft.com/en-us/library/ee388581%28v=vs.85%29.aspx
