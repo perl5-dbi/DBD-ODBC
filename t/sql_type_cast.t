@@ -2,6 +2,8 @@
 # $Id$
 #
 # Test sql_type_cast via DiscardString and StrictlyTyped
+# NOTE: as of post 1.37 you don't need DiscardString when binding SQL_INTEGER
+# columns as DBD::ODBC binds them as SQL_C_LONG and uses sv_setiv.
 #
 use Test::More;
 use strict;
@@ -140,14 +142,13 @@ is(is_iv($r), 0, "! ivok bind") or Dump($r);
 #
 $sth = $dbh->prepare(q/select a from PERL_DBD_drop_me/);
 $sth->execute;
-$sth->bind_col(1, \$r, {TYPE => SQL_INTEGER});
+$sth->bind_col(1, \$r, {TYPE => SQL_NUMERIC});
 $sth->fetch;
-is($r, 100, "correct value returned SQL_INTEGER") or Dump($r);
+is($r, 100, "correct value returned SQL_NUMERIC") or Dump($r);
 #my $j2 = encode_json [$r];
 my ($iv, $pv) = is_iv($r);
 ok($iv, "ivok bind integer") or Dump($r);
-# since post DBD::ODBC 1.37 the following will not return a pv
-ok(!$pv, "not PV bind integer") or Dump($r);
+ok($pv, "PV bind integer") or Dump($r);
 
 #
 # try binding specifying an integer type and say discard the pv
@@ -155,9 +156,9 @@ ok(!$pv, "not PV bind integer") or Dump($r);
 #
 $sth = $dbh->prepare(q/select a from PERL_DBD_drop_me/);
 $sth->execute;
-$sth->bind_col(1, \$r, {TYPE => SQL_INTEGER, DiscardString => 1});
+$sth->bind_col(1, \$r, {TYPE => SQL_NUMERIC, DiscardString => 1});
 $sth->fetch;
-is($r, 100, "correct value returned SQL_INTEGER|DiscardString");
+is($r, 100, "correct value returned SQL_NUMERIC|DiscardString");
 #my $j2 = encode_json [$r];
 ($iv, $pv) = is_iv($r);
 ok($iv, "ivok bind integer discard") or Dump($r);

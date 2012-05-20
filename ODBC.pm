@@ -1539,8 +1539,11 @@ DiscardString to the prepare attributes then if the returned bound
 data is capable of being converted to that type the scalar's pv (the
 string portion of a scalar) is cleared.
 
+NOTE: post DBD::ODBC 1.37, DBD::ODBC binds all SQL_INTEGER columns as
+SQL_C_LONG and DiscardString is irrelevant.
+
 This is especially useful if you are using a module which uses a
-scalars flags and/or pv to decide if a scalar is a number. JSON::XS
+scalar's flags and/or pv to decide if a scalar is a number. JSON::XS
 does this and without this flag you have to add 0 to all bound column
 data returning numbers to get JSON::XS to encode it is N instead of
 "N".
@@ -1562,7 +1565,7 @@ an SQL_INTEGER and the data is not able to be converted to an integer
 the ODBC driver will problably return "Invalid character value for
 cast specification (SQL-22018)".
 
-NOTE: For DiscardString you need at least DBI 1.611.
+NOTE: For StrictlyTyped you need at least DBI 1.611.
 
 =head3 TreatAsLOB
 
@@ -1768,6 +1771,12 @@ when inserting, updating or deleting many rows in one go. Note,
 execute_array uses execute_for_fetch when the parameters are passed
 for column-wise binding.
 
+NOTE: DBD::ODBC 1.34_1 to DBD::ODBC 1.36_1 set the default to use
+DBD::ODBC's own execute_for_fetch but quite a few ODBC drivers just
+cannot handle it. As such, from DBD::ODBC 1.36_2 the default was
+changed to not use DBD::ODBC's execute_for_fetch (i.e., you need to
+enable it with odbc_array_operations).
+
 However, there are a small number of differences between using
 DBD::ODBC's execute_for_fetch compared with using DBI's default
 implementation (which simply calls execute repeatedly once per row).
@@ -1837,6 +1846,34 @@ the 19 DBI documents DBI documents. The 20th column is usually called
 "USERTYPE".  Recent MS SQL Server ODBC drivers do this. Fortunately
 this should not adversely affect you so long as you are using the keys
 provided at the start of type_info_all.
+
+=head3 Binding Columns
+
+The DBI specification allows a column type to be overriden in the call
+to the bind_col method. Mostly, DBD::ODBC ignores this type as it
+binds integers (SQL_INTEGER) as a SQL_C_LONG (since DBD::ODBC 1.38_1)
+and all other columns as SQL_C_CHAR or SQL_C_WCHAR and it is too late
+to change the bind type after the result-set has been described
+anyway. The only time when the TYPE passed to bind_col is used in
+DBD::ODBC is when it is SQL_NUMERIC or SQL_DOUBLE in which case
+DBD::ODBC will call DBI's sql_type_cast method.
+
+Since DBD::ODBC 1.38_1 if you attempt to change the bind type after
+the column has already bound DBD::ODBC will issue a warning and ignore
+your column type change e.g.,
+
+  my $s = $h->prepare(q/select a from mytable);
+  $s->execute;  # The column type was determined here
+  my $r;
+  $s->bind_col(1, \$r); # and bound as the right type here
+  $s->execute;
+  $s->bind_col(1, \$r, {TYPE => SQL_XXX}); # warning, type changed
+
+Basically, if you are passing a TYPE to bind_col with DBD::ODBC (other
+than SQL_NUMERIC or SQL_DOUBLE) your code is probably wrong.
+
+Significant changes occurred in DBD::ODBC at 1.38_1 for binding
+columns. Please see the Changes file.
 
 =head2 Unicode
 

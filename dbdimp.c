@@ -87,7 +87,6 @@
    calling SQLError as the error is internal */
 #define DBDODBC_INTERNAL_ERROR -999
 
-static IV override_bind_type(IV req_type);
 static int get_row_diag(SQLSMALLINT recno,
 			imp_sth_t *imp_sth,
 			char *state,
@@ -2219,7 +2218,6 @@ static const char *S_SqlCTypeToString (SWORD sqltype)
    return s_buf;
 }
 
-
 
 
 /*
@@ -2513,9 +2511,9 @@ int dbd_describe(SV *sth, imp_sth_t *imp_sth, int more)
 # endif
 #endif /* WITH_UNICODE */
           case SQL_LONGVARBINARY:
-	    fbh->ftype = SQL_C_BINARY;
-	    fbh->ColDisplaySize = DBIc_LongReadLen(imp_sth);
-	    break;
+            fbh->ftype = SQL_C_BINARY;
+            fbh->ColDisplaySize = DBIc_LongReadLen(imp_sth);
+            break;
 #ifdef SQL_WLONGVARCHAR
           case SQL_WLONGVARCHAR:	/* added for SQLServer 7 ntext type */
 # if defined(WITH_UNICODE)
@@ -2534,8 +2532,8 @@ int dbd_describe(SV *sth, imp_sth_t *imp_sth, int more)
             }
             break;
           case SQL_LONGVARCHAR:
-	    fbh->ColDisplaySize = DBIc_LongReadLen(imp_sth)+1;
-	    break;
+            fbh->ColDisplaySize = DBIc_LongReadLen(imp_sth)+1;
+            break;
           case MS_SQLS_XML_TYPE:
             fbh->ColDisplaySize = DBIc_LongReadLen(imp_sth)+1;
             break;
@@ -2546,6 +2544,10 @@ int dbd_describe(SV *sth, imp_sth_t *imp_sth, int more)
             fbh->ColDisplaySize = sizeof(TIMESTAMP_STRUCT);
 	    break;
 #endif
+          case SQL_INTEGER:
+            fbh->ftype = SQL_C_LONG;
+            fbh->ColDisplaySize = sizeof(long);
+            break;
         }
 
         colbuf_bytes_reqd += fbh->ColDisplaySize;
@@ -2611,18 +2613,6 @@ static SQLRETURN bind_columns(
     for(i=0, fbh = imp_sth->fbh;
         i < num_fields && SQL_SUCCEEDED(rc); i++, fbh++)
     {
-        if (fbh->req_type != 0) {
-            IV override = override_bind_type(fbh->req_type);
-
-            if (override) {
-                if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 5))
-                    TRACE3(imp_sth,
-                           "     Overriding bound sql type %d with requested type %"IVdf" flags=%lx\n",
-                           fbh->ftype, fbh->req_type, fbh->bind_flags);
-                fbh->ftype = (SWORD)override;
-            }
-        }
-
         if (!(fbh->bind_flags & ODBC_TREAT_AS_LOB)) {
 
             fbh->data = rbuf_ptr;
@@ -3271,14 +3261,11 @@ AV *dbd_st_fetch(SV *sth, imp_sth_t *imp_sth)
                     TRACE1(imp_sth, "    SQL_C_WCHAR data = %.100s\n", neatsvpv(sv, 100));
                 }
                 break;
+              case SQL_INTEGER:
+                sv_setiv(sv, *((long *)fbh->data));
+                break;
 #endif /* WITH_UNICODE */
               default:
-                /* If we requested an SQL_INTEGER we've got a 4 byte integer */
-                if (fbh->req_type == SQL_INTEGER) {
-                    sv_setiv(sv, *((long *)fbh->data));
-                    break;
-                }
-
                 if (ChopBlanks && fbh->datalen > 0 &&
                     ((fbh->ColSqlType == SQL_CHAR) ||
                      (fbh->ColSqlType == SQL_WCHAR))) {
@@ -3308,7 +3295,8 @@ AV *dbd_st_fetch(SV *sth, imp_sth_t *imp_sth)
 #if DBIXS_REVISION > 13590
         /* If a bind type was specified we use DBI's sql_type_cast
            to cast it - currently only number types are handled */
-        if ((fbh->req_type == SQL_INTEGER) ||
+        if (
+            /*(fbh->req_type == SQL_INTEGER) || not needed as we've already done a sv_setiv*/
             (fbh->req_type == SQL_NUMERIC) ||
             (fbh->req_type == SQL_DECIMAL)) {
             int sts;
@@ -7222,19 +7210,5 @@ static int get_row_diag(SQLSMALLINT recno,
     return 0;
 
 }
-
-
-
-/* Only allow certain bind_col TYPEs to override the type we actually
-   use to call SQLBindCol */
-static IV override_bind_type(IV req_type) {
-    if (req_type == SQL_INTEGER ||
-        req_type == SQL_SMALLINT) {
-        return SQL_C_LONG;
-    } else {
-        return 0;
-    }
-}
-
 
 /* end */

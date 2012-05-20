@@ -20,8 +20,20 @@ $Revision: 10667 $
   [CHANGE IN BEHAVIOUR]
 
   DBD::ODBC allowed you to change the bound column type in bind_col
-  after the column was already bound. It now does not allow this now
+  after the column was already bound. It now does not allow this
   and issues a warning. This could lead to problems - see above.
+
+  You can nolonger override the bound column type (except with
+  SQL_NUMERIC and SQL_DOUBLE). All columns are now bound as either
+  SQL_C_LONG (integer columns) or SQL_C_[W]CHAR (all other columns).
+  If you are calling bind_col with a TYPE => xxx it most likely did
+  not do what you expected and you should examine it carefully with a
+  view to removing it altogether.
+
+  Integer columns are now bound as SQL_C_LONGs and not as before,
+  SQL_C_CHAR. This should not matter to you but if you were adding 0
+  to your integer columns retrieved to make them behave like integers
+  you should nolonger need to do it.
 
   [OTHER]
 
