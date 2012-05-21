@@ -3627,7 +3627,7 @@ static int rebind_param(
     if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 4)) {
         PerlIO_printf(
             DBIc_LOGPIO(imp_dbh),
-            "    +rebind_param %s %.100s (size svCUR=%d/SvLEN=%d/max=%ld) "
+            "    +rebind_param %s %.100s (size svCUR=%d/SvLEN=%d/max=%"IVdf") "
             "svtype %u, value type:%d sql type:%d\n",
             phs->name, neatsvpv(phs->sv, 0),
             SvOK(phs->sv) ? SvCUR(phs->sv) : -1,
@@ -4248,7 +4248,7 @@ int dbd_bind_ph(
        PerlIO_printf(
            DBIc_LOGPIO(imp_dbh),
            "    +dbd_bind_ph(%p, name=%s, value=%.200s, attribs=%s, "
-           "sql_type=%d(%s), is_inout=%d, maxlen=%ld\n",
+           "sql_type=%d(%s), is_inout=%d, maxlen=%"IVdf"\n",
            sth, name, SvOK(newvalue) ? neatsvpv(newvalue, 0) : "undef",
            attribs ? SvPV_nolen(attribs) : "", sql_type,
            S_SqlTypeToString(sql_type), is_inout, maxlen);
@@ -4303,7 +4303,7 @@ int dbd_bind_ph(
            PerlIO_printf(DBIc_LOGPIO(imp_dbh),
                          "!attempt to change param %s maxlen (%"IVdf"->%"IVdf")\n",
                          phs->name, phs->maxlen, maxlen);
-       croak("Can't change param %s maxlen (%ld->%ld) after first bind",
+       croak("Can't change param %s maxlen (%"IVdf"->%"IVdf") after first bind",
              phs->name, phs->maxlen, maxlen);
    }
 
@@ -6858,7 +6858,7 @@ IV odbc_st_execute_for_fetch(
         }
         if (!phs->strlen_or_ind_array) {
             if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 4))
-                TRACE2(imp_sth, "    allocating %ld for p%u ind array\n",
+                TRACE2(imp_sth, "    allocating %"IVdf" for p%u ind array\n",
                        count * sizeof(SQLULEN), p);
             phs->strlen_or_ind_array = (SQLLEN *)safemalloc(count * 2 * sizeof(SQLLEN));
         }
