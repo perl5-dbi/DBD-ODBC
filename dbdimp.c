@@ -2546,7 +2546,7 @@ int dbd_describe(SV *sth, imp_sth_t *imp_sth, int more)
 #endif
           case SQL_INTEGER:
             fbh->ftype = SQL_C_LONG;
-            fbh->ColDisplaySize = sizeof(long);
+            fbh->ColDisplaySize = sizeof(SQLINTEGER);
             break;
         }
 
@@ -3261,11 +3261,11 @@ AV *dbd_st_fetch(SV *sth, imp_sth_t *imp_sth)
                     TRACE1(imp_sth, "    SQL_C_WCHAR data = %.100s\n", neatsvpv(sv, 100));
                 }
                 break;
-              case SQL_INTEGER:
-                sv_setiv(sv, *((long *)fbh->data));
-                break;
 #endif /* WITH_UNICODE */
-              default:
+              case SQL_INTEGER:
+                 sv_setiv(sv, *((SQLINTEGER *)fbh->data));
+                 break;
+             default:
                 if (ChopBlanks && fbh->datalen > 0 &&
                     ((fbh->ColSqlType == SQL_CHAR) ||
                      (fbh->ColSqlType == SQL_WCHAR))) {
