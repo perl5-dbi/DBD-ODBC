@@ -140,6 +140,8 @@ is(is_iv($r), 0, "! ivok bind") or Dump($r);
 # try binding specifying an integer type
 # expect IOK
 #
+# NB need to re-prepare as you cannot change the bind type after a
+# column is bound
 $sth = $dbh->prepare(q/select a from PERL_DBD_drop_me/);
 $sth->execute;
 $sth->bind_col(1, \$r, {TYPE => SQL_NUMERIC});
@@ -154,6 +156,8 @@ ok($pv, "PV bind integer") or Dump($r);
 # try binding specifying an integer type and say discard the pv
 # expect IOK
 #
+# NB need to re-prepare as you cannot change the bind type after a
+# column is bound
 $sth = $dbh->prepare(q/select a from PERL_DBD_drop_me/);
 $sth->execute;
 $sth->bind_col(1, \$r, {TYPE => SQL_NUMERIC, DiscardString => 1});
