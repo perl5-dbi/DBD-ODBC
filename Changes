@@ -29,7 +29,10 @@ $Revision: 10667 $
   SQL_C_LONG (integer columns) or SQL_C_[W]CHAR (all other columns).
   If you are calling bind_col with a TYPE => xxx it most likely did
   not do what you expected and you should examine it carefully with a
-  view to removing it altogether.
+  view to removing it altogether. As a result you no longer have to
+  override the bind type for MS SQL Server XML columns - these will be
+  bound as SQL_C_CHAR or SQL_C_WCHAR depending on whether Unicode is
+  enabled.
 
   Integer columns are now bound as SQL_C_LONGs and not as before,
   SQL_C_CHAR. This should not matter to you but if you were adding 0

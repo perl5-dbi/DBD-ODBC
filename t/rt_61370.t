@@ -132,11 +132,14 @@ SKIP: {
         ok($sth, 'prepare for select');           # 1
         ok($sth->execute, 'execute for select'); # 2
         $sth->bind_col(1, \my $pkey);
+        # the SQL_WCHAR in the below call does nothing from DBD::ODBC 1.38_1
+        # as it became the deault and you cannot override the bind type:
         $sth->bind_col(2, \my $xml, {TYPE => SQL_WCHAR});
 
         foreach my $row(@rowdata) {
             $sth->fetch;
             #diag(sprintf("%3u %s", length($row->[1]), $row->[1]));
+            is($pkey, $row->[0], 'inserted/selected pkey match');
             is($xml, $row->[1], 'inserted/selected strings match'); # 3,5
             is(length($xml), length($row->[1]),
                'inserted/selected string sizes match'); # 4,6

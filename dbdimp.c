@@ -2534,9 +2534,19 @@ int dbd_describe(SV *sth, imp_sth_t *imp_sth, int more)
           case SQL_LONGVARCHAR:
             fbh->ColDisplaySize = DBIc_LongReadLen(imp_sth)+1;
             break;
-          case MS_SQLS_XML_TYPE:
-            fbh->ColDisplaySize = DBIc_LongReadLen(imp_sth)+1;
-            break;
+          case MS_SQLS_XML_TYPE: {
+              /* XML columns are inherently Unicode so bind them as such and in this case
+                 double the size of LongReadLen as we count LongReadLen as characters
+                 not bytes */
+#ifdef WITH_UNICODE
+              fbh->ftype = SQL_C_WCHAR;
+              fbh->ColDisplaySize =
+                  DBIc_LongReadLen(imp_sth) * sizeof(SQLWCHAR) + sizeof(SQLWCHAR);
+#else
+              fbh->ColDisplaySize = DBIc_LongReadLen(imp_sth) + 1;
+#endif
+              break;
+          }
 #ifdef TIMESTAMP_STRUCT	/* XXX! */
           case SQL_TIMESTAMP:
           case SQL_TYPE_TIMESTAMP:
@@ -2553,7 +2563,7 @@ int dbd_describe(SV *sth, imp_sth_t *imp_sth, int more)
         colbuf_bytes_reqd += fbh->ColDisplaySize;
         /*
          *  We later align columns in the buffer on integer boundaries so we
-         *  we need to tak account of this here. The last % is to avoid adding
+         *  we need to take account of this here. The last % is to avoid adding
          *  sizeof(int) if we are already aligned.
          */
         colbuf_bytes_reqd +=
@@ -4163,14 +4173,17 @@ int dbd_st_bind_col(
        timestamp if it spots the column is a timestamp and pull the structure
        apart.
 
-       So, basically, you can only override the bound column type if it
-       is SQL_INTEGER or SQL_SMALLINT as these are the only ones we bind as
-       anything other than chars. See override_bind_type(). However, we still
-       store the requested type as if it say SQL_DECIMAL/SQL_NUMERIC we can
-       use sql_type_cast_svpv.
-    */
+       We do however store the requested type if it SQL_DOUBLE/SQL_NUMERIC so
+       we can use it with sql_type_cast_svpv i.e., if you know the column is a double or
+       numeric we still retrieve it as a char string but then if DiscardString or StrictlyTyped
+       if specified we'lll call sql_type_cast_svpv.
 
-    imp_sth->fbh[field-1].req_type = type;
+    */
+    if (type == SQL_DOUBLE ||
+        type == SQL_NUMERIC) {
+        imp_sth->fbh[field-1].req_type = type;
+    }
+    
     imp_sth->fbh[field-1].bind_flags = 0; /* default to none */
 
     /* DBIXS 13590 added StrictlyTyped and DiscardString attributes */
