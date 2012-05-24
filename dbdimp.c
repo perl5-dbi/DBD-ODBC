@@ -87,6 +87,10 @@
    calling SQLError as the error is internal */
 #define DBDODBC_INTERNAL_ERROR -999
 
+static int taf_callback_wrapper (
+    void *handle,
+    int type,
+    int event);
 static int get_row_diag(SQLSMALLINT recno,
 			imp_sth_t *imp_sth,
 			char *state,
@@ -152,6 +156,7 @@ int dbd_st_finish(SV *sth, imp_sth_t *imp_sth);
 #define ODBC_DRIVER_COMPLETE           0x8345
 #define ODBC_BATCH_SIZE                0x8346
 #define ODBC_ARRAY_OPERATIONS          0x8347
+#define ODBC_TAF_CALLBACK              0x8348
 
 /* This is the bind type for parameters we fall back to if the bind_param
    method was not given a parameter type and SQLDescribeParam is not supported
@@ -4183,7 +4188,7 @@ int dbd_st_bind_col(
         type == SQL_NUMERIC) {
         imp_sth->fbh[field-1].req_type = type;
     }
-    
+
     imp_sth->fbh[field-1].bind_flags = 0; /* default to none */
 
     /* DBIXS 13590 added StrictlyTyped and DiscardString attributes */
@@ -4458,6 +4463,7 @@ static db_params S_db_storeOptions[] =  {
    { "odbc_describe_parameters", ODBC_DESCRIBE_PARAMETERS },
    { "odbc_batch_size", ODBC_BATCH_SIZE },
    { "odbc_array_operations", ODBC_ARRAY_OPERATIONS },
+   {"odbc_taf_callback", ODBC_TAF_CALLBACK},
    { NULL },
 };
 
@@ -4623,9 +4629,43 @@ int dbd_db_STORE_attrib(SV *dbh, imp_dbh_t *imp_dbh, SV *keysv, SV *valuesv)
       case ODBC_BATCH_SIZE:
         bSetSQLConnectionOption = FALSE;
         imp_dbh->odbc_batch_size = SvIV(valuesv);
-	if (imp_dbh->odbc_batch_size == 0) {
-	  croak("You cannot set odbc_batch_size to zero");
-	}
+        if (imp_dbh->odbc_batch_size == 0) {
+            croak("You cannot set odbc_batch_size to zero");
+        }
+        break;
+
+      case ODBC_TAF_CALLBACK:
+        bSetSQLConnectionOption = FALSE;
+        if (!SvOK(valuesv)) {
+            rc = SQLSetConnectAttr(imp_dbh->hdbc,
+                                   1280 /*SQL_ATTR_REGISTER_TAF_CALLBACK */,
+                                   NULL, SQL_IS_POINTER);
+
+            if (!SQL_SUCCEEDED(rc)) {
+                dbd_error(dbh, rc, "SQLSetConnectAttr for odbc_taf_callback");
+                return FALSE;
+            }
+        } else if (!SvROK(valuesv) || (SvTYPE(SvRV(valuesv)) != SVt_PVCV)) {
+            croak("Need a code reference for odbc_taf_callback");
+        } else {
+            SvREFCNT_inc(valuesv);
+            imp_dbh->odbc_taf_callback = valuesv;
+
+            rc = SQLSetConnectAttr(imp_dbh->hdbc, 1280 /*SQL_ATTR_REGISTER_TAF_CALLBACK */,
+                                   &taf_callback_wrapper, SQL_IS_POINTER);
+
+            if (!SQL_SUCCEEDED(rc)) {
+                dbd_error(dbh, rc, "SQLSetConnectAttr for odbc_taf_callback");
+                return FALSE;
+            }
+            /* Pass our dbh into the callback */
+            rc = SQLSetConnectAttr(imp_dbh->hdbc, 1281 /*SQL_ATTR_REGISTER_TAF_HANDLE*/,
+                                   dbh, SQL_IS_POINTER);
+            if (!SQL_SUCCEEDED(rc)) {
+                dbd_error(dbh, rc, "SQLSetConnectAttr for odbc_taf_callback handle");
+                return FALSE;
+            }
+        }
         break;
 
       case ODBC_COLUMN_DISPLAY_SIZE:
@@ -7222,6 +7262,50 @@ static int get_row_diag(SQLSMALLINT recno,
     strcpy(msg, "failed to retrieve diags");
     return 0;
 
+}
+
+
+
+
+/*
+ *  taf_callback_wrapper is the function we pass to Oracle to be called
+ *  when a connection fails. We asked the ODBC driver to pass our dbh
+ *  handle in and it also gives us the type and event. We just pass all
+ *  these args off to the registered Perl subroutine and return to
+ *  the Oracle driver whatever that Perl sub returns to us. In this way
+ *  the user's Perl dictates what happens in the failover process and not
+ *  us.
+ */
+
+static int taf_callback_wrapper (
+    void *handle,
+    int type,
+    int event) {
+
+    int return_count;
+    int ret;
+    SV* dbh = (SV *)handle;
+
+    D_imp_dbh(dbh);
+
+	dSP;
+	PUSHMARK(SP);
+    XPUSHs(handle);
+	XPUSHs(sv_2mortal(newSViv(event)));
+	XPUSHs(sv_2mortal(newSViv(type)));
+    PUTBACK;
+
+	return_count = call_sv(imp_dbh->odbc_taf_callback, G_SCALAR);
+
+    SPAGAIN;
+
+    if (return_count != 1)
+        croak("Expected one scalar back from taf handler");
+
+    ret = POPi;
+
+    PUTBACK;
+    return ret;
 }
 
 /* end */

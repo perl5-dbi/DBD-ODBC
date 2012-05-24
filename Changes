@@ -6,6 +6,13 @@ As of $LastChangedDate$
 
 $Revision: 10667 $
 
+=head2 Changes in DBD::ODBC 1.38_2 May 24 2012
+
+  [ENHANCEMENTS]
+
+  Added support for Oracle TAF (assuming your ODBC driver supports it)
+  - see odbc_taf_callback.
+
 =head2 Changes in DBD::ODBC 1.38_1 May 19 2012
 
   [BUG FIXES]

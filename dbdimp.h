@@ -117,6 +117,8 @@ struct imp_dbh_st {
     char odbc_dbms_version[80];
     int odbc_batch_size;	/* rows in a batch operation */
     int odbc_array_operations;	/* enable/disable inbuilt execute_for_fetch etc */
+    /*int (*taf_callback_fn)(SQLHANDLE connection, int type, int event);*/
+    SV *odbc_taf_callback;
 };
 
 /* Define sth implementor data structure */
