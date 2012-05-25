@@ -30,8 +30,6 @@ $Revision: 10667 $
     so anyone binding a lob has to have all of it available before it can
     be bound.
 
-  Try to produce a Module::Install build.
-
   Why does level 15 tracing of any DBD::ODBC script show alot of these:
     !!DBD::ODBC unsupported attribute passed (PrintError)
     !!DBD::ODBC unsupported attribute passed (Username)
@@ -42,9 +40,6 @@ $Revision: 10667 $
 
   Anywhere we are storing a value in an SV that we didn't create
     (and thus might have magic) should probably set magic.
-
-  Work out how to use Unicode in freeTDS as it does not have SQLW functions
-    see examples/freetds_unicode.pl latest CVS trunk apparently has SQLW functions
 
   Add a test for ChopBlanks and unicode data
 
@@ -107,6 +102,7 @@ $Revision: 10667 $
 <mje> I'll look at it again - added to TO_DO - where does try_compile_and_link come from?
 <ribasushi> mje: it's all part of this makefile, it's a good read rather clean
 <mje> ignore - sorry
+Jens suggested Config::AutoConf
 
   remove DescribeCol and odbc_describe_col - they've been deprecated for
     ages and I doubt they work on 64 bit.
