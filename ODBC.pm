@@ -1843,7 +1843,7 @@ The DBI specification post 1.608 says in bind_param:
   The data type is 'sticky' in that bind values passed to execute()
   are bound with the data type specified by earlier bind_param()
   calls, if any.  Portable applications should not rely on being able
-  to change the data type after the first C<bind_param> call.
+  to change the data type after the first bind_param call.
 
 DBD::ODBC does allow a parameter to be rebound with another data type as
 ODBC inherently allows this. Therefore you can do:
@@ -1947,7 +1947,7 @@ DBI's inbuilt execute_* methods. See rt 75687.
 =head3 type_info_all
 
 Many ODBC drivers now return 20 columns in type_info_all rather than
-the 19 DBI documents DBI documents. The 20th column is usually called
+the 19 DBI documents. The 20th column is usually called
 "USERTYPE".  Recent MS SQL Server ODBC drivers do this. Fortunately
 this should not adversely affect you so long as you are using the keys
 provided at the start of type_info_all.
