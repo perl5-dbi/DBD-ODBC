@@ -1,4 +1,5 @@
 =encoding utf8
+
 =head1 NAME
 
 DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
@@ -6,6 +7,22 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
 As of $LastChangedDate$
 
 $Revision: 10667 $
+
+=head2 Changes in DBD::ODBC 1.38_3 June 25 2012
+
+  [BUG FIXES]
+
+  Added encoding line to this file to stop pod test from complaining.
+
+  [DOCUMENTATION]
+
+  Added link to 64 bit ODBC article.
+
+  Fixed some typos in the pod.
+
+  [MISCELLANEOUS]
+
+  Made pod.t an author test.
 
 =head2 Changes in DBD::ODBC 1.38_2 May 24 2012
 
@@ -275,7 +292,7 @@ $Revision: 10667 $
   [OTHER]
 
   * Added example execute_for_fetch.pl
-  
+
 =head2 Changes in DBD::ODBC 1.34_1 December 11 2011
 
   [ENHANCEMENTS]
@@ -351,7 +368,7 @@ $Revision: 10667 $
 
   * I omitted rt_68720.t from the 1.31 distribution which leads
     to a warning as it is mentioned in the MANIFEST.
- 
+
   [OTHER]
 
   * Changed line endings in README.af and README.unicode to be unix

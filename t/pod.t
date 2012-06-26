@@ -25,6 +25,9 @@ SKIP: {
     if (($@) || ($Test::Pod::VERSION < '1.00')) {
         skip "Test::Pod 1.00 required for testing POD", $basic_tests;
     }
+    if (! -d '.svn') {
+        skip "Author test", $basic_tests;
+    }
     my @pods = all_pod_files();
     #diag("pod files: " . join(",", @pods));
     foreach my $pod (@pods) {
