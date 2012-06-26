@@ -8,6 +8,16 @@ As of $LastChangedDate$
 
 $Revision: 10667 $
 
+=head2 Changes in DBD::ODBC 1.39 XXXX XX 2012
+
+  [BUG FIXES]
+
+  Manifest mentioned 2 files in examples which do not exist - they
+  should have been execute_for_fetch.pl.
+
+  execute_for_fetch.pl example had not be changed since
+  odbc_disable_array_operations became odbc_array_operations.
+
 =head2 Changes in DBD::ODBC 1.38_3 June 25 2012
 
   [BUG FIXES]

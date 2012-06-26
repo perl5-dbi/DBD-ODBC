@@ -48,13 +48,13 @@ if (@ARGV) {
 	      });
 }
 
-# any arg disables odbc array operations
+# any arg true enables odbc array operations
 sub dbconnect {
-    my $disable = shift;
+    my $enable = shift;
 
-    my $h =  DBI->connect("dbi:ODBC:DSN=asus2","sa","easysoft",
+    my $h =  DBI->connect("dbi:ODBC:DSN=baugi","sa","easysoft",
 			  {RaiseError => 1, PrintError => 0,
-			   odbc_disable_array_operations => $disable,
+			   odbc_array_operations => $enable,
 			  });
     eval {
 	local $h->{PrintError} = 0;
@@ -68,7 +68,7 @@ sub dbconnect {
 # any true first arg sets odbc_batch_size to 50 (5 * the default)
 # any true second arg starts a transaction and commits it at the end
 sub one {
-    my $h = dbconnect(0);
+    my $h = dbconnect(1);
     $h->{odbc_batch_size} = 50 if $_[0];
     $h->begin_work if $_[1];
     doit($h);
@@ -77,7 +77,7 @@ sub one {
 }
 
 sub two {
-    my $h = dbconnect(1);
+    my $h = dbconnect(0);
     $h->begin_work if $_[0];
     doit($h);
     $h->commit if $_[0];
@@ -108,7 +108,7 @@ sub doit {
     #print Dumper($r);
 
     #$h->do(q/delete from two/);
-    
+
 }
 
 sub fetch_sub {
