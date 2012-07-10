@@ -1044,7 +1044,7 @@ sub find_dm_hdr_files
                  '/usr/local/easysoft/unixODBC');
     unshift @paths, $opt_o if $opt_o;
     unshift @paths, $ENV{ODBCHOME} if $ENV{ODBCHOME};
-    
+
     foreach my $dir(@paths) {
         my $path = File::Spec->catdir($dir, 'include');
         print "  trying $path\n";
@@ -1103,6 +1103,8 @@ sub find_unixodbc
     push @dirs, split(' ', $Config{libspath});
     # add found odbc home if not added already
     push @dirs, "$home/lib" if !defined($opt_o) && !defined($ENV{ODBCHOME});
+    # for debian/ubuntu 12 thanks to Maestro(Geoff Darling, mitsi)  for finding:
+    push @dirs, "/usr/lib/i386-linux-gnu/";
 
     for my $d(@dirs) {
         my @found;

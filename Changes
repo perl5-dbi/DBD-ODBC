@@ -8,6 +8,13 @@ As of $LastChangedDate$
 
 $Revision: 10667 $
 
+=head2 Changes in DBD::ODBC 1.40_1 July 10 2012
+
+  [BUG FIXES]
+
+  Debian/Ubuntu have moved unixODBC into /usr/lib/i386-linux-gnu
+  so look in this dir for unixODBC as well - thanks to Meastro for finding.
+
 =head2 Changes in DBD::ODBC 1.39 July 7 2012
 
   [BUG FIXES]
