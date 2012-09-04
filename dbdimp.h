@@ -96,7 +96,7 @@ struct imp_dbh_st {
      * until DBI 1.616 DBI itself issues a FETCH if you mention
      * odbc_SQL_ROWSET_SIZE in the connect method.*/
     SQLULEN rowset_size;
-    
+
     /*
      *  We need special workarounds for the following drivers. To avoid
      *  strcmping their names every time we do it once and store the type here
@@ -213,7 +213,8 @@ struct phs_st {             /* scalar placeholder */
     SQLUSMALLINT idx;       /* index number of this param 1, 2, ...	*/
     SV *sv;                 /* the scalar holding the value */
     int sv_type;            /* original sv type at time of bind */
-    char *sv_buf;	    /* pointer to sv's data buffer */
+    char *sv_buf;           /* pointer to sv's data buffer */
+    int svok;               /* result of SvOK on output param at last bind time */
     SQLULEN param_size;     /* value returned from SQLDescribeParam */
     int describe_param_called; /* has SQLDescribeParam been called */
     SQLRETURN describe_param_status;

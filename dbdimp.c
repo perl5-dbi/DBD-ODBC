@@ -530,7 +530,8 @@ int dsnHasDriverOrDSN(char *dsn) {
    strncpy(upper_dsn, dsn, sizeof(upper_dsn)-1);
    upper_dsn[sizeof(upper_dsn)-1] = '\0';
    while (*cp != '\0') {
-      *cp++ = toupper(*cp);
+      *cp = toupper(*cp);
+      cp++;               /* see rt 79190 was a sequence point error*/
    }
    return (strncmp(upper_dsn, "DSN=", 4) == 0 ||
            strncmp(upper_dsn, "DRIVER=", 7) == 0);
@@ -545,7 +546,8 @@ int dsnHasUIDorPWD(char *dsn) {
    strncpy(upper_dsn, dsn, sizeof(upper_dsn)-1);
    upper_dsn[sizeof(upper_dsn)-1] = '\0';
    while (*cp != '\0') {
-      *cp++ = toupper(*cp);
+      *cp = toupper(*cp);
+      cp++;               /* see rt 79190 was a sequence point error*/
    }
    return (strstr(upper_dsn, "UID=") != 0 || strstr(upper_dsn, "PWD=") != 0);
 }
@@ -1117,10 +1119,10 @@ int dbd_db_disconnect(SV *dbh, imp_dbh_t *imp_dbh)
    rc = SQLDisconnect(imp_dbh->hdbc);
    if (!SQL_SUCCEEDED(rc)) {
        char state[SQL_SQLSTATE_SIZE+1];
-       SQLRETURN r;
 
-       r = SQLGetDiagField(SQL_HANDLE_DBC, imp_dbh->hdbc, 1, SQL_DIAG_SQLSTATE,
-                           (SQLCHAR *)state, sizeof(state), NULL);
+       (void)SQLGetDiagField(SQL_HANDLE_DBC, imp_dbh->hdbc, 1,
+                             SQL_DIAG_SQLSTATE,
+                             (SQLCHAR *)state, sizeof(state), NULL);
        if (strcmp(state, "25000") == 0) {
            if (DBIc_TRACE(imp_dbh, TRANSACTION_TRACING, 0, 3))
                TRACE0(imp_dbh, "SQLDisconnect, Transaction in progress\n");
@@ -1129,7 +1131,7 @@ int dbd_db_disconnect(SV *dbh, imp_dbh_t *imp_dbh)
                dbh, (imp_xxh_t*)imp_dbh, "0" /* warning state */, 1,
                "Disconnect with transaction in progress - rolling back",
                state, Nullch);
-           r = dbd_db_rollback(dbh, imp_dbh);
+           (void)dbd_db_rollback(dbh, imp_dbh);
            rc = SQLDisconnect(imp_dbh->hdbc);
        }
        if (!SQL_SUCCEEDED(rc)) {
@@ -2757,7 +2759,8 @@ int dbd_st_execute(
             /* mutation check */
             if (SvTYPE(phs->sv) != phs->sv_type /* has the type changed? */
                 || (SvOK(phs->sv) && !SvPOK(phs->sv)) /* is there still a string? */
-                || SvPVX(phs->sv) != phs->sv_buf /* has the string buffer moved? */
+                || (SvPVX(phs->sv) != phs->sv_buf) /* has the string buffer moved? */
+                || (SvOK(phs->sv) != phs->svok)
                 ) {
                 if (!rebind_param(sth, imp_sth, imp_dbh, phs))
                     croak("Can't rebind placeholder %s", phs->name);
@@ -3643,7 +3646,7 @@ static int rebind_param(
         PerlIO_printf(
             DBIc_LOGPIO(imp_dbh),
             "    +rebind_param %s %.100s (size svCUR=%d/SvLEN=%d/max=%"IVdf") "
-            "svtype %u, value type:%d sql type:%d\n",
+            "svtype:%u, value type:%d, sql type:%d\n",
             phs->name, neatsvpv(phs->sv, 0),
             SvOK(phs->sv) ? SvCUR(phs->sv) : -1,
             SvOK(phs->sv) ? SvLEN(phs->sv) : -1 ,phs->maxlen,
@@ -3669,6 +3672,7 @@ static int rebind_param(
 #else
         SvGROW(phs->sv, (phs->maxlen < 28) ? 28 : phs->maxlen+1);
 #endif /* WITH_UNICODE */
+        phs->svok = SvOK(phs->sv);
     } else {
         /* phs->sv is copy of real variable, upgrade to at least string */
         (void)SvUPGRADE(phs->sv, SVt_PV);
@@ -4286,6 +4290,10 @@ int dbd_bind_ph(
        croak("Can't bind non-scalar value (currently)");
    }
 #endif
+
+   if (SvROK(newvalue) && !SvAMAGIC(newvalue)) {
+       croak("Cannot bind a plain reference");
+   }
 
    /*
     * all_params_hv created during dbd_preparse.

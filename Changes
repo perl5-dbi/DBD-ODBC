@@ -15,6 +15,25 @@ $Revision: 10667 $
   Debian/Ubuntu have moved unixODBC into /usr/lib/i386-linux-gnu
   so look in this dir for unixODBC as well - thanks to Meastro for finding.
 
+  Fixed rt 78838
+  I had a sequence point error which is only seen with some compilers
+  as it is sometimes optimized out. It could cause DBD::ODBC to omit
+  adding the UID/PWD to the end of the connection string when using DSN=.
+  Thanks to Zsolt Cserna for spotting it and to ilmari and Leon for
+  explaining it to me.
+
+  Fixed rt 79397
+  Output bound parameters may be incorrectly bound if changed after
+  bind_param_inout is called. If you start with an undef bound param
+  and change it to a defined string/number less than 28 characters
+  before calling execute the original undef will probably be bound.
+  Thanks to runrig on perl monks for providing an example.
+
+  [CHANGE IN BEHAVIOUR]
+
+  If you attempt to bind an rv without amagic DBD::ODBC will now
+  croak - related to rt 78838.
+
 =head2 Changes in DBD::ODBC 1.39 July 7 2012
 
   [BUG FIXES]
