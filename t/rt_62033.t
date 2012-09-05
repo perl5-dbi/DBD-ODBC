@@ -8,6 +8,8 @@
 #
 use Test::More;
 use strict;
+eval "require Test::NoWarnings";
+my $has_test_nowarnings = ($@ ? undef : 1);
 
 use DBI qw(:sql_types);
 use_ok('ODBCTEST');
@@ -28,6 +30,9 @@ END {
             $dbh->do(q/drop table PERL_DBD_RT_62033/);
         };
     }
+    Test::NoWarnings::had_no_warnings()
+          if ($has_test_nowarnings);
+    done_testing();
 }
 
 $dbh = DBI->connect();
@@ -132,5 +137,4 @@ eval {
     $dbh->do('drop table PERL_DBD_RT_62033');
 };
 
-done_testing();
 

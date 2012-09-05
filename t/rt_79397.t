@@ -12,6 +12,8 @@ use strict;
 
 use DBI;
 use_ok('ODBCTEST');
+eval "require Test::NoWarnings";
+my $has_test_nowarnings = ($@ ? undef : 1);
 
 my $dbh;
 
@@ -19,6 +21,12 @@ BEGIN {
    if (!defined $ENV{DBI_DSN}) {
       plan skip_all => "DBI_DSN is undefined";
    }
+}
+
+END {
+    Test::NoWarnings::had_no_warnings()
+          if ($has_test_nowarnings);
+    done_testing();
 }
 
 $dbh = DBI->connect();
@@ -75,5 +83,4 @@ SKIP: {
     };
 };
 
-done_testing();
 
