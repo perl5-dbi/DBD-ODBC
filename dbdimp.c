@@ -3462,6 +3462,7 @@ void dbd_st_destroy(SV *sth, imp_sth_t *imp_sth)
 }
 
 
+
 /************************************************************************/
 /*                                                                      */
 /*  get_param_type                                                      */
@@ -4285,7 +4286,7 @@ int dbd_bind_ph(
 #if 0
    if (SvTYPE(newvalue) > SVt_PVMG) {    /* hook for later array logic   */
        if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 3))
-           TRACE2(imp_dbh, "    !!bind %s perl type = %d -- croaking!\n",
+           TRACE2(imp_sth, "    !!bind %s perl type = %d -- croaking!\n",
                   name, SvTYPE(newvalue));
        croak("Can't bind non-scalar value (currently)");
    }
@@ -4304,11 +4305,14 @@ int dbd_bind_ph(
    phs = (phs_t*)SvPVX(*phs_svp);	/* placeholder struct	*/
 
    if (phs->sv == &PL_sv_undef) { /* first bind for this placeholder */
+       if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 4))
+           TRACE0(imp_sth, "      First bind of this placeholder\n");
       phs->value_type = SQL_C_CHAR;             /* default */
       phs->requested_type = sql_type;           /* save type requested */
       phs->maxlen = maxlen;                     /* 0 if not inout */
       phs->is_inout = is_inout;
       if (is_inout) {
+          /* TO_DO then later sv is tested not to be newvalue !!! */
           phs->sv = SvREFCNT_inc(newvalue);  /* point to live var */
           imp_sth->has_inout_params++;
           /* build array of phs's so we can deal with out vars fast */
@@ -4316,30 +4320,39 @@ int dbd_bind_ph(
               imp_sth->out_params_av = newAV();
           av_push(imp_sth->out_params_av, SvREFCNT_inc(*phs_svp));
       }
-   } else if (sql_type) {
-       /* parameter attributes are supposed to be sticky until overriden
-          so only replace requested_type if sql_type specified.
-          See https://rt.cpan.org/Ticket/Display.html?id=46597 */
-       phs->requested_type = sql_type;           /* save type requested */
-   } else if (is_inout != phs->is_inout) {
-       croak("Can't rebind or change param %s in/out mode after first bind "
-             "(%d => %d)", phs->name, phs->is_inout, is_inout);
-   } else if (maxlen && maxlen > phs->maxlen) {
-       if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 4))
-           PerlIO_printf(DBIc_LOGPIO(imp_dbh),
-                         "!attempt to change param %s maxlen (%"IVdf"->%"IVdf")\n",
-                         phs->name, phs->maxlen, maxlen);
-       croak("Can't change param %s maxlen (%"IVdf"->%"IVdf") after first bind",
-             phs->name, phs->maxlen, maxlen);
+   } else {
+       if (sql_type) {
+           /* parameter attributes are supposed to be sticky until overriden
+              so only replace requested_type if sql_type specified.
+              See https://rt.cpan.org/Ticket/Display.html?id=46597 */
+           phs->requested_type = sql_type;           /* save type requested */
+       }
+       if (is_inout != phs->is_inout) {
+           croak("Can't rebind or change param %s in/out mode after first bind "
+                 "(%d => %d)", phs->name, phs->is_inout, is_inout);
+       }
+       if (maxlen && maxlen > phs->maxlen) {
+           if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 4))
+               PerlIO_printf(DBIc_LOGPIO(imp_dbh),
+                             "!attempt to change param %s maxlen (%"IVdf"->%"IVdf")\n",
+                             phs->name, phs->maxlen, maxlen);
+           croak("Can't change param %s maxlen (%"IVdf"->%"IVdf") after first bind",
+                 phs->name, phs->maxlen, maxlen);
+       }
    }
 
    if (!is_inout) {    /* normal bind to take a (new) copy of current value */
        if (phs->sv == &PL_sv_undef)             /* (first time bind) */
            phs->sv = newSV(0);
        sv_setsv(phs->sv, newvalue);
+       if (SvAMAGIC(phs->sv)) /* if it has any magic force to string */
+               sv_pvn_force(phs->sv, &PL_na);
    } else if (newvalue != phs->sv) {
-      if (phs->sv)
+       if (phs->sv) {
+           if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 4))
+               TRACE0(imp_sth, "      Decrementing ref count on placeholder\n");
           SvREFCNT_dec(phs->sv);
+       }
       phs->sv = SvREFCNT_inc(newvalue);       /* point to live var */
    }
 
@@ -6495,11 +6508,14 @@ static int post_connect(
     imp_dbh->odbc_describe_parameters = 1;
     imp_dbh->RowCacheSize = 1;	/* default value for now */
 
+#ifdef WE_DONT_DO_THIS_ANYMORE
     if (!strcmp(imp_dbh->odbc_dbms_name, "Microsoft SQL Server")) {
         if (DBIc_TRACE(imp_dbh, CONNECTION_TRACING, 0, 0))
             TRACE0(imp_dbh, "Deferring Binding\n");
-        imp_dbh->odbc_defer_binding = 0;
+        imp_dbh->odbc_defer_binding = 1;
     }
+#endif
+
     /* check to see if SQLMoreResults is supported */
     rc = SQLGetFunctions(imp_dbh->hdbc, SQL_API_SQLMORERESULTS, &supported);
     if (SQL_SUCCEEDED(rc)) {
