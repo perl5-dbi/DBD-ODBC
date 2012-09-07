@@ -48,7 +48,6 @@ ok($driver_version, "got DRIVER version $driver_version"); # 5
 # this needs to be MS SQL Server
 if ($dbms_name !~ /Microsoft SQL Server/) {
     note('Not Microsoft SQL Server');
-    done_testing();
     exit 0;
 }
 my $sth = $dbh->prepare(q/SELECT :foo, :bar/);

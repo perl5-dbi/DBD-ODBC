@@ -58,7 +58,6 @@ my ($ev, $sth);
 # this needs to be MS SQL Server
 if ($dbms_name !~ /Microsoft SQL Server/) {
     note('Not Microsoft SQL Server');
-    done_testing();
     exit 0;
 }
 eval {

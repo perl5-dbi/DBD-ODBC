@@ -41,7 +41,6 @@ ok($dbms_name, "got DBMS name: $dbms_name"); # 2
 # this needs to be MS SQL Server
 if ($dbms_name !~ /Microsoft SQL Server/) {
     note('Not Microsoft SQL Server');
-    done_testing();
     exit 0;
 }
 

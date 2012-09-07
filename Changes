@@ -8,13 +8,28 @@ As of $LastChangedDate$
 
 $Revision: 10667 $
 
-=head2 Changes in DBD::ODBC 1.40_2 September 5 2012
+=head2 Changes in DBD::ODBC 1.40_3 September 7 2012
+
+  [BUG FIXES]
+
+  Oops, changes to some rt tests fail when not run to MS SQL Server
+  and they should not be run for other drivers - there was a double
+  done_testing call.
+
+=head2 Changes in DBD::ODBC 1.40_2 September 6 2012
 
   [MISCELLANEOUS]
 
   New test cases added for some rts.
 
   Added Test::NoWarnings to some tests where it was missing.
+
+  Fixed rt 78838 - bind_param does not correctly stringify blessed
+  objects when connected to MS SQL Server
+
+  Fix issue in dbd_bind_ph where if you passed a sql type and were
+  also attempting to change from in to out or vice versa or increasing
+  the size of an output bound param it would not spot this error.
 
 =head2 Changes in DBD::ODBC 1.40_1 September 4 2012
 
