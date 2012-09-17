@@ -1987,8 +1987,11 @@ The ODBC specification supports wide character versions (a postfix of
 character version of SQLDriverConnect.
 
 In ODBC on Windows the wide characters are defined as SQLWCHARs (2
-bytes) and are UCS-2. On non-Windows, the main driver managers I know
-of have implemented the wide character APIs differently:
+bytes) and are UCS-2 (but UTF-16 is accepted by some drivers now e.g.,
+MS SQL Server 2012 and the new collation suffix _SC which stands for
+Supplementary Character Support). On non-Windows, the main driver
+managers I know of have implemented the wide character APIs
+differently:
 
 =over
 
@@ -1996,7 +1999,7 @@ of have implemented the wide character APIs differently:
 
 unixODBC mimics the Windows ODBC API precisely meaning the wide
 character versions expect and return 2-byte characters in
-UCS-2.
+UCS-2 or UTF-16.
 
 unixODBC will happily recognise ODBC drivers which only have the ANSI
 versions of the ODBC API and those that have the wide versions
@@ -2093,7 +2096,7 @@ As of DBD::ODBC 1.32_3 meta data calls accept Unicode strings.
 Since version 1.16_4, the default parameter bind type is SQL_WVARCHAR
 for unicode builds of DBD::ODBC. This only affects ODBC drivers which
 do not support SQLDescribeParam and only then if you do not
-specifically set a sql type on the bind_param method call.
+specifically set a SQL type on the bind_param method call.
 
 The above Unicode support has been tested with the SQL Server, Oracle
 9.2+ and Postgres drivers on Windows and various Easysoft ODBC drivers
@@ -2178,14 +2181,12 @@ API currently uses UCS-2 it does not support Unicode characters with
 code points above 0xFFFF (if you know better I'd like to hear from
 you). However, because DBD::ODBC uses UTF-16 encoding you can still
 insert Unicode characters above 0xFFFF into your database and retrieve
-them back correctly but they will not being treated as a single
+them back correctly but they may not being treated as a single
 Unicode character in your database e.g., a "select length(a_column)
-from table" with a single Unicode character above 0xFFFF will most
-likely return 2 and not 1 so you cannot use database functions on that
+from table" with a single Unicode character above 0xFFFF may
+return 2 and not 1 so you cannot use database functions on that
 data like upper/lower/length etc but you can at least save the data in
-your database and get it back. This is a fudge and I cannot say I'm
-overjoyed by it but it is what the majority of people who use
-DBD::ODBC have requested.
+your database and get it back.
 
 When built for unicode, DBD::ODBC will always call SQLDriverConnectW
 (and not SQLDriverConnect) even if a) your connection string is not

@@ -8,13 +8,19 @@ As of $LastChangedDate$
 
 $Revision: 10667 $
 
-=head2 Changes in DBD::ODBC 1.40_3 September 7 2012
+=head2 Changes in DBD::ODBC 1.40_3 September 17 2012
 
   [BUG FIXES]
 
   Oops, changes to some rt tests fail when not run to MS SQL Server
   and they should not be run for other drivers - there was a double
   done_testing call.
+
+  [MISCELLANEOUS]
+
+  New example sqlserver_supplementary_chrs.pl added which shows that
+  in MS SQL Server 2012 you can now store unicode characters
+  over 0xFFFF (ones which are surrogate pairs).
 
 =head2 Changes in DBD::ODBC 1.40_2 September 6 2012
 
