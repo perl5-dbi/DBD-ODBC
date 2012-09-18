@@ -3,6 +3,9 @@
 # Quick example demonstrating you can insert and retrieve
 # supplementary characters from MS SQL Server 2012 - it won't work before this version
 #
+# See http://msdn.microsoft.com/en-us/library/ms143726.aspx
+#     http://msdn.microsoft.com/en-us/library/bb330962(v=sql.90).aspx
+#
 use strict;
 use warnings;
 use DBI;
@@ -21,9 +24,10 @@ my $charinfo   = charinfo(0x2317F);
 print Dumper($charinfo);
 #print "0x2317F is : ", charnames::viacode(0x2317F), "\n";
 
-my $h = DBI->connect();
+my $h = DBI->connect() or die "Failed to connect to db";
 
 $h->{ChopBlanks} = 1;
+$h->{RaiseError} = 1;
 
 eval {
     $h->do('drop table mje');
