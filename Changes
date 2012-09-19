@@ -33,6 +33,8 @@ $Revision: 10667 $
   also attempting to change from in to out or vice versa or increasing
   the size of an output bound param it would not spot this error.
 
+  Allowed the test cases to spot DB2 driver as libXXXdb2.
+
   [MISCELLANEOUS]
 
   New test cases added for some rts.

@@ -101,7 +101,7 @@ require 5.004;
                    if ($row[0] eq 'VARCHAR') {
                        $fields .= "(4000)";
                    }
-               } elsif ($drvname =~ /libdb2/) {
+               } elsif ($drvname =~ /lib.*db2/) {
                    # in DB2 a row cannot be longer than the page size which is usually 32K
                    # but can be as low as 4K
                    if ($row[0] eq 'VARCHAR') {
