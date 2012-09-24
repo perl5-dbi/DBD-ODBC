@@ -1200,6 +1200,13 @@ README.unicode file for further details.
 After calling the connect method this will be the ODBC driver's
 out connection string - see documentation on SQLDriverConnect.
 
+Typically, applications (like MS Access and many others) which build a connection string via
+dialogs and possibly SQLBrowseConnect eventually end up with a successful ODBC connection
+to the ODBC driver and database. The odbc_out_connect_string provides a string
+which you can pass to SQLDriverConnect (DBI's connect prefixed with dbi:ODBC:") which
+will connect you to the same datasource at a later date. You may also want to see
+L</odbc_driver_complete>.
+
 =head3 odbc_version
 
 This was added prior to the move to ODBC 3.x to allow the caller to
