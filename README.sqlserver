@@ -7,7 +7,7 @@ worked and what bugs I found.
 
 There are 5 basic ways I know to connect to SQL Server via ODBC:
 
-1. On windows via the SQL Server OBDC Driver
+1. On Windows via the SQL Server OBDC Driver
 2. On Windows via the SQL Server Native Client
 3. On UNIX via an ODBC driver manager (of which there are 3) and
    a SQL Server ODBC Driver. There are at least 4 of these:

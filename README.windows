@@ -87,7 +87,7 @@ Missing SQLLEN/SQLULEN definitions
 ==================================
 
 MS changed the ODBC header files and introduced SQLLEN/SQLULEN types
-whicha re required to build on 64 bit platforms so DBD::ODBC now needs
+which are required to build on 64 bit platforms so DBD::ODBC now needs
 them.
 
 If you find you are missing definitions for SQLLEN/SQLULEN you need

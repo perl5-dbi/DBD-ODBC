@@ -7,7 +7,7 @@ DBD::ODBC -- DBD module interfacing the ODBC databases.
    DBD::ODBC is Copyright (C) 1994,1995,1996,1997,1998  Tim Bunce
    portions Copyright (C) 1997,1998,1999,2000,2001,2002 Jeff Urlwin
    portions Copyright (C) 1997  Thomas K. Wenrich
-   portions Copyright (C) 2007,2008,2009,2010,2011 Martin J. Evans
+   portions Copyright (C) 2007,2008,2009,2010,2012 Martin J. Evans
 
 LICENSE INFORMATION:
 
@@ -49,15 +49,19 @@ BUILDING:
     ODBCHOME  (Unix only) The dir your driver manager is installed in
               or specify this via -o argument to Makefile.PL
 
-  If you want UNICODE support on non-Windows platforms specify -u switch
-  to Makefile.PL. If you don't want UNICODE support on Windows specify
-  the -nou switch to Makefile.PL.
+  If you want UNICODE support on non-Windows platforms specify -u
+  switch to Makefile.PL. If you don't want UNICODE support on Windows
+  specify the -nou switch to Makefile.PL. On non-Windows platforms all
+  UNICODE features will work correctly with the unixODBC driver
+  manager.
 
   If the Makefile.PL finds iODBC and you would prefer to build with
-  unixODBC you can use the -x switch to favor unixODBC. This only happens
-  in rare case where you have binary packages of both installed but you
-  can only have development packages on one installed and DBD::ODBC
-  locates iODBC first.
+  unixODBC you can use the -x switch to favor unixODBC. This only
+  happens in rare case where you have binary packages of both
+  installed but you can only have development packages on one
+  installed and DBD::ODBC locates iODBC first. This quite often
+  happens on Ubuntu and other Debian based Linux systems where an
+  incomplete iODBC is often installed.
 
   perl Makefile.PL
   make                (or nmake/dmake, if VC++ on Win32)
@@ -72,6 +76,10 @@ TESTING
   Note that the tests currently all pass when using the Microsoft SQL
   server driver up to SQL Server 2008 and many other ODBC drivers on
   Windows and UNIX (too numerous to mention here).
+
+  To run an individual test use:
+
+  prove -vb t/test.t
 
   If the tests from t/09bind.t fail, that is an indication of lack of
   ODBC Level 2 functionality.  This does not (necessarily) mean that
@@ -131,6 +139,8 @@ dbi-users@perl.org. But note...
 2. Full details of which software you are using, including:
 
   Perl version (the output of perl -V)
+  ODBC Driver and version
+  ODBC Driver manager used and version
 
 It is important to check that you are using the latest version before
 posting. If you're not then I'm *very* likely to simply say "upgrade to

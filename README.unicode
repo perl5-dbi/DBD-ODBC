@@ -4,6 +4,9 @@
 # Author Martin J. Evans (mjevans at cpan dot org)
 #
 
+This document is historical now. If all you want to know is what Unicode
+is supported by DBD::ODBC read the DBD::ODBC pod.
+
 The original Unicode support was written by Alexander Foken and posted
 as a patch. You can find Alexander's original README document in
 README.af (some of this is directly taken from that document).  Around
