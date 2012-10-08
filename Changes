@@ -31,6 +31,8 @@ $Revision: 10667 $
 
   More documentation for odbc_out_connect_string.
 
+  Minor changes to sqlserver_supplementart_chrs.pl example.
+
 =head2 Changes in DBD::ODBC 1.40_2 September 6 2012
 
   [BUG FIXES]

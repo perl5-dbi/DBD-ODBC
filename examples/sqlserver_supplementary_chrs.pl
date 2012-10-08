@@ -24,8 +24,10 @@ my $charinfo   = charinfo(0x2317F);
 print Dumper($charinfo);
 #print "0x2317F is : ", charnames::viacode(0x2317F), "\n";
 
-my $h = DBI->connect() or die "Failed to connect to db";
+my $h = DBI->connect() or BAIL_OUT("Failed to connect");
 
+BAIL_OUT("Not a unicode build of DBD::ODBC") if !$h->{odbc_has_unicode};
+$h->{RaiseError} = 1;
 $h->{ChopBlanks} = 1;
 $h->{RaiseError} = 1;
 
@@ -38,7 +40,8 @@ eval {
 $h->do(q/create table mje (a nchar(20) collate Latin1_General_100_CI_AI_SC)/);
 
 my $s = $h->prepare(q/insert into mje values(?)/);
-$s->execute("\x{2317F}");
+my $inserted = $s->execute("\x{2317F}");
+is($inserted, 1, "inserted one row");
 
 my $r = $h->selectall_arrayref(q/select a, len(a), unicode(a), datalength(a) from mje/);
 print Dumper($r);
