@@ -55,18 +55,18 @@ tidyup();
 my $putdata_start = $dbh->{odbc_putdata_start};
 is($putdata_start, 32768, 'default putdata_start');
 
-my $sth = $dbh->func(SQL_ALL_TYPES, 'GetTypeInfo');
-ok($sth, "GetTypeInfo");
-
+my $type_info_all = $dbh->type_info_all();
+ok($type_info_all, "type_info_all") or BAIL_OUT("type_info_all failed");
+my $map = shift @{$type_info_all};
 my ($type_name, $type);
 
-while (my @row = $sth->fetchrow) {
-    #diag("$row[0], $row[1], $row[2]");
-    next if (($row[1] != SQL_WLONGVARCHAR) && ($row[1] != SQL_LONGVARCHAR));
-    if ($row[2] > 60000) {
-        #diag("$row[0] $row[1] $row[2]");
-        ($type_name, $type) = ($row[0], $row[1]);
-        $sth->finish;
+while (my $row = shift @{$type_info_all}) {
+    #diag("$row->[$map->{TYPE_NAME}],$row->[$map->{DATA_TYPE}], $row->[$map->{COLUMN_SIZE}]");
+    next if (($row->[$map->{DATA_TYPE}] != SQL_WLONGVARCHAR) && ($row->[$map->{DATA_TYPE}] != SQL_LONGVARCHAR));
+    if ($row->[$map->{COLUMN_SIZE}] > 60000) {
+        #diag("$row->[$map->{TYPE_NAME}] $row->[$map->{DATA_TYPE}] $row->[$map->{COLUMN_SIZE}]");
+        ($type_name, $type) = ($row->[$map->{TYPE_NAME}],
+                               $row->[$map->{DATA_TYPE}]);
         last;
     }
 }
@@ -104,7 +104,7 @@ sub test
         is($pds, $putdata_start, "retrieved putdata_start = set value");
     }
 
-    $sth = $dbh->prepare(q/insert into DBD_ODBC_drop_me values(?)/);
+    my $sth = $dbh->prepare(q/insert into DBD_ODBC_drop_me values(?)/);
     ok($sth, "prepare for insert");
   SKIP: {
         skip "prepare failed", 3 unless $sth;
