@@ -260,22 +260,9 @@ SKIP: {
    $dbh->{LongReadLen} = 800;
 
    my @types = (SQL_TYPE_TIMESTAMP, SQL_TIMESTAMP);
-   my $type;
-   my @row;
-   foreach $type (@types) {
-      my $sth = $dbh->func($type, "GetTypeInfo");
-      if ($sth) {
-	 @row = $sth->fetchrow();
-	 $sth->finish();
-	 last if @row;
-      } else {
-       # warn "Unable to get type for type $type\n";
-      }
-   }
-   BAIL_OUT("Unable to find a suitable test type for date field\n")
-	 unless @row;
-
-   my $datetype = $row[0];
+   my $row = $dbh->type_info(\@types);
+   BAIL_OUT("Unable to find a suitable test type for date field") if !$row;
+   my $datetype = $row->{TYPE_NAME};
    $dbh->do("CREATE TABLE PERL_DBD_TABLE1 (i INTEGER, time $datetype, str VARCHAR(4000))");
 
 
@@ -343,7 +330,7 @@ SKIP: {
    $sth = $dbh->prepare("Select id, val from #PERL_DBD_TABLE1");
    $sth->execute;
    $iErrCount = 0;
-   while (@row = $sth->fetchrow_array) {
+   while (my @row = $sth->fetchrow_array) {
       unless ((!defined($row[1]) && !defined($data2[$i])) || ($row[1] eq $data2[$i])) {
 	 $iErrCount++ ;
 	 print "$row[1] ne $data2[$i]\n";
@@ -406,7 +393,7 @@ SKIP: {
    $sth = $dbh->prepare("select * from PERL_DBD_TABLE1 order by i");
    $sth->execute;
    $i = 1;
-   while (@row = $sth->fetchrow_array) {
+   while (my @row = $sth->fetchrow_array) {
       if ($i != $row[0]) {
 	 diag(join(', ', @row), " ERROR!\n");
 	 $iErrCount++;
@@ -430,7 +417,7 @@ SKIP: {
    $iErrCount = 0;
    $sth2 = $dbh->prepare("select * from PERL_DBD_TABLE1 where d is not null");
    $sth2->execute;
-   while (@row = $sth2->fetchrow_array) {
+   while (my @row = $sth2->fetchrow_array) {
       if ($row[0] ne "2002-07-12 05:08:37.350") {
 	 $iErrCount++ ;
 	 diag(join(", ", @row), "\n");
@@ -443,7 +430,7 @@ SKIP: {
 
    eval {$dbh->do('CREATE TABLE PERL_DBD_TABLE1 (i INTEGER, j integer)')}
    or diag($@);
-   
+
    $proc1 = <<EOT;
 CREATE PROCEDURE PERL_DBD_PROC1 (\@i INT) AS
 DECLARE \@result INT;
@@ -645,7 +632,7 @@ AS
    $sth2 = $dbh->prepare("print 'START' select count(*) from PERL_DBD_TABLE1 print 'END'");
    $sth2->execute;
    do {
-      while (@row = $sth2->fetchrow_array) {
+      while (my @row = $sth2->fetchrow_array) {
 	 is($row[0], 1, "Valid select results with print statements");
       }
    } while ($sth2->{odbc_more_results});
