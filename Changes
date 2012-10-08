@@ -8,7 +8,7 @@ As of $LastChangedDate$
 
 $Revision: 10667 $
 
-=head2 Changes in DBD::ODBC 1.40_3 September 17 2012
+=head2 Changes in DBD::ODBC 1.40_3 October 8 2012
 
   [BUG FIXES]
 
@@ -30,8 +30,6 @@ $Revision: 10667 $
   over 0xFFFF (ones which are surrogate pairs).
 
   More documentation for odbc_out_connect_string.
-
-  Minor changes to sqlserver_supplementart_chrs.pl example.
 
 =head2 Changes in DBD::ODBC 1.40_2 September 6 2012
 
