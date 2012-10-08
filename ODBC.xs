@@ -160,6 +160,9 @@ odbc_lob_read(sth, colno, bufsv, length, attr = NULL)
      OUTPUT:
         RETVAL
 
+ # ColAttributes was down in the TO_DO list to remove since it duplicated
+ # some functionality in DBI statement attributes. However, ColAttributes
+ # can do more
 void
 _ColAttributes(sth, colno, ftype)
 	SV *	sth
@@ -212,30 +215,30 @@ _statistics(dbh, sth, catalog, schema, table, unique, quick)
     ST(0) = dbd_st_statistics(dbh, sth, catalog, schema, table,
                               unique, quick) ? &PL_sv_yes : &PL_sv_no;
 
-void
-DescribeCol(sth, colno)
-	SV *sth
-	int colno
-
-	PPCODE:
-
-	char ColumnName[SQL_MAX_COLUMN_NAME_LEN];
-	I16 NameLength;
-	I16 DataType;
-	U32 ColumnSize;
-	I16 DecimalDigits;
-	I16 Nullable;
-	int rc;
-
-	rc = odbc_describe_col(sth, colno, ColumnName, sizeof(ColumnName), &NameLength,
-			&DataType, &ColumnSize, &DecimalDigits, &Nullable);
-	if (rc) {
-		XPUSHs(newSVpv(ColumnName, 0));
-		XPUSHs(newSViv(DataType));
-		XPUSHs(newSViv(ColumnSize));
-		XPUSHs(newSViv(DecimalDigits));
-		XPUSHs(newSViv(Nullable));
-	}
+ #void
+ #DescribeCol(sth, colno)
+ #	SV *sth
+ #	int colno
+ #
+ #	PPCODE:
+ #
+ #	char ColumnName[SQL_MAX_COLUMN_NAME_LEN];
+ #	I16 NameLength;
+ #	I16 DataType;
+ #	U32 ColumnSize;
+ #	I16 DecimalDigits;
+ #	I16 Nullable;
+ #	int rc;
+ #
+ #	rc = odbc_describe_col(sth, colno, ColumnName, sizeof(ColumnName), &NameLength,
+ #			&DataType, &ColumnSize, &DecimalDigits, &Nullable);
+ #	if (rc) {
+ #		XPUSHs(newSVpv(ColumnName, 0));
+ #		XPUSHs(newSViv(DataType));
+ #		XPUSHs(newSViv(ColumnSize));
+ #		XPUSHs(newSViv(DecimalDigits));
+ #		XPUSHs(newSViv(Nullable));
+ #	}
 
 # ------------------------------------------------------------
 # database level interface

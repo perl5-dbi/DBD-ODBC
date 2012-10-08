@@ -510,14 +510,14 @@ $DBD::ODBC::VERSION = '1.40_3';
 	return $sth;
     }
 
-    sub GetTypeInfo {
-	my ($dbh, $sqltype) = @_;
-	# create a "blank" statement handle
-	my $sth = DBI::_new_sth($dbh, { 'Statement' => "SQLGetTypeInfo" });
-	# print "SQL Type is $sqltype\n";
-	_GetTypeInfo($dbh, $sth, $sqltype) or return;
-	return $sth;
-    }
+#    sub GetTypeInfo {
+#	my ($dbh, $sqltype) = @_;
+#	# create a "blank" statement handle
+#	my $sth = DBI::_new_sth($dbh, { 'Statement' => "SQLGetTypeInfo" });
+#	# print "SQL Type is $sqltype\n";
+#	_GetTypeInfo($dbh, $sth, $sqltype) or return;
+#	return $sth;
+#    }
 
     sub type_info_all {
 	my ($dbh, $sqltype) = @_;
@@ -1473,10 +1473,11 @@ which returns the C<SQL_DRIVER_NAME>.
 This function returns a scalar value, which can be a numeric or string
 value depending on the information value requested.
 
-=head3 SQLGetTypeInfo
+=head3 GetTypeInfo
 
 B<This private function is now superceded by DBI's type_info and
-type_info_all methods.>
+type_info_all methods however as it is used by those methods it
+still exists.>
 
 This function maps to the ODBC SQLGetTypeInfo API and the argument
 should be a SQL type number (e.g. SQL_VARCHAR) or
@@ -1625,16 +1626,10 @@ use DBI's NAME and NAME_xx attributes for portability.
 
 =head3 DescribeCol
 
-B<This private function is now superceded by DBI's statement attributes
-NAME, TYPE, PRECISION, SCALE, NULLABLE etc).>
+Removed in DBD::ODBC 1.40_3
 
-See the ODBC specification for the SQLDescribeCol API.
-You call SQLDescribeCol like this:
-
-  @info = $sth->func($column, "DescribeCol");
-
-The returned array contains the column attributes in the order described
-in the ODBC specification for SQLDescribeCol.
+Use the DBI's statement attributes NAME, TYPE, PRECISION, SCALE,
+NULLABLE etc instead.
 
 =head2 Additional bind_col attributes
 

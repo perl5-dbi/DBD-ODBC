@@ -10,8 +10,6 @@ $Revision: 10667 $
 
 =head1 Todo
 
-  Add row caching/multiple row fetches to speed selects
-
   Better/more tests on multiple statement handles which ensure the
     correct number of rows
 
@@ -51,9 +49,6 @@ $Revision: 10667 $
   Bump requirement to Test::Simple 0.96 so we can use subtest which
   is really cool and reorganise tests to use it. 0.96, because it seems
   to be the first really stable version of subtest.
-
-  Change SQLError to SQLGetDiagRec and perhaps SQLGetDiagField to get
-  further details on the error.
 
   Add more Oracle-specific tests - like calling functions/procedures
   and in/out params.
@@ -104,11 +99,7 @@ $Revision: 10667 $
 <mje> ignore - sorry
 Jens suggested Config::AutoConf
 
-  remove DescribeCol and odbc_describe_col - they've been deprecated for
-    ages and I doubt they work on 64 bit.
-  Same with GetTypeInfo
-  Cancel is not even documented
-  Same with ColAttributes
+  Cancel is not documented
 
 ODBC 3.8:
 http://msdn.microsoft.com/en-us/library/ee388581%28v=vs.85%29.aspx

@@ -10,14 +10,11 @@
 # This set of routines currently depends greatly upon some ODBC meta-data.
 # The meta data required is the driver's native type name for various ODBC/DBI
 # SQL types.  For example, SQL_VARCHAR would produce VARCHAR2 under Oracle and TEXT
-# under MS-Access.  This uses the function SQLGetTypeInfo.  This is obtained via
-# the DBI C<func> method, which is implemented as a call to the driver.  In this case,
-# of course, this is the DBD::ODBC.
+# under MS-Access.
 #
 # the SQL_TIMESTAMP may be dubious on many platforms, but SQL_DATE was not supported
 # under Oracle, MS SQL Server or Access.  Those are pretty common ones.
 #
-
 require 5.004;
 {
    package ODBCTEST;
@@ -50,21 +47,11 @@ require 5.004;
       my $column = shift;
 
       my $type;
-      my @row;
-      my $sth;
-      foreach $type (@{ $TestFieldInfo{$column} }) {
-          #diag("Looking for type $type\n");
-	 $sth = $dbh->func($type, GetTypeInfo);
-	    # may not be correct behavior, but get the first compat type
-	 if ($sth) {
-	    @row = $sth->fetchrow();
-	    $sth->finish();
-	    last if @row;
-	 } else {
-		    # warn "Unable to get type for type $type\n";
-	 }
-      }
-      if (scalar(@row) == 0) {
+      my $type_info_all;
+
+      $type_info = $dbh->type_info($TestFieldInfo{$column});
+
+      if (!$type_info) {
           my $types = $dbh->type_info_all;
           foreach my $t (@$types) {
               next if ref($t) ne 'ARRAY';
@@ -72,8 +59,7 @@ require 5.004;
           }
           BAIL_OUT("Unable to find a suitable test type for field $column");
       }
-	# warn join(", ",@row);
-      return @row;
+      return $type_info;
    }
    sub tab_create {
        my $dbh = shift;
@@ -92,25 +78,25 @@ require 5.004;
            $fields .= ", " unless !$fields;
            $fields .= "$f ";
            # print "-- $fields\n";
-           my @row = get_type_for_column($dbh, $f);
-           $fields .= $row[0];
-           if ($row[5]) {
+           my $row = get_type_for_column($dbh, $f);
+           $fields .= $row->{TYPE_NAME};
+           if ($row->{CREATE_PARAMS}) {
                if ($drvname =~ /OdbcFb/i) {
                    # Firebird ODBC driver seems to be badly broken - for
                    # varchars it reports max size of 32765 when it is 4000
-                   if ($row[0] eq 'VARCHAR') {
+                   if ($row->{TYPE_NAME} eq 'VARCHAR') {
                        $fields .= "(4000)";
                    }
                } elsif ($drvname =~ /lib.*db2/) {
                    # in DB2 a row cannot be longer than the page size which is usually 32K
                    # but can be as low as 4K
-                   if ($row[0] eq 'VARCHAR') {
+                   if ($row->{TYPE_NAME} eq 'VARCHAR') {
                        diag("This seems to be db2 and as far as I am aware, you cannot have a row greater than your page size. When I last looked db2 says a varchar can be 32672 but if we use that here the row will very likely be larger than your page size. Also, even if we reduce the varchar but keep it above 3962 db2 seems to complain so we mangle it here to 3962. It does not seem right to me that SQLGetTypeInfo says a varchar can be 32672 and then it is limited to 3962. If you know better, please let me know.");
                        $fields .= "(3962)";
                   }
                } else {
-                   $fields .= "($row[2])"	 if ($row[5] =~ /LENGTH/i);
-                   $fields .= "($row[2],0)" if ($row[5] =~ /PRECISION,SCALE/i);
+                   $fields .= "($row->{COLUMN_SIZE})" if ($row->{CREATE_PARAMS} =~ /LENGTH/i);
+                   $fields .= "($row->{COLUMN_SIZE},0)" if ($row->{CREATE_PARAMS} =~ /PRECISION,SCALE/i);
                }
            }
            if ($f eq 'COL_A') {
@@ -119,7 +105,9 @@ require 5.004;
            # print "-- $fields\n";
        }
        # diag("Using fields: $fields\n");
-       $dbh->do("CREATE TABLE $table_name ($fields)") or
+       my $sql = "CREATE TABLE $table_name ($fields)";
+       #diag($sql);
+       $dbh->do($sql) or
            diag("Failed to create table - ", $dbh->errstr);
    }
 
@@ -180,13 +168,16 @@ require 5.004;
        # qeDBF needs a space after the table name!
       foreach (@tab_insert_values) {
 
-	 @row = ODBCTEST::get_type_for_column($dbh, 'COL_D');
-	 # print "TYPE FOUND = $row[1]\n";
-	 if (!$dbh->do("INSERT INTO $table_name (COL_A, COL_B, COL_C, COL_D) VALUES ("
+	 my $row = ODBCTEST::get_type_for_column($dbh, 'COL_D');
+	 # print "TYPE FOUND = $row->{DATA_TYPE}\n";
+        my $sql = "INSERT INTO $table_name (COL_A, COL_B, COL_C, COL_D) VALUES ("
 		 . join(", ", $_->[0],
 			$dbh->quote($_->[1]),
 			$dbh->quote($_->[2]),
-			$_->[isDateType($row[1]) ? 3 : 4]). ")")) {
+			$_->[isDateType($row->{DATA_TYPE}) ? 3 : 4]). ")";
+        #diag($sql);
+	 if (!$dbh->do($sql)) {
+           diag($dbh->errstr);
 	    return 0;
 	 }
       }
@@ -217,39 +208,39 @@ require 5.004;
       foreach (@data) {
 	 my @row;
 	 if ($handle_column_type) {
-	    @row = ODBCTEST::get_type_for_column($dbh, 'COL_A');
-	    # diag("Binding the value: $_->[0] type = $row[1]\n");
-	    $sth->bind_param(1, $_->[0], { TYPE => $row[1] });
+	    $row = ODBCTEST::get_type_for_column($dbh, 'COL_A');
+	    # diag("Binding the value: $_->[0] type = $row->{DATA_TYPE}\n");
+	    $sth->bind_param(1, $_->[0], { TYPE => $row->{DATA_TYPE}});
 	 } else {
 	    $sth->bind_param(1, $_->[0]);
 	 }
 	 if ($handle_column_type) {
-	    @row = ODBCTEST::get_type_for_column($dbh, 'COL_B');
-	    $sth->bind_param(2, $_->[1], { TYPE => $row[1] });
+	    $row = ODBCTEST::get_type_for_column($dbh, 'COL_B');
+	    $sth->bind_param(2, $_->[1], { TYPE => $row->{DATA_TYPE} });
 	 } else {
 	    $sth->bind_param(2, $_->[1]);
 	 }
 	 if ($handle_column_type) {
-	    @row = ODBCTEST::get_type_for_column($dbh, 'COL_C');
-	    $sth->bind_param(3, $_->[2], { TYPE => $row[1] });
+	    $row = ODBCTEST::get_type_for_column($dbh, 'COL_C');
+	    $sth->bind_param(3, $_->[2], { TYPE => $row->{DATA_TYPE} });
 	 } else {
 	    $sth->bind_param(3, $_->[2]);
 	 }
 
 	 # print "SQL_DATE = ", SQL_DATE, " SQL_TIMESTAMP = ", SQL_TIMESTAMP, "\n";
-	 @row = ODBCTEST::get_type_for_column($dbh, 'COL_D');
+	 $row = ODBCTEST::get_type_for_column($dbh, 'COL_D');
 	 # diag("TYPE FOUND = $row[1]\n");
 	 # if ($row[1] == SQL_TYPE_TIMESTAMP) {
 	 #   $row[1] = SQL_TIMESTAMP;
 	 #}
 	 # print "Binding the date value: \"$_->[$row[1] == SQL_DATE ? 3 : 4]\"\n";
 	 if ($handle_column_type) {
-	    $sth->bind_param(4, $_->[isDateType($row[1]) ? 3 : 4], { TYPE => $row[1] });
+	    $sth->bind_param(4, $_->[isDateType($row->{DATA_TYPE}) ? 3 : 4], { TYPE => $row->{DATA_TYPE} });
 	 } else {
 	    # sigh, couldn't figure out how to get rid of the warning nicely,
 	    # so I turned it off!!!  Now, I have to turn it back on due
 	    # to  problems in other perl versions.
-	    $sth->bind_param(4, $_->[isDateType($row[1]) ? 3 : 4]);
+	    $sth->bind_param(4, $_->[isDateType($row->{DATA_TYPE}) ? 3 : 4]);
 	 }
 	 return 0 unless $sth->execute;
       }

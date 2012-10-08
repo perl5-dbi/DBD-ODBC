@@ -223,10 +223,10 @@ if (!defined($DBI::errstr) || (length($DBI::errstr) == 0)) {
 } else {
     pass("Error reported on bad query");
 }
-my @row = ODBCTEST::get_type_for_column($dbh, 'COL_D');
+my $row = ODBCTEST::get_type_for_column($dbh, 'COL_D');
 
 my $dateval;
-if (ODBCTEST::isDateType($row[1])) {
+if (ODBCTEST::isDateType($row->{DATA_TYPE})) {
    $dateval = "{d '1998-05-13'}";
 } else {
    $dateval = "{ts '1998-05-13 12:13:01'}";
@@ -236,7 +236,7 @@ $sth = $dbh->prepare("SELECT COL_D FROM $ODBCTEST::table_name WHERE COL_D > $dat
 ok(defined($sth), "date check select");
 ok($sth->execute(), "date check execute");
 my $count = 0;
-while (@row = $sth->fetchrow) {
+while (my @row = $sth->fetchrow) {
 	$count++ if ($row[0]);
 	# diag("$row[0]\n");
 }
@@ -246,7 +246,7 @@ $sth = $dbh->prepare("SELECT COL_A, COUNT(*) FROM $ODBCTEST::table_name GROUP BY
 ok($sth, "group by query prepare");
 ok($sth->execute(), "group by query execute");
 $count = 0;
-while (@row = $sth->fetchrow) {
+while (my @row = $sth->fetchrow) {
 	$count++ if ($row[0]);
 	# diag("$row[0], $row[1]\n");
 }

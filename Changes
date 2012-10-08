@@ -16,6 +16,13 @@ $Revision: 10667 $
   and they should not be run for other drivers - there was a double
   done_testing call.
 
+  [CHANGE IN BEHAVIOUR]
+
+  As I warned literally years ago DBD::ODBC's private function
+  DescribeCol has been removed. You can use DBI's statement attributes
+  like NAME, PRECISION etc, instead. All test code has been changed to
+  remove calls to DescribeCol and GetTypeInfo.
+
   [MISCELLANEOUS]
 
   New example sqlserver_supplementary_chrs.pl added which shows that

@@ -1489,9 +1489,7 @@ void dbd_preparse(imp_sth_t *imp_sth, char *statement)
                                 "    found numbered parameter = %s\n", name);
                  } else if (!imp_sth->odbc_ignore_named_placeholders &&
                           isALNUM(*src)) {
-                     /* ':foo' is valid, only if we are not ignoring named
-                      * parameters
-                      */
+                     /* ':foo' is valid, only if we are not ignoring named parameters */
                      char *p = name;
                      idx++;
                      *dest++ = '?';
@@ -1522,18 +1520,16 @@ void dbd_preparse(imp_sth_t *imp_sth, char *statement)
                      phs_t *phs;
 
                      if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 5))
-                         TRACE1(imp_sth,
-                                "    creating new parameter key %s\n", name);
+                         TRACE2(imp_sth,
+                                "    creating new parameter key %s, index %d\n", name, idx);
                      /* create SV holding the placeholder */
-                     phs_sv = newSVpv((char*)&phs_tpl,
-                                      sizeof(phs_tpl)+namelen+1);
+                     phs_sv = newSVpv((char*)&phs_tpl, sizeof(phs_tpl)+namelen+1);
                      phs = (phs_t*)SvPVX(phs_sv);
                      strcpy(phs->name, name);
                      phs->idx = idx;
 
                      /* store placeholder to all_params_hv */
-                     svpp = hv_store(imp_sth->all_params_hv, name,
-                                     (I32)namelen, phs_sv, 0);
+                     svpp = hv_store(imp_sth->all_params_hv, name, (I32)namelen, phs_sv, 0);
                  } else {
                      if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 5))
                          TRACE1(imp_sth,
@@ -5704,6 +5700,7 @@ char * FK_TableName;
 
 
 
+#ifdef ODBC_NOW_DEPRECATED
 int odbc_describe_col(
     SV *sth,
     int colno,
@@ -5728,7 +5725,7 @@ int odbc_describe_col(
    *ColumnSize = (U32)ColSize;
    return 1;
 }
-
+#endif /* ODBC_NOW_DEPRECATED */
 
 
 
