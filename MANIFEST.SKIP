@@ -1,3 +1,4 @@
+#defaults
 \bRCS\b
 \.svn\b
 ^MANIFEST\.
@@ -13,3 +14,5 @@
 \.exists
 \.obj$
 dbdodbc.h
+^pm_to_blib
+^blibdirs

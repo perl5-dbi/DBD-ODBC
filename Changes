@@ -8,6 +8,10 @@ As of $LastChangedDate$
 
 $Revision: 10667 $
 
+=head2 Changes in DBD::ODBC 1.41 October 23 2012
+
+  A full release of the 1.40 development release series.
+
 =head2 Changes in DBD::ODBC 1.40_3 October 8 2012
 
   [BUG FIXES]
