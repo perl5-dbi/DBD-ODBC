@@ -2467,7 +2467,7 @@ int dbd_describe(SV *sth, imp_sth_t *imp_sth, int more)
         {
           case SQL_VARBINARY:
           case SQL_BINARY:
-	    fbh->ftype = SQL_C_BINARY;
+            fbh->ftype = SQL_C_BINARY;
             if (fbh->ColDef == 0) {             /* cope with varbinary(max) */
                 fbh->ColDisplaySize = DBIc_LongReadLen(imp_sth);
             }
