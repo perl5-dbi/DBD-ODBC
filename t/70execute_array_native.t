@@ -82,3 +82,10 @@ $ea->error($dbh, {array_context => 0, raise => 0});
 $ea->row_wise($dbh, {array_context => 1, raise => 1});
 
 $ea->update($dbh, {array_context => 1, raise => 1});
+
+# do all the error ones again without specifying ArrayTupleStatus
+$ea->error($dbh, {array_context => 1, raise => 1, notuplestatus => 1});
+$ea->error($dbh, {array_context => 0, raise => 1, notuplestatus => 1});
+$ea->error($dbh, {array_context => 1, raise => 0, notuplestatus => 1});
+$ea->error($dbh, {array_context => 0, raise => 0, notuplestatus => 1});
+

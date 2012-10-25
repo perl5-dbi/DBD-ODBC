@@ -129,22 +129,34 @@ sub check_tuple_status
     my ($self, $tsts, $expected) = @_;
 
     note(Data::Dumper->Dump([$tsts], [qw(ArrayTupleStatus)]));
+
+    BAIL_OUT('expected data must be specified')
+        if (!$expected || (ref($expected) ne 'ARRAY'));
+
+    is(ref($tsts), 'ARRAY', 'tuple status is an array') or return;
+    if (!is(scalar(@$tsts), scalar(@$expected), 'status arrays same size')) {
+        diag(Dumper($tsts));
+        diag(Dumper($expected));
+        return;
+    }
+
     my $row = 0;
-    foreach my $s (@$tsts) {
-        if (ref($expected->[$row])) {
+    foreach my $s (@$expected) {
+        if (ref($s)) {
             unless ($self->{_param_array_row_counts} == 2) {
-                is(ref($s), 'ARRAY', 'array in array tuple status');
-                is(scalar(@$s), 3, '3 elements in array tuple status error');
+                is(ref($tsts->[$row]), 'ARRAY', 'array in array tuple status');
+                is(scalar(@{$tsts->[$row]}), 3, '3 elements in array tuple status error');
             }
         } else {
-            if ($s == -1) {
+            if ($tsts->[$row] == -1) {
                 pass("row $row tuple status unknown");
             } else {
-                is($s, $expected->[$row], "row $row tuple status");
+                is($tsts->[$row], $s, "row $row tuple status");
             }
         }
-        $row++
+        $row++;
     }
+    return;
 }
 
 # insert might return 'mas' which means the caller said the test
@@ -180,33 +192,36 @@ sub insert
     }
 
     my (@tuple_status, $sts, $total_affected);
+    my $tuple_status_arg = {};
+    $tuple_status_arg->{ArrayTupleStatus} = \@tuple_status unless $ref->{notuplestatus};
+
     $sts = 999999;              # to ensure it is overwritten
     $total_affected = 999998;
     if ($ref->{array_context}) {
         eval {
             if ($ref->{params}) {
                 ($sts, $total_affected) =
-                    $sth->execute_array({ArrayTupleStatus => \@tuple_status},
+                    $sth->execute_array($tuple_status_arg,
                                         @{$ref->{params}});
             } elsif ($ref->{fetch}) {
                 ($sts, $total_affected) =
                     $sth->execute_array(
-                        {ArrayTupleStatus => \@tuple_status,
+                        {%{$tuple_status_arg},
                          ArrayTupleFetch => $ref->{fetch}});
             } else {
                 ($sts, $total_affected) =
-                    $sth->execute_array({ArrayTupleStatus => \@tuple_status});
+                    $sth->execute_array($tuple_status_arg);
             }
         };
     } else {
         eval {
             if ($ref->{params}) {
                 $sts =
-                    $sth->execute_array({ArrayTupleStatus => \@tuple_status},
+                    $sth->execute_array($tuple_status_arg,
                                         @{$ref->{params}});
             } else {
                 $sts =
-                    $sth->execute_array({ArrayTupleStatus => \@tuple_status});
+                    $sth->execute_array($tuple_status_arg);
             }
         };
     }
@@ -248,7 +263,7 @@ sub insert
         is(scalar(@tuple_status), (($ref->{sts} eq '0E0') ? 0 : $ref->{sts}),
            "$ref->{sts} rows in tuple_status");
     }
-    if ($ref->{tuple}) {
+    if ($ref->{tuple} && !exists($ref->{notuplestatus})) {
         $self->check_tuple_status(\@tuple_status, $ref->{tuple});
     }
     return;

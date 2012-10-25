@@ -8,6 +8,17 @@ As of $LastChangedDate$
 
 $Revision: 10667 $
 
+=head2 Changes in DBD::ODBC 1.42_0 ??? ?? ????
+
+  [MISCELLANEOUS]
+
+  Steffen Goeldner reported some issues with execute_array in
+  DBD::Oracle where if ArrayTupleStatus was not specified and an error
+  occurred DBD::Oracle did not do the right thing. As I used
+  DBD::Oracle as a base when I wrote execute_for_fetch in DBD::ODBC I
+  added tests to the test suite to ensure these issues did not exist
+  in DBD::ODBC.
+
 =head2 Changes in DBD::ODBC 1.41 October 23 2012
 
   A full release of the 1.40 development release series.
