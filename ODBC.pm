@@ -1956,7 +1956,7 @@ provided at the start of type_info_all.
 
 =head3 Binding Columns
 
-The DBI specification allows a column type to be overriden in the call
+The DBI specification allows a column type to be overridden in the call
 to the bind_col method. Mostly, DBD::ODBC ignores this type as it
 binds integers (SQL_INTEGER) as a SQL_C_LONG (since DBD::ODBC 1.38_1)
 and all other columns as SQL_C_CHAR or SQL_C_WCHAR and it is too late

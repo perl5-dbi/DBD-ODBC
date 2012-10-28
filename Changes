@@ -19,6 +19,8 @@ $Revision: 10667 $
   added tests to the test suite to ensure these issues did not exist
   in DBD::ODBC.
 
+  RT 80446 - fix spelling mistake - thanks to Xavier Guimar.
+
 =head2 Changes in DBD::ODBC 1.41 October 23 2012
 
   A full release of the 1.40 development release series.
