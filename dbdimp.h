@@ -119,6 +119,13 @@ struct imp_dbh_st {
     int odbc_array_operations;	/* enable/disable inbuilt execute_for_fetch etc */
     /*int (*taf_callback_fn)(SQLHANDLE connection, int type, int event);*/
     SV *odbc_taf_callback;
+    /* If the driver does not support SQLDescribeParam or SQLDescribeParam
+       fails we fall back on a default type. However, some databases need
+       that type to be different depending on the length of the column.
+       MS SQL Server needs to switch from VARCHAR to LONGVARCHAR at 4000
+       bytes whereas MS Access at 256. We set the switch point once we know
+       the database. */
+    int switch_to_longvarchar;
 };
 
 /* Define sth implementor data structure */

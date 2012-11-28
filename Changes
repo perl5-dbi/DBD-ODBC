@@ -8,7 +8,23 @@ As of $LastChangedDate$
 
 $Revision: 10667 $
 
-=head2 Changes in DBD::ODBC 1.42_0 ??? ?? ????
+=head2 Changes in DBD::ODBC 1.42_0 November 28 2012
+
+  [BUG FIXES]
+
+  MS Access requires a longchar column to be bound using SQL_LONGVARCHAR.
+  However, MS Access does not support SQLDescribeParam and we default to
+  SQL_VARCHAR in this case. The point at which we switch to SQL_LONGVARCHAR
+  was defaulted to 4000 (for MS SQL Server). We now default to SQL_LONGVARCHAR
+  for MS Access when data is > 255. This means you can remove those
+  {TYPE => SQL_LONGVARCHAR} from your bind_param calls for longchar columns
+  in MS Access.
+
+  I seem to have introduced a bug in the test suite for MS Access.
+  The last test in the 09bind test binds dates as varchars (by
+  default) and this cannot work in MS Access (it needs to be a
+  timestamp).  This test was skipped in the past and the skip got
+  removed.
 
   [MISCELLANEOUS]
 
