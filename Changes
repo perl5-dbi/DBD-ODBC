@@ -19,6 +19,10 @@ $Revision: 10667 $
   added tests to the test suite to ensure these issues did not exist
   in DBD::ODBC.
 
+  Minor change to sql_type_cast.t test which attempts to insert an
+  integer into a varchar. No databases so far have complained about
+  this until we ran the test against Derby. Changed to use '100'.
+
   RT 80446 - fix spelling mistake - thanks to Xavier Guimar.
 
 =head2 Changes in DBD::ODBC 1.41 October 23 2012

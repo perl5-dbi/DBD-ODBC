@@ -106,7 +106,7 @@ ok(!$ev, 'create test table with integer');
 BAIL_OUT("Failed to create test table") if $ev;
 
 eval {
-    $dbh->do(q/insert into PERL_DBD_drop_me (a) values(100)/);
+    $dbh->do(q/insert into PERL_DBD_drop_me (a) values('100')/);
 };
 $ev = $@;
 #3
