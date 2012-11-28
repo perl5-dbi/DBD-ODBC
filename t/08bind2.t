@@ -89,6 +89,9 @@ SKIP:
    {
 
       skip "Known to fail using Oracle's ODBC drivers 8.x and 9.x", 1 if (!$rc && $dbname =~ /Oracle/i);
+      # Driver without SQLDescribeParam rarely support binding
+      # dates/times without a type
+      skip "SQLDescribeParam not supported using " . $dbh->get_info(17) . "\n", 1, unless $dbh->func(58, 'GetFunctions');
       ok($rc, "insert #3 various test data data with dates"); # 5
    };
 
