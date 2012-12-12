@@ -124,6 +124,7 @@ t/rt_63550.t
 t/rt_78838.t
 t/rt_79190.t
 t/rt_79397.t
+t/rt_81911.t
 t/sql_type_cast.t
 t/odbc_describe_parameter.t
 unicode_helper.c

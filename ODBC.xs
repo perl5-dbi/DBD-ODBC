@@ -8,6 +8,21 @@ INCLUDE: ODBC.xsi
 
 MODULE = DBD::ODBC    PACKAGE = DBD::ODBC::st
 
+IV odbc_rows(sth)
+    SV *    sth
+
+    PREINIT:
+        IV ret;
+    CODE:
+
+    ret = odbc_st_rowcount(sth);
+    if (ret == 0)
+        XST_mPV(0, "0E0");
+    else if (ret < -1)
+        XST_mUNDEF(0);
+    else
+        XST_mIV(0, ret);
+
 void
 odbc_execute_for_fetch(sth, tuples, count, tuple_status)
 	SV *	sth

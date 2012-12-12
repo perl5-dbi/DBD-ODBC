@@ -36,6 +36,8 @@
  * MS ODBC 64 bit:
  * http://msdn.microsoft.com/en-us/library/ms716287%28v=vs.85%29.aspx
  */
+#include <limits.h>
+
 #define NEED_newRV_noinc
 #define NEED_sv_2pv_flags
 #define NEED_my_snprintf
@@ -414,7 +416,7 @@ int odbc_discon_all(SV *drh,
 
 
 /* error : <=(-2), ok row count : >=0, unknown count : (-1)   */
-int dbd_db_execdirect(SV *dbh,
+SQLLEN dbd_db_execdirect(SV *dbh,
                       SV *statement )
 {
    D_imp_dbh(dbh);
@@ -497,7 +499,7 @@ int dbd_db_execdirect(SV *dbh,
                  imp_dbh->henv, imp_dbh->hdbc, stmt);
    }
 
-   return (int)rows;
+   return rows;
 }
 
 
@@ -2684,7 +2686,7 @@ int dbd_st_execute(
     RETCODE rc;
     D_imp_dbh_from_sth;
     int outparams = 0;
-    int ret;
+    SQLLEN ret;
 
     if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 3))
         TRACE1(imp_dbh, "    +dbd_st_execute(%p)\n", sth);
@@ -2864,9 +2866,9 @@ int dbd_st_execute(
         RETCODE rc2;
         rc2 = SQLRowCount(imp_sth->hstmt, &imp_sth->RowCount);
         if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 7))
-            TRACE2(imp_dbh, "    SQLRowCount=%d (rows=%ld)\n",
+            TRACE2(imp_dbh, "    SQLRowCount=%d (rows=%"IVdf")\n",
                    rc2,
-                   (long)(SQL_SUCCEEDED(rc2) ? imp_sth->RowCount : (SQLLEN)-1));
+                   (IV)(SQL_SUCCEEDED(rc2) ? imp_sth->RowCount : -1));
         if (!SQL_SUCCEEDED(rc2)) {
             dbd_error(sth, rc2, "st_execute/SQLRowCount");	/* XXX ? */
             imp_sth->RowCount = -1;
@@ -3009,12 +3011,19 @@ int dbd_st_execute(
      * Because you return -2 on errors so if you don't abs() it, a perfectly
      * valid return value will get flagged as an error...
      */
-    ret = (imp_sth->RowCount == -1 ? -1 : abs(imp_sth->RowCount));
+    ret = (imp_sth->RowCount == -1 ? -1 : imp_sth->RowCount);
 
     if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 3))
-        TRACE2(imp_dbh, "    -dbd_st_execute(%p)=%d\n", sth, ret);
+        TRACE2(imp_dbh, "    -dbd_st_execute(%p)=%"IVdf"\n", sth, (IV)ret);
+
+    if (ret > INT_MAX) {
+        if (DBIc_WARN(imp_sth)) {
+            warn("SQLRowCount overflowed in execute - see RT 81911");
+        }
+        return INT_MAX;
+    }
+
     return ret;
-    /* return imp_sth->RowCount; */
 }
 
 
@@ -6733,6 +6742,28 @@ static   HWND GetConsoleHwnd(void)
 }
 #endif	/* WIN32 */
 
+/*
+ *  new odbc_rows statement method to workaround RT 81911 in DBI
+ *  Just return the last RowCount value suitably mangled like execute does
+ *  but without casting to int problem.
+ */
+IV odbc_st_rowcount(
+    SV *sth)
+{
+    D_imp_sth(sth);
+/*    SQLLEN rows;
+      SQLRETURN rc;*/
+
+    return imp_sth->RowCount;
+    /*
+    rc = SQLRowCount(imp_sth->hstmt, &rows);
+    if (!SQL_SUCCEEDED(rc)) {
+        dbd_error(sth, rc, "odbc_st_rowcount");
+        return -1;
+        }
+        return rows;*/
+}
+
 /* TO_DO:
  * bind_param can be called with no target parameter but to set the parameter type
  *   and it is supposed to be sticky - it is not here.
@@ -7180,7 +7211,7 @@ IV odbc_st_execute_for_fetch(
 
     rc = SQLRowCount(imp_sth->hstmt, &imp_sth->RowCount);
     if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 3))
-        TRACE2(imp_sth, "    SQLRowCount=%d (rows=%ld)\n", rc, imp_sth->RowCount);
+        TRACE2(imp_sth, "    SQLRowCount=%d (rows=%"IVdf")\n", rc, (IV)imp_sth->RowCount);
     if (rc != SQL_SUCCESS) {
         /* TO_DO free strlen_or_ind_array */
         /* on the other hand since batch_size is always constant we could

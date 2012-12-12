@@ -19,7 +19,7 @@ require 5.008;
 # see discussion on dbi-users at
 # http://www.nntp.perl.org/group/perl.dbi.dev/2010/07/msg6096.html and
 # http://www.dagolden.com/index.php/369/version-numbers-should-be-boring/
-$DBD::ODBC::VERSION = '1.42_0';
+$DBD::ODBC::VERSION = '1.42_1';
 
 {
     ## no critic (ProhibitMagicNumbers ProhibitExplicitISA)
@@ -112,6 +112,7 @@ $DBD::ODBC::VERSION = '1.42_0';
             'Attribution' => 'DBD::ODBC by Jeff Urlwin, Tim Bunce and Martin J. Evans',
 	    });
         DBD::ODBC::st->install_method("odbc_lob_read");
+        DBD::ODBC::st->install_method("odbc_rows", { O=>0x00000000 });
         # don't clear errors - IMA_KEEP_ERR = 0x00000004
         DBD::ODBC::st->install_method("odbc_getdiagrec", { O=>0x00000004 });
         DBD::ODBC::db->install_method("odbc_getdiagrec", { O=>0x00000004 });
@@ -650,7 +651,7 @@ DBD::ODBC - ODBC Driver for DBI
 
 =head1 VERSION
 
-This documentation refers to DBD::ODBC version 1.42_0.
+This documentation refers to DBD::ODBC version 1.42_1.
 
 =head1 SYNOPSIS
 
@@ -1392,6 +1393,30 @@ bind_param_inout), don't expect output parameters to written to until ALL
 result sets have been retrieved.
 
 =head2 Private statement methods
+
+=head3 odbc_rows
+
+This method was added in 1.42_1.
+
+In 64 bit ODBC SQLRowCount can return a 64bit value for the number of
+rows affected. Unfortunately, the DBI DBD interface currently (at
+least until 1.622) defines execute as returning an int so values which
+cannot fit in an int are truncated. See RT 81911.
+
+From DBD::ODBC 1.42_1 DBD::ODBC
+
+o defines this method which will return the affected rows in an IV
+(and IVs are guaranteed to be able to hold a pointer) so you
+can get the real affected rows without truncation.
+
+o if it detects an overflow in the execute method it will issue
+a warning (if Warn is on which it is by default) and return INT_MAX.
+
+At some stage DBI may change to fix the issue this works around.
+
+NOTE: the return from odbc_rows is not the raw value returned by
+SQLRowCount. It is the same as execute normally returns e.g., 0E0 (for
+0), -1 for unknown and N for N rows affected where N > 0.
 
 =head3 odbc_lob_read
 

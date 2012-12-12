@@ -8,6 +8,35 @@ As of $LastChangedDate$
 
 $Revision: 10667 $
 
+=head2 Changes in DBD::ODBC 1.42_1 December 12 2012
+
+  [BUG FIXES]
+
+  DBD::ODBC's ExecDirect method did not return an SQLLEN so if you
+  managed to affect a massive number of rows it would be cast to an
+  int and hence precision lost.
+
+  [CHANGE IN BEHAVIOUR]
+
+  When you called DBI's execute method and odbc_exec_direct was not
+  set (the default) if you managed to affect more rows than would fit
+  into an int you would get the incorrect count (NOTE on 32 bit
+  platforms ODBC's SQLRowCount can only return a 32bit value
+  anyway). You would get whatever casting an SQLLEN to an int would
+  give you. The fix for this needs a change to DBI (see RT 81911) and
+  the change would probably impact every DBD so until then DBD::ODBC
+  will a) warn if an overflow occurs and Warn is set on the handle b)
+  return INT_MAX and c) provide a new statement method odbc_rows which
+  you can use to get the correct value.
+
+  [ENHANCEMENTS]
+
+  New odbc_rows statement method (see above).
+
+  [MISCELLANEOUS]
+
+  New rt_81911.t test case.
+
 =head2 Changes in DBD::ODBC 1.42_0 November 28 2012
 
   [BUG FIXES]
