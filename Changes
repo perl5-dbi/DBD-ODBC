@@ -8,6 +8,13 @@ As of $LastChangedDate$
 
 $Revision: 10667 $
 
+=head2 Changes in DBD::ODBC 1.42_2 December 17 2012
+
+  [MISCELLANEOUS]
+
+  Changed any use of if SvUPGRADE to remove the if test as per email
+  from Dave Mitchell and posting at http://www.xray.mpe.mpg.de/mailing-lists/perl5-porters/2012-12/msg00424.html.
+
 =head2 Changes in DBD::ODBC 1.42_1 December 12 2012
 
   [BUG FIXES]

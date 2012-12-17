@@ -6919,7 +6919,7 @@ IV odbc_st_execute_for_fetch(
             sv = *sv_p;
             /*check to see if value sv is a null (undef) if it is upgrade it*/
             if (!SvOK(sv))	{
-                if (SvUPGRADE(sv, SVt_PV)){} /* For GCC not to warn on unused result */
+                (void)SvUPGRADE(sv, SVt_PV);
             }
             else {
                 (void)SvPV(sv, sv_len);
@@ -7036,7 +7036,7 @@ IV odbc_st_execute_for_fetch(
             sv = *sv_p;
             /*check to see if value sv is a null (undef) if it is upgrade it*/
             if (!SvOK(sv))	{
-                if (SvUPGRADE(sv, SVt_PV)){} /* For GCC not to warn on unused result */
+                (void)SvUPGRADE(sv, SVt_PV);
                 phs->strlen_or_ind_array[row] = SQL_NULL_DATA;
             }
             else {
