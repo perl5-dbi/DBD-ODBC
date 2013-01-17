@@ -19,6 +19,7 @@ examples/column_info.pl
 examples/DbiTest.pl
 examples/DbiTest2.pl
 examples/dml_counts.pl
+examples/enable_odbc_tracing.pl
 examples/execute_for_fetch.pl
 examples/getinfo.pl
 examples/identity.pl

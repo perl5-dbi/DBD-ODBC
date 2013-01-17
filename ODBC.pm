@@ -19,7 +19,7 @@ require 5.008;
 # see discussion on dbi-users at
 # http://www.nntp.perl.org/group/perl.dbi.dev/2010/07/msg6096.html and
 # http://www.dagolden.com/index.php/369/version-numbers-should-be-boring/
-$DBD::ODBC::VERSION = '1.42_2';
+$DBD::ODBC::VERSION = '1.42_3';
 
 {
     ## no critic (ProhibitMagicNumbers ProhibitExplicitISA)
@@ -195,9 +195,9 @@ $DBD::ODBC::VERSION = '1.42_2';
             odbc_column_display_size       => undef, # sth and dbh
             odbc_utf8_on                   => undef, # sth and dbh
             odbc_driver_complete           => undef,
-            odbc_batch_size                      => undef,
+            odbc_batch_size                => undef,
             odbc_array_operations          => undef, # sth and dbh
-            odbc_taf_callback                    => undef
+            odbc_taf_callback              => undef
         };
     }
 
@@ -651,7 +651,7 @@ DBD::ODBC - ODBC Driver for DBI
 
 =head1 VERSION
 
-This documentation refers to DBD::ODBC version 1.42_2.
+This documentation refers to DBD::ODBC version 1.42_3.
 
 =head1 SYNOPSIS
 
@@ -706,6 +706,37 @@ updates or deletes; it is simply a hint to the driver/database that
 you won't being doing updates.
 
 This attribute requires DBI version 1.55 or better.
+
+=head Private attributes which may be used in the connect method
+
+=head3 odbc_trace_file
+
+Specify the name and path to a file you want ODBC API trace
+information to be written to. See L</odbc_trace>.
+
+=head3 odbc_trace
+
+Enable or disable ODBC API tracing. Set to 1 to enable and 0 to
+disable.
+
+This calls SQLSetConnectAttr for SQL_ATTR_TRACE and either sets
+SQL_OPT_TRACE_ON or SQL_OPT_TRACE_OFF. Enabling tracing will tell
+the ODBC driver manager to write and ODBC API trace to the file
+named with L</odbc_trace_file>.
+
+NOTE: If you don't set odbc_trace_file most ODBC Driver Managers write
+to a file called SQL.LOG in the root directory (but this depends on
+the driver manager used).
+
+NOTE: This tracing is produced by the ODBC Driver Manager and has
+nothing to do with DBD::ODBC other than it should trace the ODBC
+calls DBD::ODBC makes i.e., DBD::ODBC is not responsible for the
+tracing mechanism itself.
+
+NOTE: Enabling tracing will probably slow your application down a lot.
+I'd definitely think twice about it if in a production environment
+unless you are desperate as it tends to produce very large trace
+files for short periods of ODBC activity.
 
 =head2 Private attributes common to connection and statement handles
 

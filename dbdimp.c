@@ -625,8 +625,41 @@ int dbd_db_login6_sv(
 
       if (set_odbc_version(dbh, imp_dbh, attr) != 1) return 0;
    }
-
    imp_dbh->henv = imp_drh->henv;	/* needed for dbd_error */
+
+   /* If odbc_trace_file set, set it in ODBC */
+   {
+       SV **attr_sv;
+       char *file;
+
+       if ((attr_sv =
+            DBD_ATTRIB_GET_SVP(attr, "odbc_trace_file",
+                               (I32)strlen("odbc_trace_file"))) != NULL) {
+           if (SvPOK(*attr_sv)) {
+               file = SvPV_nolen(*attr_sv);
+               rc = SQLSetConnectAttr(NULL, SQL_ATTR_TRACEFILE,
+                                      file, strlen(file));
+               if (!SQL_SUCCEEDED(rc)) {
+                   warn("Failed to set trace file");
+               }
+           }
+       }
+   }
+
+   /* If odbc_trace enabled, turn ODBC tracing on */
+   {
+       UV dc = 0;
+       SV **svp;
+
+       DBD_ATTRIB_GET_IV(attr, "odbc_trace", 10, svp, dc);
+       if (svp && dc) {
+           rc = SQLSetConnectAttr(NULL, SQL_ATTR_TRACE,
+                                  (SQLPOINTER)SQL_OPT_TRACE_ON, 0);
+           if (!SQL_SUCCEEDED(rc)) {
+               warn("Failed to enable tracing");
+           }
+       }
+   }
 
    rc = SQLAllocHandle(SQL_HANDLE_DBC, imp_drh->henv, &imp_dbh->hdbc);
    if (!SQL_SUCCEEDED(rc)) {
@@ -867,8 +900,41 @@ int dbd_db_login6(
 
       if (set_odbc_version(dbh, imp_dbh, attr) != 1) return 0;
    }
-
    imp_dbh->henv = imp_drh->henv;	/* needed for dbd_error */
+
+   /* If odbc_trace_file set, set it in ODBC */
+   {
+       SV **attr_sv;
+       char *file;
+
+       if ((attr_sv =
+            DBD_ATTRIB_GET_SVP(attr, "odbc_trace_file",
+                               (I32)strlen("odbc_trace_file"))) != NULL) {
+           if (SvPOK(*attr_sv)) {
+               file = SvPV_nolen(*attr_sv);
+               rc = SQLSetConnectAttr(NULL, SQL_ATTR_TRACEFILE,
+                                      file, strlen(file));
+               if (!SQL_SUCCEEDED(rc)) {
+                   warn("Failed to set trace file");
+               }
+           }
+       }
+   }
+
+   /* If odbc_trace enabled, turn ODBC tracing on */
+   {
+       UV dc = 0;
+       SV **svp;
+
+       DBD_ATTRIB_GET_IV(attr, "odbc_trace", 10, svp, dc);
+       if (svp && dc) {
+           rc = SQLSetConnectAttr(NULL, SQL_ATTR_TRACE,
+                                  (SQLPOINTER)SQL_OPT_TRACE_ON, 0);
+           if (!SQL_SUCCEEDED(rc)) {
+               warn("Failed to enable tracing");
+           }
+       }
+   }
 
    imp_dbh->out_connect_string = NULL;
 
@@ -2001,12 +2067,12 @@ int odbc_st_prepare_sv(
       if ((attr_sv =
            DBD_ATTRIB_GET_SVP(attribs, "odbc_execdirect",
                               (I32)strlen("odbc_execdirect"))) != NULL) {
-	 imp_sth->odbc_exec_direct = SvIV(*attr_sv) != 0;
+          imp_sth->odbc_exec_direct = SvIV(*attr_sv) != 0;
       }
       if ((attr_sv =
            DBD_ATTRIB_GET_SVP(attribs, "odbc_exec_direct",
                               (I32)strlen("odbc_exec_direct"))) != NULL) {
-	 imp_sth->odbc_exec_direct = SvIV(*attr_sv) != 0;
+          imp_sth->odbc_exec_direct = SvIV(*attr_sv) != 0;
       }
    }
 
@@ -4489,7 +4555,7 @@ static db_params S_db_storeOptions[] =  {
    { "odbc_describe_parameters", ODBC_DESCRIBE_PARAMETERS },
    { "odbc_batch_size", ODBC_BATCH_SIZE },
    { "odbc_array_operations", ODBC_ARRAY_OPERATIONS },
-   {"odbc_taf_callback", ODBC_TAF_CALLBACK},
+   { "odbc_taf_callback", ODBC_TAF_CALLBACK},
    { NULL },
 };
 
@@ -5386,67 +5452,67 @@ SV *dbd_st_FETCH_attrib(SV *sth, imp_sth_t *imp_sth, SV *keysv)
 /*======================================================================*/
 int dbd_st_STORE_attrib(SV *sth, imp_sth_t *imp_sth, SV *keysv, SV *valuesv)
 {
-   STRLEN kl;
-   char *key = SvPV(keysv,kl);
-   T_st_params *par;
+    STRLEN kl;
+    char *key = SvPV(keysv,kl);
+    T_st_params *par;
 
-   for (par = S_st_store_params; par->len > 0; par++)
-      if (par->len == kl && strEQ(key, par->str))
-	 break;
+    for (par = S_st_store_params; par->len > 0; par++)
+        if (par->len == kl && strEQ(key, par->str))
+            break;
 
-   if (par->len <= 0)
-      return FALSE;
+    if (par->len <= 0)
+        return FALSE;
 
-   switch(par - S_st_store_params)
-   {
+    switch(par - S_st_store_params)
+    {
       case 0:
-	 imp_sth->odbc_ignore_named_placeholders = SvTRUE(valuesv);
-	 return TRUE;
+        imp_sth->odbc_ignore_named_placeholders = SvTRUE(valuesv);
+        return TRUE;
 
       case 1:
-	 imp_sth->odbc_default_bind_type = (SQLSMALLINT)SvIV(valuesv);
-	 return TRUE;
-	 break;
+        imp_sth->odbc_default_bind_type = (SQLSMALLINT)SvIV(valuesv);
+        return TRUE;
+        break;
 
       case 2:
-	 imp_sth->odbc_force_rebind = (int)SvIV(valuesv);
-	 return TRUE;
-	 break;
+        imp_sth->odbc_force_rebind = (int)SvIV(valuesv);
+        return TRUE;
+        break;
 
       case 3:
-	 imp_sth->odbc_query_timeout = SvIV(valuesv);
-	 return TRUE;
-	 break;
+        imp_sth->odbc_query_timeout = SvIV(valuesv);
+        return TRUE;
+        break;
 
       case 4:
-         imp_sth->odbc_putdata_start = SvIV(valuesv);
-         return TRUE;
-         break;
+        imp_sth->odbc_putdata_start = SvIV(valuesv);
+        return TRUE;
+        break;
 
       case 5:
-         imp_sth->odbc_column_display_size = SvIV(valuesv);
-         return TRUE;
-         break;
+        imp_sth->odbc_column_display_size = SvIV(valuesv);
+        return TRUE;
+        break;
 
       case 6:
-	 imp_sth->odbc_force_bind_type = (SQLSMALLINT)SvIV(valuesv);
-	 return TRUE;
-	 break;
+        imp_sth->odbc_force_bind_type = (SQLSMALLINT)SvIV(valuesv);
+        return TRUE;
+        break;
 
       case 7:
-         imp_sth->odbc_batch_size = SvIV(valuesv);
-	 if (imp_sth->odbc_batch_size == 0) {
-	   croak("You cannot set odbc_batch_size to zero");
-	 }
-         return TRUE;
-         break;
+        imp_sth->odbc_batch_size = SvIV(valuesv);
+        if (imp_sth->odbc_batch_size == 0) {
+            croak("You cannot set odbc_batch_size to zero");
+        }
+        return TRUE;
+        break;
 
       case 8:
-	 imp_sth->odbc_array_operations = SvTRUE(valuesv);
-	 return TRUE;
+        imp_sth->odbc_array_operations = SvTRUE(valuesv);
+        return TRUE;
 
-   }
-   return FALSE;
+    }
+    return FALSE;
 }
 
 
