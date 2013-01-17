@@ -707,7 +707,7 @@ you won't being doing updates.
 
 This attribute requires DBI version 1.55 or better.
 
-=head Private attributes which may be used in the connect method
+=head2 Private attributes which may be used in the connect method
 
 =head3 odbc_trace_file
 
