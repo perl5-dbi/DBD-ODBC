@@ -4648,7 +4648,7 @@ int dbd_db_STORE_attrib(SV *dbh, imp_dbh_t *imp_dbh, SV *keysv, SV *valuesv)
 
         return FALSE;
     } else if (DBIc_TRACE(imp_dbh, DBD_TRACING, 0, 3)) {
-	  TRACE1(imp_dbh, "    setting %s\n", key);
+        TRACE1(imp_dbh, "    setting %s\n", key);
     }
 
     bSetSQLConnectionOption = TRUE;
@@ -4964,37 +4964,37 @@ int dbd_db_STORE_attrib(SV *dbh, imp_dbh_t *imp_dbh, SV *keysv, SV *valuesv)
 /*======================================================================*/
 SV *dbd_db_FETCH_attrib(SV *dbh, imp_dbh_t *imp_dbh, SV *keysv)
 {
-   RETCODE rc;
-   STRLEN kl;
-   char *key = SvPV(keysv,kl);
-   const db_params *pars;
-   SV *retsv = Nullsv;
+    RETCODE rc;
+    STRLEN kl;
+    char *key = SvPV(keysv,kl);
+    const db_params *pars;
+    SV *retsv = Nullsv;
 
-   /* checking pars we need FAST */
+    /* checking pars we need FAST */
 
-   if (DBIc_TRACE(imp_dbh, DBD_TRACING, 0, 8))
-       TRACE1(imp_dbh, "    FETCH %s\n", key);
+    if (DBIc_TRACE(imp_dbh, DBD_TRACING, 0, 8))
+        TRACE1(imp_dbh, "    FETCH %s\n", key);
 
 
-   if ((pars = S_dbOption(S_db_fetchOptions, key, kl)) == NULL)
-      return Nullsv;
+    if ((pars = S_dbOption(S_db_fetchOptions, key, kl)) == NULL)
+        return Nullsv;
 
-   switch (pars->fOption) {
-     case ODBC_OUTCON_STR:
-       if (!imp_dbh->out_connect_string) {
-           retsv = &PL_sv_undef;
-       } else {
-           retsv = newSVsv(imp_dbh->out_connect_string);
-       }
-       break;
+    switch (pars->fOption) {
+      case ODBC_OUTCON_STR:
+        if (!imp_dbh->out_connect_string) {
+            retsv = &PL_sv_undef;
+        } else {
+            retsv = newSVsv(imp_dbh->out_connect_string);
+        }
+        break;
 
       case SQL_DRIVER_ODBC_VER:
         retsv = newSVpv(imp_dbh->odbc_ver, 0);
         break;
 
       case SQL_DBMS_NAME:
-	 retsv = newSVpv(imp_dbh->odbc_dbms_name, 0);
-	 break;
+        retsv = newSVpv(imp_dbh->odbc_dbms_name, 0);
+        break;
 
       case ODBC_IGNORE_NAMED_PLACEHOLDERS:
         retsv = newSViv(imp_dbh->odbc_ignore_named_placeholders);
@@ -5076,75 +5076,74 @@ SV *dbd_db_FETCH_attrib(SV *dbh, imp_dbh_t *imp_dbh, SV *keysv)
         break;
 
       case ODBC_ERR_HANDLER:
-	 /* fetch current value of the error handler (a coderef). */
-	 if(imp_dbh->odbc_err_handler) {
-	    retsv = newSVsv(imp_dbh->odbc_err_handler);
-	 } else {
-	    retsv = &PL_sv_undef;
-	 }
-	 break;
+        /* fetch current value of the error handler (a coderef). */
+        if(imp_dbh->odbc_err_handler) {
+            retsv = newSVsv(imp_dbh->odbc_err_handler);
+        } else {
+            retsv = &PL_sv_undef;
+        }
+        break;
 
       case ODBC_ROWCACHESIZE:
-	 retsv = newSViv(imp_dbh->RowCacheSize);
-	 break;
+        retsv = newSViv(imp_dbh->RowCacheSize);
+        break;
 
-     default:
-     {
-         enum gettype {INT, STR, BOOL};
-         enum gettype type;
-         char strval[256];
-         SQLUINTEGER uval = 0;
-         SQLINTEGER retstrlen;
+      default:
+      {
+          enum gettype {t_UINT, t_STR, t_BOOL};
+          enum gettype type;
+          char strval[256];
+          SQLUINTEGER uval = 0;
+          SQLINTEGER retstrlen;
 
-         /*
-          * The remainders we support are ODBC attributes like
-          * AutoCommit (SQL_AUTOCOMMIT)
-          * odbc_SQL_ROWSET_SIZE (SQL_ROWSET_SIZE)
-          *
-          * Nothing else should get here for now unless any item is added
-          * to S_db_fetchOptions.
-          */
-         switch (pars->fOption) {
-           case SQL_ROWSET_SIZE:
-             type = INT;
-             break;
-           case SQL_ATTR_TRACE:
-             type = BOOL;
-             break;
-           case SQL_ATTR_TRACEFILE:
-             type = STR;
-             break;
-         }
+          /*
+           * The remainders we support are ODBC attributes like
+           * odbc_SQL_ROWSET_SIZE (SQL_ROWSET_SIZE), odbc_trace etc
+           *
+           * Nothing else should get here for now unless any item is added
+           * to S_db_fetchOptions.
+           */
+          switch (pars->fOption) {
+            case SQL_ROWSET_SIZE:
+              type = t_UINT;
+              break;
+            case SQL_ATTR_TRACE:
+              type = t_BOOL;
+              break;
+            case SQL_ATTR_TRACEFILE:
+              type = t_STR;
+              break;
+          }
 
-         if (type == INT || type == BOOL) {
-             rc = SQLGetConnectAttr(
-                 imp_dbh->hdbc, pars->fOption, &uval, SQL_IS_UINTEGER, NULL);
-         } else if (type == STR) {
-             rc = SQLGetConnectAttr(
-                 imp_dbh->hdbc, pars->fOption, strval, sizeof(strval),  &retstrlen);
-         }
-         if (!SQL_SUCCEEDED(rc)) {
-             if (DBIc_TRACE(imp_dbh, DBD_TRACING, 0, 3))
-                 TRACE1(imp_dbh,
-                        "    !!SQLGetConnectAttr=%d in dbd_db_FETCH\n", rc);
-             AllODBCErrors(imp_dbh->henv, imp_dbh->hdbc, 0, 0,
-                           DBIc_LOGPIO(imp_dbh));
-             return Nullsv;
-	 }
+          if (type == t_UINT || type == t_BOOL) {
+              rc = SQLGetConnectAttr(
+                  imp_dbh->hdbc, pars->fOption, &uval, SQL_IS_UINTEGER, NULL);
+          } else if (type == t_STR) {
+              rc = SQLGetConnectAttr(
+                  imp_dbh->hdbc, pars->fOption, strval, sizeof(strval),  &retstrlen);
+          }
+          if (!SQL_SUCCEEDED(rc)) {
+              if (DBIc_TRACE(imp_dbh, DBD_TRACING, 0, 3))
+                  TRACE1(imp_dbh,
+                         "    !!SQLGetConnectAttr=%d in dbd_db_FETCH\n", rc);
+              AllODBCErrors(imp_dbh->henv, imp_dbh->hdbc, 0, 0,
+                            DBIc_LOGPIO(imp_dbh));
+              return Nullsv;
+          }
 
-         if (type == INT) {
-             retsv = newSViv(uval);
-         } else if (type == BOOL) {
-             if (uval == pars->atrue)
-                 retsv = newSViv(1);
-             else
-                 retsv = newSViv(0);
-         } else if (type == STR) {
-             retsv = newSVpv(strval, retstrlen);
-         }
-         break;
-	 } /* inner switch */
-   } /* outer switch */
+          if (type == t_UINT) {
+              retsv = newSViv(uval);
+          } else if (type == t_BOOL) {
+              if (uval == pars->atrue)
+                  retsv = newSViv(1);
+              else
+                  retsv = newSViv(0);
+          } else if (type == t_STR) {
+              retsv = newSVpv(strval, retstrlen);
+          }
+          break;
+      } /* end of default */
+    } /* outer switch */
 
    return sv_2mortal(retsv);
 }
