@@ -4532,10 +4532,8 @@ static db_params S_db_storeOptions[] =  {
 #if 0 /* not defined by DBI/DBD specification */
    { "TRANSACTION",
    SQL_ACCESS_MODE, SQL_MODE_READ_ONLY, SQL_MODE_READ_WRITE },
-   { "solid_trace", SQL_OPT_TRACE, SQL_OPT_TRACE_ON, SQL_OPT_TRACE_OFF },
    { "solid_timeout", SQL_LOGIN_TIMEOUT },
    { "ISOLATION", SQL_TXN_ISOLATION },
-   { "solid_tracefile", SQL_OPT_TRACEFILE },
 #endif
    { "odbc_SQL_ROWSET_SIZE", SQL_ROWSET_SIZE },
    { "odbc_ignore_named_placeholders", ODBC_IGNORE_NAMED_PLACEHOLDERS },
@@ -4556,6 +4554,8 @@ static db_params S_db_storeOptions[] =  {
    { "odbc_batch_size", ODBC_BATCH_SIZE },
    { "odbc_array_operations", ODBC_ARRAY_OPERATIONS },
    { "odbc_taf_callback", ODBC_TAF_CALLBACK},
+   {"odbc_trace", SQL_ATTR_TRACE, SQL_OPT_TRACE_ON, SQL_OPT_TRACE_OFF},
+   {"odbc_trace_file", SQL_ATTR_TRACEFILE},
    { NULL },
 };
 
@@ -4582,6 +4582,8 @@ static db_params S_db_fetchOptions[] =  {
    { "odbc_driver_complete", ODBC_DRIVER_COMPLETE },
    { "odbc_batch_size", ODBC_BATCH_SIZE},
    { "odbc_array_operations", ODBC_ARRAY_OPERATIONS },
+   { "odbc_trace", SQL_ATTR_TRACE, SQL_OPT_TRACE_ON, SQL_OPT_TRACE_OFF},
+   { "odbc_trace_file", SQL_ATTR_TRACEFILE},
    { NULL }
 };
 
@@ -4632,7 +4634,6 @@ int dbd_db_STORE_attrib(SV *dbh, imp_dbh_t *imp_dbh, SV *keysv, SV *valuesv)
 {
     RETCODE rc;
     STRLEN kl;
-    STRLEN plen;
     char *key = SvPV(keysv,kl);
     int on;
     SQLPOINTER vParam;
@@ -4658,8 +4659,15 @@ int dbd_db_STORE_attrib(SV *dbh, imp_dbh_t *imp_dbh, SV *keysv, SV *valuesv)
       case SQL_ROWSET_SIZE:                     /* not ODBC 3 */
         vParam = (SQLPOINTER)SvIV(valuesv);
         break;
-      case SQL_OPT_TRACEFILE:
-        vParam = (SQLPOINTER) SvPV(valuesv, plen);
+      case SQL_ATTR_TRACE:
+        if (SvTRUE(valuesv)) {
+            vParam = (SQLPOINTER)pars->atrue;
+        } else {
+            vParam = (SQLPOINTER)pars->afalse;
+        }
+        break;
+      case SQL_ATTR_TRACEFILE:
+        vParam = (SQLPOINTER) SvPV_nolen(valuesv);
         attr_length = SQL_NTS;
         break;
 
@@ -4900,6 +4908,7 @@ int dbd_db_STORE_attrib(SV *dbh, imp_dbh_t *imp_dbh, SV *keysv, SV *valuesv)
             sv_setsv(imp_dbh->odbc_err_handler, valuesv);
         }
         break;
+
       case ODBC_VERSION:
         /* set only in connect, nothing to store */
         bSetSQLConnectionOption = FALSE;
@@ -4958,7 +4967,6 @@ SV *dbd_db_FETCH_attrib(SV *dbh, imp_dbh_t *imp_dbh, SV *keysv)
    RETCODE rc;
    STRLEN kl;
    char *key = SvPV(keysv,kl);
-   SQLUINTEGER vParam = 0;
    const db_params *pars;
    SV *retsv = Nullsv;
 
@@ -5080,43 +5088,61 @@ SV *dbd_db_FETCH_attrib(SV *dbh, imp_dbh_t *imp_dbh, SV *keysv)
 	 retsv = newSViv(imp_dbh->RowCacheSize);
 	 break;
 
-      default:
-	 /*
-	  * The remainders we support are ODBC attributes like
+     default:
+     {
+         enum gettype {INT, STR, BOOL};
+         enum gettype type;
+         char strval[256];
+         SQLUINTEGER uval = 0;
+         SQLINTEGER retstrlen;
+
+         /*
+          * The remainders we support are ODBC attributes like
           * AutoCommit (SQL_AUTOCOMMIT)
           * odbc_SQL_ROWSET_SIZE (SQL_ROWSET_SIZE)
           *
           * Nothing else should get here for now unless any item is added
           * to S_db_fetchOptions.
-	  */
+          */
+         switch (pars->fOption) {
+           case SQL_ROWSET_SIZE:
+             type = INT;
+             break;
+           case SQL_ATTR_TRACE:
+             type = BOOL;
+             break;
+           case SQL_ATTR_TRACEFILE:
+             type = STR;
+             break;
+         }
 
-	 rc = SQLGetConnectAttr(
-             imp_dbh->hdbc, pars->fOption, &vParam, SQL_IS_UINTEGER, 0);
-         if (pars->fOption != SQL_ROWSET_SIZE)
-             dbd_error(dbh, rc, "db_FETCH/SQLGetConnectAttr");
-
-	 if (!SQL_SUCCEEDED(rc)) {
+         if (type == INT || type == BOOL) {
+             rc = SQLGetConnectAttr(
+                 imp_dbh->hdbc, pars->fOption, &uval, SQL_IS_UINTEGER, NULL);
+         } else if (type == STR) {
+             rc = SQLGetConnectAttr(
+                 imp_dbh->hdbc, pars->fOption, strval, sizeof(strval),  &retstrlen);
+         }
+         if (!SQL_SUCCEEDED(rc)) {
              if (DBIc_TRACE(imp_dbh, DBD_TRACING, 0, 3))
                  TRACE1(imp_dbh,
                         "    !!SQLGetConnectAttr=%d in dbd_db_FETCH\n", rc);
-             if (pars->fOption == SQL_ROWSET_SIZE) {
-                 AllODBCErrors(imp_dbh->henv, imp_dbh->hdbc, 0, 0,
-                               DBIc_LOGPIO(imp_dbh));
-                 vParam = imp_dbh->rowset_size;
-             }
-	    return Nullsv;
+             AllODBCErrors(imp_dbh->henv, imp_dbh->hdbc, 0, 0,
+                           DBIc_LOGPIO(imp_dbh));
+             return Nullsv;
 	 }
 
-	 switch(pars->fOption) {
-	    case SQL_ROWSET_SIZE:
-	       retsv = newSViv(vParam);
-	       break;
-	    default:
-	       if (vParam == pars->atrue)
-		  retsv = newSViv(1);
-	       else
-		  retsv = newSViv(0);
-	       break;
+         if (type == INT) {
+             retsv = newSViv(uval);
+         } else if (type == BOOL) {
+             if (uval == pars->atrue)
+                 retsv = newSViv(1);
+             else
+                 retsv = newSViv(0);
+         } else if (type == STR) {
+             retsv = newSVpv(strval, retstrlen);
+         }
+         break;
 	 } /* inner switch */
    } /* outer switch */
 

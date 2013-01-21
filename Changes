@@ -8,6 +8,13 @@ As of $LastChangedDate$
 
 $Revision: 10667 $
 
+=head2 Changes in DBD::ODBC 1.42_4 January 21 2013
+
+  [ENHANCEMENTS]
+
+  odbc_trace and odbc_trace_file are now full connection attributes
+  so you can set them any time you like, not just in connect.
+
 =head2 Changes in DBD::ODBC 1.42_3 January 17 2013
 
   [ENHANCEMENTS]
