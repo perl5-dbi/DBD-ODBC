@@ -5,7 +5,7 @@
 #
 use Test::More;
 use strict;
-use Data::Dumper;
+#use Data::Dumper;
 $| = 1;
 
 my $has_test_nowarnings = 1;

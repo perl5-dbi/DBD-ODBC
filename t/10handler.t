@@ -8,12 +8,11 @@ $| = 1;
 my $has_test_nowarnings = 1;
 eval "require Test::NoWarnings";
 $has_test_nowarnings = undef if $@;
-my $tests = 11;
+my $tests = 10;
 $tests += 1 if $has_test_nowarnings;
 plan tests => $tests;
 
 use_ok('ODBCTEST');
-use_ok('Data::Dumper');
 
 BEGIN {
    if (!defined $ENV{DBI_DSN}) {

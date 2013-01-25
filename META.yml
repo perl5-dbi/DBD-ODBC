@@ -1,7 +1,7 @@
 --- #YAML:1.0
 name: DBD-ODBC
 abstract: ODBC DBD for Perl DBI
-version: 1.42_4
+version: 1.42_5
 version_from: ODBC.pm
 author:
   - Martin J. Evans <mjevans@cpan.org>
@@ -21,6 +21,15 @@ requires:
 build_requires:
   DBI: 1.21
   ExtUtils::MakeMaker: 0
+  Test::Simple: 0.90
+  Config: 0
+  Data::Dumper: 0
+  Devel::Peek: 0
+  B: 0
+  overload: 0
+  strict: 0
+  warnings: 0
+  utf8: 0
 configure_requires:
   DBI: 1.21
   ExtUtils::MakeMaker: 0

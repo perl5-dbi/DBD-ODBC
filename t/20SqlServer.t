@@ -9,7 +9,7 @@ $| = 1;
 my $has_test_nowarnings = 1;
 eval "require Test::NoWarnings";
 $has_test_nowarnings = undef if $@;
-my $tests = 65;
+my $tests = 64;
 $tests += 1 if $has_test_nowarnings;
 plan tests => $tests;
 
@@ -19,7 +19,7 @@ my $dbh;
 # can't seem to get the imports right this way
 use DBI qw(:sql_types);
 use_ok('ODBCTEST');
-use_ok('Data::Dumper');
+#use_ok('Data::Dumper');
 
 BEGIN {
     plan skip_all => "DBI_DSN is undefined"

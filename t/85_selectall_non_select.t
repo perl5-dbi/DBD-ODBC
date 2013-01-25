@@ -6,7 +6,7 @@ use strict;
 use warnings;
 use DBI;
 use Test::More;
-use Data::Dumper;
+#use Data::Dumper;
 
 my $has_test_nowarnings = 1;
 eval "require Test::NoWarnings";

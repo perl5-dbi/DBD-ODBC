@@ -4,7 +4,7 @@
 
 use Test::More;
 use strict;
-use Data::Dumper;
+#use Data::Dumper;
 
 $| = 1;
 

@@ -2,7 +2,7 @@
 # $Id$
 
 ## TBd: these tests don't seem to be terribly useful
-use sigtrap;
+#use sigtrap;
 use Test::More;
 use strict;
 
@@ -123,5 +123,5 @@ print $DBI::errstr;
 # make sure there is an invalid transaction state error at the end here.
 # (XXX not reliable, iodbc-2.12 with "INTERSOLV dBase IV ODBC Driver" == -1)
 #print "# DBI::err=$DBI::err\nnot " if $DBI::err ne "25000";
-#print "ok 7\n"; 
+#print "ok 7\n";
 

@@ -8,13 +8,13 @@ $| = 1;
 my $has_test_nowarnings = 1;
 eval "require Test::NoWarnings";
 $has_test_nowarnings = undef if $@;
-my $tests = 9;
+my $tests = 8;
 $tests += 1 if $has_test_nowarnings;
 plan tests => $tests;
 
 use DBI qw(:sql_types);
 use_ok('ODBCTEST');
-use_ok('Data::Dumper');
+#use_ok('Data::Dumper');
 
 my $dbh;
 
