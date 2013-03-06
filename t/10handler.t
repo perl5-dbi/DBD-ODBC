@@ -59,7 +59,7 @@ my $eval = $@;
 ok($handler_called >= 1, 'Error handler called');
 ok($errstate, 'Error handler called - state seen');
 ok($errmsg, 'Error handler called - message seen');
-ok($errnative, 'Error handler called - native seen');
+ok(defined($errnative), 'Error handler called - native seen');
 ok(!defined($evalret), 'Error handler called - error passed on');
 ok($eval, 'Error handler called - error propagated');
 
