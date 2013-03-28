@@ -19,7 +19,7 @@ require 5.008;
 # see discussion on dbi-users at
 # http://www.nntp.perl.org/group/perl.dbi.dev/2010/07/msg6096.html and
 # http://www.dagolden.com/index.php/369/version-numbers-should-be-boring/
-$DBD::ODBC::VERSION = '1.43';
+$DBD::ODBC::VERSION = '1.44_1';
 
 {
     ## no critic (ProhibitMagicNumbers ProhibitExplicitISA)
@@ -653,13 +653,13 @@ DBD::ODBC - ODBC Driver for DBI
 
 =head1 VERSION
 
-This documentation refers to DBD::ODBC version 1.43.
+This documentation refers to DBD::ODBC version 1.44_1.
 
 =head1 SYNOPSIS
 
   use DBI;
 
-  $dbh = DBI->connect('dbi:ODBC:DSN', 'user', 'password');
+  $dbh = DBI->connect('dbi:ODBC:DSN=mydsn', 'user', 'password');
 
 See L<DBI> for more information.
 
@@ -676,15 +676,12 @@ C<perldoc DBD::ODBC::FAQ>.
 
 =head2 Important note about the tests
 
-Please note that some tests may fail or report they are unsupported on
-this platform.  Notably Oracle's ODBC driver will fail the "advanced"
-binding tests in t/08bind2.t.  These tests run perfectly under SQL
-Server 2000. This is normal and expected.  Until Oracle fixes their
-drivers to do the right thing from an ODBC perspective, it's going to
-be tough to fix the issue.  The workaround for Oracle is to bind date
-types with SQL_TIMESTAMP.  Also note that some tests may be skipped,
-such as t/09multi.t, if your driver doesn't seem to support returning
-multiple result sets.  This is normal.
+DBD::ODBC is unlike most other DBDs in that it connects to literally
+dozens of possible ODBC Drivers. It is practically impossible for me
+to test every one and so some tests may fail with some ODBC Drivers.
+This does not mean DBD::ODBC will not work with your ODBC Driver but
+it is worth reporting any test failures on rt.cpan.org or to the
+dbi-users mailing list.
 
 =head2 DBI attribute handling
 
@@ -693,7 +690,7 @@ DBI specification.
 
 =head3 ReadOnly (boolean)
 
-DBI documents the C<ReadOnly> attribute as being settleable and
+DBI documents the C<ReadOnly> attribute as being settable and
 retrievable on connection and statement handles. In ODBC setting
 ReadOnly to true causes the connection attribute C<SQL_ATTR_ACCESS_MODE>
 to be set to C<SQL_MODE_READ_ONLY> and setting it to false will set the
