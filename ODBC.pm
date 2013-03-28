@@ -3,7 +3,7 @@
 # Copyright (c) 1994,1995,1996,1998  Tim Bunce
 # portions Copyright (c) 1997-2004  Jeff Urlwin
 # portions Copyright (c) 1997  Thomas K. Wenrich
-# portions Copyright (c) 2007-2012 Martin J. Evans
+# portions Copyright (c) 2007-2013 Martin J. Evans
 #
 # You may distribute under the terms of either the GNU General Public
 # License or the Artistic License, as specified in the Perl README file.
@@ -2586,5 +2586,14 @@ Jeff Urlwin and Martin J. Evans - see the source.
 =head1 SEE ALSO
 
 L<DBI>
+
+DBD::ODBC can be used with many ODBC drivers to many different
+databases.  If you want a generic DBD for multiple databases DBD::ODBC
+is probably for you.  If you are only accessing a single database then
+you might want to look for DBD::my_database (e.g. DBD::Oracle) as
+database specific DBDs often have more functionality.
+
+L<DBIx::LogAny> or L<DBIx::Log4perl> for logging DBI method calls, SQL,
+parameters and results.
 
 =cut
