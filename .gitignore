@@ -12,4 +12,7 @@ dbixl4p.config
 x.log
 *.pl
 *.log
-
+*.xsi
+*.o
+dbdodbc.h
+ODBC.c
