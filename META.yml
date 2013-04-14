@@ -39,7 +39,7 @@ resources:
   license: http://dev.perl.org/licenses/
   bugtracker: http://rt.cpan.org/Public/Dist/Display.html?Name=DBD-ODBC
   MailingList: http://dbi.perl.org/support
-  repository: http://svn.perl.org/modules/dbd-odbc
+  repository: https://github.com/mjegh/DBD-ODBC.git
 installdirs:  site
 keywords:
   - ODBC

@@ -8,6 +8,11 @@ As of $LastChangedDate$
 
 $Revision: 10667 $
 
+=head2 Changes in DBD::ODBC 1.44_1 April ?? 2013
+
+  Moved from subversion to github as svn.perl.org is closing down.
+  Changed docs to show new repository.
+
 =head2 Changes in DBD::ODBC 1.43 March 6 2013
 
   This is a full release of all the 1.42_* development releases.

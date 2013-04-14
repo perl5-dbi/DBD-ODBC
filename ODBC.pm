@@ -2330,22 +2330,9 @@ SQL type to the end of the C<bind_param> method.
 
 =head2 Version Control
 
-DBD::ODBC source code is under version control at svn.perl.org.  If
-you would like to use the "bleeding" edge version, you can get the
-latest from svn.perl.org via Subversion version control.  Note there
-is no guarantee that this version is any different than what you get
-from the tarball from CPAN, but it might be :)
-
-You may read about Subversion at L<http://subversion.tigris.org>
-
-You can get a subversion client from there and check dbd-odbc out via:
-
-   svn checkout http://svn.perl.org/modules/dbd-odbc/trunk <your directory name here>
-
-Which will pull all the files from the subversion trunk to your
-specified directory. If you want to see what has changed since the
-last release of DBD::ODBC read the Changes file or use "svn log" to
-get a list of checked in changes.
+DBD::ODBC source code was under version control at svn.perl.org
+until April 2013 when svn.perl.org was closed down and it is now on
+github at https://github.com/mjegh/DBD-ODBC.git.
 
 =head2 Contributing
 
@@ -2356,18 +2343,10 @@ maintenance of this module:
 
 =item Submitting patches
 
-Please use Subversion (see above) to get the latest version of
-DBD::ODBC from the trunk and submit any patches against that.
+Please send my a git pull request or email a unified diff.
 
-Please, before submitting a patch:
-
-   svn update
-   <try and included a test which demonstrates the fix/change working>
-   <test your patch>
-   svn diff > describe_my_diffs.patch
-
-and send the resulting file to me and cc the dbi-users@perl.org
-mailing list (if you are not a member - why not!).
+Please try and include a test which demonstrates the fix/change
+working.
 
 =item Reporting installs
 
