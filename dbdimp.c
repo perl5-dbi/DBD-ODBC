@@ -1,4 +1,4 @@
-/* $Id$
+/* $Id: dbdimp.c 15563 2013-01-21 14:19:00Z mjevans $
  *
  * portions Copyright (c) 1994,1995,1996,1997  Tim Bunce
  * portions Copyright (c) 1997 Thomas K. Wenrich
@@ -4519,72 +4519,53 @@ long destoffset;
 /* storing and fetching.                                                */
 /*                                                                      */
 /*======================================================================*/
+enum paramdir { PARAM_READ = 1, PARAM_WRITE = 2, PARAM_READWRITE = 3 };
+enum gettype {PARAM_TYPE_CUSTOM = 0, PARAM_TYPE_UINT, PARAM_TYPE_STR, PARAM_TYPE_BOOL};
+
 typedef struct {
    const char *str;
    UWORD fOption;
+   enum paramdir dir;
+   enum gettype type;
    UDWORD atrue;
    UDWORD afalse;
 } db_params;
 
-static db_params S_db_storeOptions[] =  {
-   { "AutoCommit", SQL_AUTOCOMMIT, SQL_AUTOCOMMIT_ON, SQL_AUTOCOMMIT_OFF },
-   { "ReadOnly", SQL_ATTR_ACCESS_MODE, SQL_MODE_READ_ONLY, SQL_MODE_READ_WRITE},
+static db_params S_db_options[] =  {
+   { "AutoCommit", SQL_AUTOCOMMIT, PARAM_READWRITE, PARAM_TYPE_BOOL, SQL_AUTOCOMMIT_ON, SQL_AUTOCOMMIT_OFF },
+   { "ReadOnly", SQL_ATTR_ACCESS_MODE, PARAM_READWRITE, PARAM_TYPE_BOOL, SQL_MODE_READ_ONLY, SQL_MODE_READ_WRITE},
+   { "RowCacheSize", ODBC_ROWCACHESIZE, PARAM_READ, PARAM_TYPE_CUSTOM },
 #if 0 /* not defined by DBI/DBD specification */
    { "TRANSACTION",
-   SQL_ACCESS_MODE, SQL_MODE_READ_ONLY, SQL_MODE_READ_WRITE },
-   { "solid_timeout", SQL_LOGIN_TIMEOUT },
-   { "ISOLATION", SQL_TXN_ISOLATION },
+   SQL_ACCESS_MODE, PARAM_READWRITE, PARAM_TYPE_BOOL, SQL_MODE_READ_ONLY, SQL_MODE_READ_WRITE },
+   { "solid_timeout", SQL_LOGIN_TIMEOUT, PARAM_READWRITE, PARAM_TYPE_UINT },
+   { "ISOLATION", PARAM_READWRITE, PARAM_TYPE_UINT, SQL_TXN_ISOLATION },
 #endif
-   { "odbc_SQL_ROWSET_SIZE", SQL_ROWSET_SIZE },
-   { "odbc_ignore_named_placeholders", ODBC_IGNORE_NAMED_PLACEHOLDERS },
-   { "odbc_default_bind_type", ODBC_DEFAULT_BIND_TYPE },
-   { "odbc_force_bind_type", ODBC_FORCE_BIND_TYPE },
-   { "odbc_force_rebind", ODBC_FORCE_REBIND },
-   { "odbc_async_exec", ODBC_ASYNC_EXEC },
-   { "odbc_err_handler", ODBC_ERR_HANDLER },
-   { "odbc_exec_direct", ODBC_EXEC_DIRECT },
-   { "odbc_version", ODBC_VERSION },
-   { "odbc_cursortype", ODBC_CURSORTYPE },
-   { "odbc_query_timeout", ODBC_QUERY_TIMEOUT },
-   { "odbc_putdata_start", ODBC_PUTDATA_START },
-   { "odbc_column_display_size", ODBC_COLUMN_DISPLAY_SIZE },
-   { "odbc_utf8_on", ODBC_UTF8_ON },
-   { "odbc_old_unicode", ODBC_OLD_UNICODE },
-   { "odbc_describe_parameters", ODBC_DESCRIBE_PARAMETERS },
-   { "odbc_batch_size", ODBC_BATCH_SIZE },
-   { "odbc_array_operations", ODBC_ARRAY_OPERATIONS },
-   { "odbc_taf_callback", ODBC_TAF_CALLBACK},
-   {"odbc_trace", SQL_ATTR_TRACE, SQL_OPT_TRACE_ON, SQL_OPT_TRACE_OFF},
-   {"odbc_trace_file", SQL_ATTR_TRACEFILE},
+   { "odbc_SQL_DBMS_NAME", SQL_DBMS_NAME, PARAM_READ, PARAM_TYPE_CUSTOM, },
+   { "odbc_SQL_DRIVER_ODBC_VER", SQL_DRIVER_ODBC_VER, PARAM_READ, PARAM_TYPE_CUSTOM },
+   { "odbc_SQL_ROWSET_SIZE", SQL_ROWSET_SIZE, PARAM_READWRITE, PARAM_TYPE_UINT },
+   { "odbc_ignore_named_placeholders", ODBC_IGNORE_NAMED_PLACEHOLDERS, PARAM_READWRITE, PARAM_TYPE_CUSTOM },
+   { "odbc_default_bind_type", ODBC_DEFAULT_BIND_TYPE, PARAM_READWRITE, PARAM_TYPE_CUSTOM },
+   { "odbc_force_bind_type", ODBC_FORCE_BIND_TYPE, PARAM_READWRITE, PARAM_TYPE_CUSTOM },
+   { "odbc_force_rebind", ODBC_FORCE_REBIND, PARAM_READWRITE, PARAM_TYPE_CUSTOM },
+   { "odbc_async_exec", ODBC_ASYNC_EXEC, PARAM_READWRITE, PARAM_TYPE_CUSTOM },
+   { "odbc_err_handler", ODBC_ERR_HANDLER, PARAM_READWRITE, PARAM_TYPE_CUSTOM },
+   { "odbc_exec_direct", ODBC_EXEC_DIRECT, PARAM_READWRITE, PARAM_TYPE_CUSTOM },
+   { "odbc_version", ODBC_VERSION, PARAM_READWRITE, PARAM_TYPE_CUSTOM },
+   { "odbc_cursortype", ODBC_CURSORTYPE, PARAM_READWRITE, PARAM_TYPE_CUSTOM },
+   { "odbc_query_timeout", ODBC_QUERY_TIMEOUT, PARAM_READWRITE, PARAM_TYPE_CUSTOM },
+   { "odbc_putdata_start", ODBC_PUTDATA_START, PARAM_READWRITE, PARAM_TYPE_CUSTOM },
+   { "odbc_column_display_size", ODBC_COLUMN_DISPLAY_SIZE, PARAM_READWRITE, PARAM_TYPE_CUSTOM },
+   { "odbc_utf8_on", ODBC_UTF8_ON, PARAM_READWRITE, PARAM_TYPE_CUSTOM },
+   { "odbc_old_unicode", ODBC_OLD_UNICODE, PARAM_READWRITE, PARAM_TYPE_CUSTOM },
+   { "odbc_has_unicode", ODBC_HAS_UNICODE, PARAM_READ, PARAM_TYPE_CUSTOM },
+   { "odbc_describe_parameters", ODBC_DESCRIBE_PARAMETERS, PARAM_READWRITE, PARAM_TYPE_CUSTOM },
+   { "odbc_batch_size", ODBC_BATCH_SIZE, PARAM_READWRITE, PARAM_TYPE_CUSTOM },
+   { "odbc_array_operations", ODBC_ARRAY_OPERATIONS, PARAM_READWRITE, PARAM_TYPE_CUSTOM },
+   { "odbc_taf_callback", ODBC_TAF_CALLBACK, PARAM_READWRITE, PARAM_TYPE_CUSTOM },
+   {"odbc_trace", SQL_ATTR_TRACE, PARAM_READWRITE, PARAM_TYPE_BOOL, SQL_OPT_TRACE_ON, SQL_OPT_TRACE_OFF},
+   {"odbc_trace_file", SQL_ATTR_TRACEFILE, PARAM_READWRITE, PARAM_TYPE_STR, },
    { NULL },
-};
-
-static db_params S_db_fetchOptions[] =  {
-   { "AutoCommit", SQL_AUTOCOMMIT, SQL_AUTOCOMMIT_ON, SQL_AUTOCOMMIT_OFF },
-   { "ReadOnly", SQL_ATTR_ACCESS_MODE, SQL_MODE_READ_ONLY, SQL_MODE_READ_WRITE},   { "RowCacheSize", ODBC_ROWCACHESIZE },
-   { "odbc_SQL_ROWSET_SIZE", SQL_ROWSET_SIZE },
-   { "odbc_SQL_DRIVER_ODBC_VER", SQL_DRIVER_ODBC_VER },
-   { "odbc_ignore_named_placeholders", ODBC_IGNORE_NAMED_PLACEHOLDERS },
-   { "odbc_default_bind_type", ODBC_DEFAULT_BIND_TYPE },
-   { "odbc_force_bind_type", ODBC_FORCE_BIND_TYPE },
-   { "odbc_force_rebind", ODBC_FORCE_REBIND },
-   { "odbc_async_exec", ODBC_ASYNC_EXEC },
-   { "odbc_err_handler", ODBC_ERR_HANDLER },
-   { "odbc_SQL_DBMS_NAME", SQL_DBMS_NAME },
-   { "odbc_exec_direct", ODBC_EXEC_DIRECT },
-   { "odbc_query_timeout", ODBC_QUERY_TIMEOUT},
-   { "odbc_putdata_start", ODBC_PUTDATA_START},
-   { "odbc_column_display_size", ODBC_COLUMN_DISPLAY_SIZE},
-   { "odbc_utf8_on", ODBC_UTF8_ON},
-   { "odbc_has_unicode", ODBC_HAS_UNICODE},
-   { "odbc_out_connect_string", ODBC_OUTCON_STR},
-   { "odbc_describe_parameters", ODBC_DESCRIBE_PARAMETERS},
-   { "odbc_driver_complete", ODBC_DRIVER_COMPLETE },
-   { "odbc_batch_size", ODBC_BATCH_SIZE},
-   { "odbc_array_operations", ODBC_ARRAY_OPERATIONS },
-   { "odbc_trace", SQL_ATTR_TRACE, SQL_OPT_TRACE_ON, SQL_OPT_TRACE_OFF},
-   { "odbc_trace_file", SQL_ATTR_TRACEFILE},
-   { NULL }
 };
 
 /*======================================================================*/
@@ -4641,11 +4622,16 @@ int dbd_db_STORE_attrib(SV *dbh, imp_dbh_t *imp_dbh, SV *keysv, SV *valuesv)
     SQLINTEGER attr_length = SQL_IS_UINTEGER;
     int bSetSQLConnectionOption;
 
-    if ((pars = S_dbOption(S_db_storeOptions, key, kl)) == NULL) {
+    if ((pars = S_dbOption(S_db_options, key, kl)) == NULL) {
         if (DBIc_TRACE(imp_dbh, DBD_TRACING, 0, 3))
             TRACE1(imp_dbh,
                    "    !!DBD::ODBC unsupported attribute passed (%s)\n", key);
 
+        return FALSE;
+    } else if (!(pars->dir & PARAM_WRITE)) {
+        if (DBIc_TRACE(imp_dbh, DBD_TRACING, 0, 3))
+            TRACE1(imp_dbh,
+                   "    !!DBD::ODBC attempt to set non-writable attribute (%s)\n", key);
         return FALSE;
     } else if (DBIc_TRACE(imp_dbh, DBD_TRACING, 0, 3)) {
         TRACE1(imp_dbh, "    setting %s\n", key);
@@ -4975,8 +4961,10 @@ SV *dbd_db_FETCH_attrib(SV *dbh, imp_dbh_t *imp_dbh, SV *keysv)
     if (DBIc_TRACE(imp_dbh, DBD_TRACING, 0, 8))
         TRACE1(imp_dbh, "    FETCH %s\n", key);
 
+    if ((pars = S_dbOption(S_db_options, key, kl)) == NULL)
+        return Nullsv;
 
-    if ((pars = S_dbOption(S_db_fetchOptions, key, kl)) == NULL)
+    if (!(pars->dir & PARAM_READ))
         return Nullsv;
 
     switch (pars->fOption) {
@@ -5090,8 +5078,7 @@ SV *dbd_db_FETCH_attrib(SV *dbh, imp_dbh_t *imp_dbh, SV *keysv)
 
       default:
       {
-          enum gettype {t_UINT, t_STR, t_BOOL};
-          enum gettype type;
+          enum gettype type = pars->type;
           char strval[256];
           SQLUINTEGER uval = 0;
           SQLINTEGER retstrlen;
@@ -5103,24 +5090,18 @@ SV *dbd_db_FETCH_attrib(SV *dbh, imp_dbh_t *imp_dbh, SV *keysv)
            * Nothing else should get here for now unless any item is added
            * to S_db_fetchOptions.
            */
-          switch (pars->fOption) {
-            case SQL_ROWSET_SIZE:
-              type = t_UINT;
-              break;
-            case SQL_ATTR_TRACE:
-              type = t_BOOL;
-              break;
-            case SQL_ATTR_TRACEFILE:
-              type = t_STR;
-              break;
-          }
 
-          if (type == t_UINT || type == t_BOOL) {
+          if (type == PARAM_TYPE_UINT || type == PARAM_TYPE_BOOL) {
               rc = SQLGetConnectAttr(
                   imp_dbh->hdbc, pars->fOption, &uval, SQL_IS_UINTEGER, NULL);
-          } else if (type == t_STR) {
+          } else if (type == PARAM_TYPE_STR) {
               rc = SQLGetConnectAttr(
                   imp_dbh->hdbc, pars->fOption, strval, sizeof(strval),  &retstrlen);
+          } else {
+              if (DBIc_TRACE(imp_dbh, DBD_TRACING, 0, 3))
+                  TRACE2(imp_dbh,
+                         "    !!unknown type %d for %s in dbd_db_FETCH\n", type, key);
+              return Nullsv;
           }
           if (!SQL_SUCCEEDED(rc)) {
               if (DBIc_TRACE(imp_dbh, DBD_TRACING, 0, 3))
@@ -5131,14 +5112,14 @@ SV *dbd_db_FETCH_attrib(SV *dbh, imp_dbh_t *imp_dbh, SV *keysv)
               return Nullsv;
           }
 
-          if (type == t_UINT) {
+          if (type == PARAM_TYPE_UINT) {
               retsv = newSViv(uval);
-          } else if (type == t_BOOL) {
+          } else if (type == PARAM_TYPE_BOOL) {
               if (uval == pars->atrue)
                   retsv = newSViv(1);
               else
                   retsv = newSViv(0);
-          } else if (type == t_STR) {
+          } else if (type == PARAM_TYPE_STR) {
               retsv = newSVpv(strval, retstrlen);
           }
           break;

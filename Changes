@@ -13,13 +13,18 @@ $Revision: 10667 $
   Moved from subversion to github as svn.perl.org is closing down.
   Changed docs to show new repository.
 
+  [BUG FIXES]
+
+  Fixed RT 84450 - Database Handle Attribute Fetch broken. Thanks to
+  Stephen Oberholtzer for finding and supplying patch.
+
 =head2 Changes in DBD::ODBC 1.43 March 6 2013
 
   This is a full release of all the 1.42_* development releases.
 
   plus:
 
-  [Bug FIXES]
+  [BUG FIXES]
 
   Minor fix to 10handler.t test suite which relied on a native error
   being true instead of defined.
