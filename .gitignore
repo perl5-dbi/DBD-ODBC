@@ -16,3 +16,7 @@ x.log
 *.o
 dbdodbc.h
 ODBC.c
+dll.base
+dll.exp
+ODBC.def
+ODBC.bs
