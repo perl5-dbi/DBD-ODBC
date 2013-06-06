@@ -2336,14 +2336,14 @@ github at https://github.com/mjegh/DBD-ODBC.git.
 
 =head2 Contributing
 
-There are seven main ways you may help with the development and
+There are a number of ways you may help with the development and
 maintenance of this module:
 
 =over
 
 =item Submitting patches
 
-Please send my a git pull request or email a unified diff.
+Please send me a git pull request or email a unified diff.
 
 Please try and include a test which demonstrates the fix/change
 working.
