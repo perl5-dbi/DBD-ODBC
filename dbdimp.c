@@ -4258,14 +4258,15 @@ int dbd_st_bind_col(
        we can use it with sql_type_cast_svpv i.e., if you know the column is a double or
        numeric we still retrieve it as a char string but then if DiscardString or StrictlyTyped
        if specified we'lll call sql_type_cast_svpv.
-
     */
     if (type == SQL_DOUBLE ||
         type == SQL_NUMERIC) {
         imp_sth->fbh[field-1].req_type = type;
     }
 
-    imp_sth->fbh[field-1].bind_flags = 0; /* default to none */
+    if (attribs) {                              /* attributes are sticky */
+        imp_sth->fbh[field-1].bind_flags = 0; /* default to none */
+    }
 
     /* DBIXS 13590 added StrictlyTyped and DiscardString attributes */
     if (attribs) {

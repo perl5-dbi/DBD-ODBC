@@ -18,6 +18,10 @@ $Revision: 10667 $
   Fixed RT 84450 - Database Handle Attribute Fetch broken. Thanks to
   Stephen Oberholtzer for finding and supplying patch.
 
+  Fixed problem with attributes on bind_col not being sticky. You'll
+  probably only see this if you are using fetchall_arrayref with a
+  slice and setting TYPE or attributes in bind_col first.
+
 =head2 Changes in DBD::ODBC 1.43 March 6 2013
 
   This is a full release of all the 1.42_* development releases.

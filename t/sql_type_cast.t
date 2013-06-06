@@ -23,7 +23,7 @@ $| = 1;
 my $has_test_nowarnings = 1;
 eval "require Test::NoWarnings";
 $has_test_nowarnings = undef if $@;
-my $tests = 13;
+my $tests = 16;
 $tests += 1 if $has_test_nowarnings;
 plan tests => $tests;
 
@@ -167,6 +167,23 @@ is($r, 100, "correct value returned SQL_NUMERIC|DiscardString");
 ($iv, $pv) = is_iv($r);
 ok($iv, "ivok bind integer discard") or Dump($r);
 ok(!$pv, "not PV bind integer discard") or Dump($r);
+
+#
+# try binding specifying an integer type and say discard the pv
+# expect IOK. NOTE we use fetchall_arrayref with a slice as
+# DBI rebinds columns in this case - and types/attrs should be sticky.
+#
+# NB need to re-prepare as you cannot change the bind type after a
+# column is bound
+$sth = $dbh->prepare(q/select a as one from PERL_DBD_drop_me/);
+$sth->execute;
+$sth->bind_col(1, \$r, {TYPE => SQL_NUMERIC, DiscardString => 1});
+my $list = $sth->fetchall_arrayref({});
+is($list->[0]{one}, 100, "correct value returned SQL_NUMERIC|DiscardString");
+#my $j2 = encode_json [$r];
+($iv, $pv) = is_iv($list->[0]{one});
+ok($iv, "ivok bind integer discard") or Dump($list->[0]{one});
+ok(!$pv, "not PV bind integer discard") or Dump($list->[0]{one});
 
 # cannot do the following since the driver will whinge the type cannot
 # be cast to an integer
