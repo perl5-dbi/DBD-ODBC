@@ -192,7 +192,7 @@ or Openlink.
 
 There are basically three choices:
 
-* a commericial MS Access ODBC Driver like the one from Easysoft.
+* a commercial MS Access ODBC Driver like the one from Easysoft.
 
 * a commercial ODBC Bridge like the ones from Easysoft or OpenLink.
 
@@ -620,12 +620,12 @@ During connection if you get a HY009 "invalid length or pointer" error
 it is a bug in SQLSetConnectAttr in SQLite and you will need a version
 at least 0.85pre1.
 
-=head2 Where do I get the lastest MDAC Development Kit?
+=head2 Where do I get the latest MDAC Development Kit?
 
 MS keep moving this around. If you want to build DBD::ODBC yourself
 from source you'll need the latest Microsoft Data Access Components
 (MDAC) Software Development Kit. You can get it as part of the Platform
-Development Kit, with some of the Visual Studio versions and occassionally
+Development Kit, with some of the Visual Studio versions and occasionally
 from:
 
 http://msdn.microsoft.com/en-us/data/aa937730.aspx
@@ -638,7 +638,7 @@ where in April 2010 it listed the "Microsoft Data Access Componetns (MDAC)
 This happens because Microsoft changed their headers to add SQLLEN/SQLULEN
 types and your C headers are probably out of date. As DBD::ODBC needs
 to use these types you'll need an updated MDAC Development Kit. See
-" Where do I get the lastest MDAC Development Kit?".
+" Where do I get the latest MDAC Development Kit?".
 
 =head2 Why do I get errors with bound parameters and MS SQL Server?
 
@@ -1035,7 +1035,7 @@ In this example (also from the DBIx::Class test code) the SQL was like:
 
   SELECT DATEADD(hour, ?, me.date_created) FROM mytable me where me.id = ?
 
-The second argument to datadd needs to be an integer. There are 2 ways
+The second argument to dateadd needs to be an integer. There are 2 ways
 around this:
 
 =over
@@ -1081,24 +1081,24 @@ and date columns:
     use strict;
     use warnings;
     my $h = DBI->connect();
-    
+
     eval{ $h->do(q/DROP TABLE odbctest/) };
-    
+
     $h->do(q/CREATE TABLE odbctest (
        id integer NOT NULL IDENTITY (1,1),
        name nvarchar(50) NULL,
        adate date NULL )/);
-    
+
     my $s = $h->prepare(q/
     set identity_insert odbctest on;
     insert into odbctest
        (id, name, adate)
        values (?,?,?);
-    
+
     set identity_insert odbctest off;
     select scope_identity();
     /);
-    
+
     my $bug
        = undef;        # fails
        #= '2011-03-21'; # works
@@ -1111,7 +1111,7 @@ and date columns:
     my $i = 1; my $tuple_status;
     $s->bind_param_array($i++, $_) for @values;
     $s->execute_array({ArrayTupleStatus => $tuple_status});
-    
+
     $s = $h->prepare(q/select * from odbctest where id = ?/);
     foreach (1000, 2000) {
         $s->execute($_);
@@ -1119,7 +1119,7 @@ and date columns:
     }
 
 When I first ran this with SQL Server native client (pre native client 10)
-on Windows I got 
+on Windows I got
 
     DBD::ODBC::st execute_array failed: [Microsoft][SQL Native Client]Syntax error,  permission violation, or other nonspecific error (SQL-42000) [err was 1 now 2000
 
@@ -1141,7 +1141,7 @@ If you use native client 10 and change the insert code to:
     );
     my @types = (
     	SQL_VARCHAR, SQL_VARCHAR, SQL_DATE);
-    
+
     my $i = 1; my $tuple_status;
     $s->bind_param_array($i++, $_, {TYPE => $types[$i-2]}) for @values;
     $s->execute_array({ArrayTupleStatus => $tuple_status});
@@ -1206,7 +1206,7 @@ can use to set application name and the workstation name:
 B<APP> specifies the application name recorded in the program_name
 column in master.dbo.sysprocesses.
 
-B<WSID> sets thw workstation name recorded in the hostname column in
+B<WSID> sets the workstation name recorded in the hostname column in
 master.dbo.sysprocesses.
 
 To set these add these attributes to the call to DBIs connect like this:

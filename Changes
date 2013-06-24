@@ -8,7 +8,14 @@ As of $LastChangedDate$
 
 $Revision: 10667 $
 
-=head2 Changes in DBD::ODBC 1.44_1 April ?? 2013
+=head2 Changes in DBD::ODBC 1.44_2 June 24 2013
+
+  [MISCELLANEOUS]
+
+  Fixed RT 86379 - spelling mistakes in ODBC.pm and FAQ - thanks
+  to David Steinbrunner.
+
+=head2 Changes in DBD::ODBC 1.44_1 June 6 2013
 
   Moved from subversion to github as svn.perl.org is closing down.
   Changed docs to show new repository.
