@@ -8,7 +8,14 @@ As of $LastChangedDate$
 
 $Revision: 10667 $
 
-=head2 Changes in DBD::ODBC 1.44_2 June 24 2013
+=head2 Changes in DBD::ODBC 1.44_2 September 3 2013
+
+  [BUG FIXES]
+
+  When table_info was called with a '%' for any one of the catalog,
+  schema or type arguments with the rest all '' (the empty string),
+  only a list of catalogs, schemas or types should be returned. It was
+  not doing that as it was changing empty strings to undef/NULL.
 
   [MISCELLANEOUS]
 

@@ -1704,7 +1704,7 @@ int dbd_st_tables(
        SV *copy;
 
        if (SvOK(catalog)) {
-           /*printf("CATALOG OK %d\n", SvCUR(catalog));*/
+           /*printf("CATALOG OK %d /%s/\n", SvCUR(catalog), SvPV_nolen(catalog));*/
 
            copy = sv_mortalcopy(catalog);
            SV_toWCHAR(copy);
@@ -1732,20 +1732,19 @@ int dbd_st_tables(
        }
        */
        rc = SQLTablesW(imp_sth->hstmt,
-                       (wcatalog && *wcatalog) ? wcatalog : NULL, SQL_NTS,
-                       (wschema && *wschema) ? wschema : NULL, SQL_NTS,
-                       (wtable && *wtable) ? wtable : NULL, SQL_NTS,
-                       (wtype && *wtype) ? wtype : NULL, SQL_NTS		/* type (view, table, etc) */
+                       wcatalog ? wcatalog : NULL, SQL_NTS,
+                       wschema ? wschema : NULL, SQL_NTS,
+                       wtable ? wtable : NULL, SQL_NTS,
+                       wtype ? wtype : NULL, SQL_NTS		/* type (view, table, etc) */
                       );
    }
 #else
    {
        rc = SQLTables(imp_sth->hstmt,
-                      (acatalog && *acatalog) ? acatalog : 0, SQL_NTS,
-                      (aschema && *aschema) ? aschema : 0, SQL_NTS,
-                      (atable && *atable) ? atable : 0, SQL_NTS,
-                      atype && *atype ? atype : 0,
-                      SQL_NTS		/* type (view, table, etc) */
+                      acatalog ? acatalog : NULL, SQL_NTS,
+                      aschema ? aschema : NULL, SQL_NTS,
+                      atable ? atable : NULL, SQL_NTS,
+                      atype ? atable : NULL, SQL_NTS /* type (view, table, etc) */
                       );
    }
 

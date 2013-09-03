@@ -255,27 +255,29 @@ $DBD::ODBC::VERSION = '1.44_2';
 
 
     sub table_info {
- 	my ($dbh, $catalog, $schema, $table, $type) = @_;
+        my ($dbh, $catalog, $schema, $table, $type) = @_;
 
-	if ($#_ == 1) {
-	   my $attrs = $_[1];
-	   $catalog = $attrs->{TABLE_CAT};
-	   $schema = $attrs->{TABLE_SCHEM};
-	   $table = $attrs->{TABLE_NAME};
-	   $type = $attrs->{TABLE_TYPE};
+        if ($#_ == 1) {
+            my $attrs = $_[1];
+            $catalog = $attrs->{TABLE_CAT};
+            $schema = $attrs->{TABLE_SCHEM};
+            $table = $attrs->{TABLE_NAME};
+            $type = $attrs->{TABLE_TYPE};
  	}
+        # the following was causing a problem
+        # changing undef to '' makes a big difference to SQLTables
+        # as SQLTables has special cases for empty string calls
+        #$catalog = q{} if (!$catalog);
+        #$schema = q{} if (!$schema);
+        #$table = q{} if (!$table);
+        #$type = q{} if (!$type);
 
-	$catalog = q{} if (!$catalog);
-	$schema = q{} if (!$schema);
-	$table = q{} if (!$table);
-	$type = q{} if (!$type);
+        # create a "blank" statement handle
+        my $sth = DBI::_new_sth($dbh, { 'Statement' => "SQLTables" });
 
-	# create a "blank" statement handle
-	my $sth = DBI::_new_sth($dbh, { 'Statement' => "SQLTables" });
-
-	DBD::ODBC::st::_tables($dbh,$sth, $catalog, $schema, $table, $type)
-	      or return;
-	return $sth;
+        DBD::ODBC::st::_tables($dbh,$sth, $catalog, $schema, $table, $type)
+              or return;
+        return $sth;
     }
 
     sub primary_key_info {
@@ -653,7 +655,7 @@ DBD::ODBC - ODBC Driver for DBI
 
 =head1 VERSION
 
-This documentation refers to DBD::ODBC version 1.44_1.
+This documentation refers to DBD::ODBC version 1.44_2.
 
 =head1 SYNOPSIS
 
