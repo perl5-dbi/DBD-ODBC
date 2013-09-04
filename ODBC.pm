@@ -2334,7 +2334,7 @@ SQL type to the end of the C<bind_param> method.
 
 DBD::ODBC source code was under version control at svn.perl.org
 until April 2013 when svn.perl.org was closed down and it is now on
-github at https://github.com/mjegh/DBD-ODBC.git.
+github at https://github.com/perl5-dbi/DBD-ODBC.git.
 
 =head2 Contributing
 
