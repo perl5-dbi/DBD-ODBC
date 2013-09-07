@@ -17,6 +17,16 @@ $Revision: 10667 $
   only a list of catalogs, schemas or types should be returned. It was
   not doing that as it was changing empty strings to undef/NULL.
 
+  pod for odbc_lob_read had an example only saying lob_read.
+
+  TYPE attribute for odbc_lob_read was actually coded as Type.  It is
+  now as documented.
+
+  The example lob_read.pl had the TYPE set to 999 from when I was
+  testing it but it got checked in like this.
+
+  MANIFEST contained column_info.pl but the file was coltest.pl
+
   [MISCELLANEOUS]
 
   Fixed RT 86379 - spelling mistakes in ODBC.pm and FAQ - thanks

@@ -155,7 +155,7 @@ odbc_lob_read(sth, colno, bufsv, length, attr = NULL)
      if (attr) {
          SV **svp;
          DBD_ATTRIBS_CHECK("odbc_lob_read", sth, attr);
-         DBD_ATTRIB_GET_IV(attr, "Type", 4, svp, sql_type);
+         DBD_ATTRIB_GET_IV(attr, "TYPE", 4, svp, sql_type);
      }
      if (SvROK(bufsv)) {
         bufsv = SvRV(bufsv);

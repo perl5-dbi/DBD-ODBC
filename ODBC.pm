@@ -1450,7 +1450,7 @@ SQLRowCount. It is the same as execute normally returns e.g., 0E0 (for
 
 =head3 odbc_lob_read
 
-  $chrs_or_bytes_read = $sth->lob_read($column_no, \$lob, $length, \%attr);
+  $chrs_or_bytes_read = $sth->odbc_lob_read($column_no, \$lob, $length, \%attr);
 
 Reads C<$length> bytes from the lob at column C<$column_no> returning
 the lob into C<$lob> and the number of bytes or characters read into

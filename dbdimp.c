@@ -5938,7 +5938,10 @@ IV odbc_st_lob_read(
                       "Driver did not return the lob length - SQL_NO_TOTAL)");
             return -1;
         }
-        retlen = length - 1;
+        retlen = length;
+        if (col_type == SQL_C_CHAR) {
+            retlen--;                           /* NUL chr at end */
+        }
     } else if (rc == SQL_SUCCESS) {
         if (len == SQL_NULL_DATA) {
             return 0;
