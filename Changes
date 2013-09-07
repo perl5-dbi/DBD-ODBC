@@ -32,6 +32,10 @@ $Revision: 10667 $
   Fixed RT 86379 - spelling mistakes in ODBC.pm and FAQ - thanks
   to David Steinbrunner.
 
+  Added 82_table_info.t test.
+
+  Added 87_odbc_log_read.t test.
+
 =head2 Changes in DBD::ODBC 1.44_1 June 6 2013
 
   Moved from subversion to github as svn.perl.org is closing down.
