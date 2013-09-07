@@ -11,8 +11,10 @@ MYMETA.json
 dbixl4p.config
 x.log
 *.log
+*.exe
 *.xsi
 *.o
+mje/*
 dbdodbc.h
 ODBC.c
 dll.base
