@@ -225,19 +225,21 @@ sub insert
             }
         };
     }
+    my $ev = $@;
     if ($ref->{error} && $ref->{raise}) {
-        ok($@, 'error in execute_array eval');
-    } else {
-        if ($ref->{requires_mas} && $@) {
-            diag("\nThis test died with $@");
-            diag("It requires multiple active statement support in the driver and I cannot easily determine if your driver supports MAS. Ignoring the rest of this test.");
-            foreach (@tuple_status) {
-                if (ref($_)) {
-                    diag(join(",", @$_));
-                }
+        ok($ev, 'error in execute_array eval');
+    } elsif ($ref->{requires_mas} && $ev) {
+        diag("\nThis test died with $ev");
+        diag("It requires multiple active statement support in the driver and I cannot easily determine if your driver supports MAS. Ignoring the rest of this test.");
+        foreach (@tuple_status) {
+            if (ref($_)) {
+                diag(join(",", @$_));
             }
-            return 'mas';
         }
+        return 'mas';
+    } elsif ($ref->{raise} && $ev) {
+        BAIL_OUT("Totally unexpected error - $ev");
+    } else {
         ok(!$@, 'no error in execute_array eval') or note($@);
     }
     $dbh->commit if $ref->{commit};

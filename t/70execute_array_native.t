@@ -39,8 +39,10 @@ unless($dbh) {
 }
 {
     my $driver_name = DBI::neat($dbh->get_info(6));
+    my $dbms_name = $dbh->get_info(17);
     if (($driver_name =~ /odbcjt32.dll/i) ||
-            ($driver_name =~ /ACEODBC.DLL/i)) {
+            ($driver_name =~ /ACEODBC.DLL/i) ||
+                ($dbms_name eq 'ACCESS')) { # for OOB
         $has_test_nowarnings = 0;
         plan skip_all => 'MS Access does not support array operations'
     }
