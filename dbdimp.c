@@ -326,7 +326,7 @@ static void odbc_handle_outparams(imp_sth_t *imp_sth, int debug)
                       PerlIO_printf(
                           DBIc_LOGPIO(imp_sth),
                           "    outparam %s = '%s'\t(len %ld), is numeric end"
-                          " of buffer = %d\n",
+                          " of buffer = %ld\n",
                           phs->name, SvPV(sv,PL_na), (long)phs->strlen_or_ind,
                           p - pstart);
                   }
@@ -1704,7 +1704,7 @@ int dbd_st_tables(
        SV *copy;
 
        if (SvOK(catalog)) {
-           /*printf("CATALOG OK %d /%s/\n", SvCUR(catalog), SvPV_nolen(catalog));*/
+           /*printf("CATALOG OK %"IVdf" /%s/\n", SvCUR(catalog), SvPV_nolen(catalog));*/
 
            copy = sv_mortalcopy(catalog);
            SV_toWCHAR(copy);
@@ -2896,8 +2896,8 @@ int dbd_st_execute(
          * (value_len = 0).
          */
         if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 5))
-            TRACE2(imp_dbh, "    SQLParamData needs phs %p, sending %i bytes\n",
-                   phs, len);
+            TRACE2(imp_dbh, "    SQLParamData needs phs %p, sending %"UVuf" bytes\n",
+                   phs, (UV)len);
         ptr = SvPV(phs->sv, len);
         rc = SQLPutData(imp_sth->hstmt, ptr, len);
         if (!SQL_SUCCEEDED(rc)) {
@@ -3716,11 +3716,11 @@ static int rebind_param(
     if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 4)) {
         PerlIO_printf(
             DBIc_LOGPIO(imp_dbh),
-            "    +rebind_param %s %.100s (size svCUR=%d/SvLEN=%d/max=%"IVdf") "
+            "    +rebind_param %s %.100s (size SvCUR=%"UVuf"/SvLEN=%"UVuf"/max=%"IVdf") "
             "svtype:%u, value type:%d, sql type:%d\n",
             phs->name, neatsvpv(phs->sv, 0),
-            SvOK(phs->sv) ? SvCUR(phs->sv) : -1,
-            SvOK(phs->sv) ? SvLEN(phs->sv) : -1 ,phs->maxlen,
+            SvOK(phs->sv) ? (UV)SvCUR(phs->sv) : -1,
+            SvOK(phs->sv) ? (UV)SvLEN(phs->sv) : -1 ,phs->maxlen,
             SvTYPE(phs->sv), phs->value_type, phs->sql_type);
     }
 
@@ -3804,9 +3804,9 @@ static int rebind_param(
     if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 4)) {
         PerlIO_printf(
             DBIc_LOGPIO(imp_dbh),
-            "      bind %s %.100s value_len=%d maxlen=%ld null=%d)\n",
+            "      bind %s %.100s value_len=%"UVuf" maxlen=%ld null=%d)\n",
             phs->name, neatsvpv(phs->sv, value_len),
-            value_len,(long)phs->maxlen, SvOK(phs->sv) ? 0 : 1);
+            (UV)value_len,(long)phs->maxlen, SvOK(phs->sv) ? 0 : 1);
     }
 
     /*
@@ -4476,8 +4476,8 @@ long destoffset;
    if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 4))
       PerlIO_printf(
           DBIc_LOGPIO(imp_sth),
-          "SQLGetData(...,off=%ld, len=%ld)->rc=%d,len=%ld SvCUR=%d\n",
-          destoffset, len, rc, (long)retl, SvCUR(bufsv));
+          "SQLGetData(...,off=%ld, len=%ld)->rc=%d,len=%ld SvCUR=%"UVuf"\n",
+          destoffset, len, rc, (long)retl, (UV)SvCUR(bufsv));
 
    if (!SQL_SUCCEEDED(rc)) {
       dbd_error(sth, rc, "dbd_st_blob_read/SQLGetData");
@@ -4502,7 +4502,7 @@ long destoffset;
    *SvEND(bufsv) = '\0'; /* consistent with perl sv_setpvn etc */
 
    if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 4))
-       TRACE1(imp_sth, "    blob_read: SvCUR=%d\n", SvCUR(bufsv));
+       TRACE1(imp_sth, "    blob_read: SvCUR=%"UVuf"\n", (UV)SvCUR(bufsv));
 
    return 1;
 }
@@ -6771,13 +6771,13 @@ static SQLSMALLINT default_parameter_type(
             return ODBC_BACKUP_BIND_TYPE_VALUE;
         } else if (SvCUR(phs->sv) > imp_dbh->switch_to_longvarchar) {
            if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 3))
-               TRACE3(imp_sth, "%s, sv=%d bytes, defaulting to %d\n",
-                      why, SvCUR(phs->sv), ODBC_BACKUP_LONG_BIND_TYPE_VALUE);
+               TRACE3(imp_sth, "%s, sv=%"UVuf" bytes, defaulting to %d\n",
+                      why, (UV)SvCUR(phs->sv), ODBC_BACKUP_LONG_BIND_TYPE_VALUE);
             return ODBC_BACKUP_LONG_BIND_TYPE_VALUE;
         } else {
            if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 3))
-               TRACE3(imp_sth, "%s, sv=%d bytes, defaulting to %d\n",
-                      why, SvCUR(phs->sv), ODBC_BACKUP_BIND_TYPE_VALUE);
+               TRACE3(imp_sth, "%s, sv=%"UVuf" bytes, defaulting to %d\n",
+                      why, (UV)SvCUR(phs->sv), ODBC_BACKUP_BIND_TYPE_VALUE);
             return ODBC_BACKUP_BIND_TYPE_VALUE;
         }
     }
@@ -6914,7 +6914,7 @@ IV odbc_st_execute_for_fetch(
     rc = SQLSetStmtAttr(imp_sth->hstmt, SQL_ATTR_PARAM_BIND_TYPE,
                         (SQLPOINTER)SQL_PARAM_BIND_BY_COLUMN, 0);
     if (!SQL_SUCCEEDED(rc)) {
-        dbd_error(sth, rc, "odbc_st_execute_for_fetch/SQL_ATTR_BIND_TYPE");
+        dbd_error(sth, rc, "odbc_st_execute_for_fetch/SQL_ATTR_PARAM_BIND_TYPE");
         return -2;
     }
 
