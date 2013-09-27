@@ -75,6 +75,7 @@ examples/timetest.pl
 examples/unicode_params.pl
 examples/unicode_sql.pl
 examples/sqlserver_supplementary_chrs.pl
+examples/perl-DBD-ODBC.spec
 ODBC.h
 ODBC.pm
 ODBC.xs

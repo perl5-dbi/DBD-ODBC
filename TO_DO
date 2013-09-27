@@ -1,3 +1,5 @@
+use strict;
+
 =head1 NAME
 
 DBD::ODBC::TO_DO - Things to do in DBD::ODBC
