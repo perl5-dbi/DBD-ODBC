@@ -12,6 +12,14 @@ $Revision: 10667 $
 
 =head2 Changes in DBD::ODBC NEXT WHEN
 
+  [BUG FIXES]
+
+
+  The 82_table_info test assumed all database and ODBC Drivers
+  supported catalogs and schemas (some don't). Use get_info to
+  find out if catalogs and schemas are supported before
+  running these tests.
+
   [MISCELLANEOUS]
 
   Added RedHat spec file to examples courtesy of Michiel Beijen.
