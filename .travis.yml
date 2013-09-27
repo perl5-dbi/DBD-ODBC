@@ -1,3 +1,5 @@
+before_install:
+ - sudo apt-get install -qq unixodbc unixodbc-dev
 language: perl
 perl:
   - "5.16"
