@@ -28,7 +28,7 @@
  *   http://perl.active-venture.com/pod/perlapi-svfunctions.html
  * Formatted Printing of IVs, UVs, and NVs
  *   http://perldoc.perl.org/perlguts.html#Formatted-Printing-of-IVs,-UVs,-and-NVs
- *   http://cpansearch.perl.org/src/RURBAN/illguts-0.36/index.html
+ *   http://cpansearch.perl.org/src/RURBAN/illguts-0.44/index.html
  * Internal replacements for standard C library functions:
  * http://search.cpan.org/~jesse/perl-5.12.1/pod/perlclib.pod
  * http://search.cpan.org/dist/Devel-PPPort/PPPort.pm
