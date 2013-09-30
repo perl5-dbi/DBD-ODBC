@@ -4919,11 +4919,24 @@ int dbd_db_STORE_attrib(SV *dbh, imp_dbh_t *imp_dbh, SV *keysv, SV *valuesv)
     if (bSetSQLConnectionOption) {
         rc = SQLSetConnectAttr(imp_dbh->hdbc, pars->fOption,
                                vParam, attr_length);
-
         if (!SQL_SUCCEEDED(rc)) {
             dbd_error(dbh, rc, "db_STORE/SQLSetConnectAttr");
             return FALSE;
+        } else if (SQL_SUCCESS_WITH_INFO == rc) {
+            char state[SQL_SQLSTATE_SIZE+1];
+            SQLINTEGER native;
+            char msg[256];
+            SQLSMALLINT msg_len;
+
+            (void)SQLGetDiagRec(SQL_HANDLE_DBC, imp_dbh->hdbc, 1,
+                                (SQLCHAR *)state, &native, msg, sizeof(msg), &msg_len);
+
+            DBIh_SET_ERR_CHAR(
+                dbh, (imp_xxh_t*)imp_dbh, "0" /* warning state */, 1,
+                msg,
+                state, Nullch);
         }
+
         if (pars->fOption == SQL_ROWSET_SIZE)
             imp_dbh->rowset_size = (SQLULEN)vParam;
 

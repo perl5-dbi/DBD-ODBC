@@ -12,8 +12,21 @@ $Revision: 10667 $
 
 =head2 Changes in DBD::ODBC NEXT WHEN
 
-  [BUG FIXES]
+  [CHANGE IN BEHAVIOUR]
 
+  Changed ReadOnly attribute handling (mapped to SQL_ACCESS_MODE) to
+  record a warning if we call SQLSetConnectAttr and the driver returns
+  SQL_SUCCESS_WITH_INFO, option value changed. I've only seen the
+  SQLite ODBC driver do this. As of DBI 1.628 this warning is not
+  reported - see RT#89015.
+
+  If you attempt to set the ReadOnly attribute true and the underlying
+  ODBC driver does not support this a warning is issued. However,
+  until RT 89015 "You cannot issue a warning in the STORE method" in
+  DBI is resolved you won't get this warning. As DBI 1.628 it is not
+  resolved.
+
+  [BUG FIXES]
 
   The 82_table_info test assumed all database and ODBC Drivers
   supported catalogs and schemas (some don't). Use get_info to
