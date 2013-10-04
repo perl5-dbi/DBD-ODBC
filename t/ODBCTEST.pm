@@ -93,7 +93,12 @@ require 5.004;
                    if ($row->{TYPE_NAME} eq 'VARCHAR') {
                        diag("This seems to be db2 and as far as I am aware, you cannot have a row greater than your page size. When I last looked db2 says a varchar can be 32672 but if we use that here the row will very likely be larger than your page size. Also, even if we reduce the varchar but keep it above 3962 db2 seems to complain so we mangle it here to 3962. It does not seem right to me that SQLGetTypeInfo says a varchar can be 32672 and then it is limited to 3962. If you know better, please let me know.");
                        $fields .= "(3962)";
-                  }
+                   }
+               } elsif (!exists($row->{COLUMN_SIZE})) {
+                   # Postgres 9 seems to omit COLUMN_SIZE
+                   $fields .= '(4000)';
+                   note("WARNING Your ODBC driver is broken - DBI's type_info method should return a hashref containing a key of COLUMN_SIZE and we got " .
+                            join(",", keys %$row));
                } else {
                    $fields .= "($row->{COLUMN_SIZE})" if ($row->{CREATE_PARAMS} =~ /LENGTH/i);
                    $fields .= "($row->{COLUMN_SIZE},0)" if ($row->{CREATE_PARAMS} =~ /PRECISION,SCALE/i);

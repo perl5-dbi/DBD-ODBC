@@ -33,11 +33,18 @@ $Revision: 10667 $
   find out if catalogs and schemas are supported before
   running these tests.
 
+  The rt_79190.t could incorrectly fail if your test DSN contained
+  the DRIVER attribute.
+
   [MISCELLANEOUS]
 
   Added RedHat spec file to examples courtesy of Michiel Beijen.
 
   Added "use strict" to FAQ/Changes etc to quieten kwalitee test.
+
+  Added a workaround in the test suite for a probable bug in the
+  postgres ODBC driver which does not return COLUMN_SIZE from
+  SQLGetTypeInfo. It also issues a warning.
 
 =head2 Changes in DBD::ODBC 1.44_3 September 7 2013
 

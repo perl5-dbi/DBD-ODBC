@@ -36,7 +36,7 @@ END {
 }
 
 my $dsn = $ENV{DBI_DSN};
-if ($dsn !~ /dbi:ODBC:DSN=/i) {
+if ($dsn !~ /dbi:ODBC:DSN=/i && $dsn !~ /dbi:ODBC:DRIVER=/i) {
     $dsn =~ s/dbi:ODBC:(.*)/dbi:ODBC:DSN=$1/;
 }
 
