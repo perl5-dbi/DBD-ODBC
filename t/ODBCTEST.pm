@@ -98,7 +98,7 @@ require 5.004;
                    # Postgres 9 seems to omit COLUMN_SIZE
                    $fields .= '(4000)';
                    note("WARNING Your ODBC driver is broken - DBI's type_info method should return a hashref containing a key of COLUMN_SIZE and we got " .
-                            join(",", keys %$row));
+                            join(",", sort keys %$row));
                } else {
                    $fields .= "($row->{COLUMN_SIZE})" if ($row->{CREATE_PARAMS} =~ /LENGTH/i);
                    $fields .= "($row->{COLUMN_SIZE},0)" if ($row->{CREATE_PARAMS} =~ /PRECISION,SCALE/i);
