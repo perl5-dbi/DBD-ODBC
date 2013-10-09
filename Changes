@@ -14,17 +14,12 @@ $Revision: 10667 $
 
   [CHANGE IN BEHAVIOUR]
 
-  Changed ReadOnly attribute handling (mapped to SQL_ACCESS_MODE) to
-  record a warning if we call SQLSetConnectAttr and the driver returns
-  SQL_SUCCESS_WITH_INFO, option value changed. I've only seen the
-  SQLite ODBC driver do this. As of DBI 1.628 this warning is not
-  reported - see RT#89015.
-
-  If you attempt to set the ReadOnly attribute true and the underlying
-  ODBC driver does not support this a warning is issued. However,
-  until RT 89015 "You cannot issue a warning in the STORE method" in
-  DBI is resolved you won't get this warning. As DBI 1.628 it is not
-  resolved.
+  If you attempt to set the ReadOnly attribute and the underlying
+  ODBC driver does not support this (SQL_SUCCESS_WITH_INFO and "option
+  value changed" is returned) a warning is issued. However, until RT
+  89015 "You cannot issue a warning in the STORE method" in DBI is
+  resolved you won't get this warning. As DBI 1.628 it is not
+  resolved. I've only seen the SQLite ODBC driver do this.
 
   [BUG FIXES]
 
@@ -44,7 +39,8 @@ $Revision: 10667 $
 
   Added a workaround in the test suite for a probable bug in the
   postgres ODBC driver which does not return COLUMN_SIZE from
-  SQLGetTypeInfo. It also issues a warning.
+  SQLGetTypeInfo. It also issues a warning.  See
+  http://www.postgresql.org/message-id/524EF455.6050409@ntlworld.com
 
 =head2 Changes in DBD::ODBC 1.44_3 September 7 2013
 
