@@ -10,7 +10,7 @@ As of $LastChangedDate$
 
 $Revision: 10667 $
 
-=head2 Changes in DBD::ODBC NEXT WHEN
+=head2 Changes in DBD::ODBC 1.44_3 October 11 2013
 
   [CHANGE IN BEHAVIOUR]
 
