@@ -7,6 +7,7 @@ use warnings;
 use DBI;
 use Test::More;
 use Data::Dumper;
+use DBI::Const::GetInfoType;
 
 my $has_test_nowarnings = 1;
 eval "require Test::NoWarnings";
@@ -38,7 +39,7 @@ $dbh->{PrintError} = 0;
 
 $dbh->do(q/create table PERL_DBD_DROP_ME (a char(10))/);
 
-if ($dbh->get_info(10003) ne 'N') {
+if ($dbh->get_info($GetInfoType{SQL_CATALOG_NAME}) ne 'N') {
 
     # test type_info('%','','') which should return catalogs only
     my $s = $dbh->table_info('%', '', '');
@@ -65,7 +66,7 @@ if ($dbh->get_info(10003) ne 'N') {
     }
 }
 
-if ($dbh->get_info(91) != 0) {
+if ($dbh->get_info($GetInfoType{SQL_SCHEMA_USAGE}) != 0) {
     # test type_info('','%','') which should return schema only
     my $s = $dbh->table_info('', '%', '');
     my $r = $s->fetchall_arrayref;
@@ -96,9 +97,21 @@ if ($dbh->get_info(91) != 0) {
     my $s = $dbh->table_info(undef, undef, 'PERL_DBD_DROP_ME');
     my $r = $s->fetchall_arrayref;
     ok(scalar(@$r) > 0, 'table found');
+
+    if ($r && scalar(@$r)) {    # assuming we get something back
+        my $pass = 0;
+        foreach my $row (@$r) {
+            $pass = 1;
+        }
+        ok($pass, "table only") or diag(Dumper($r));
+    }
 }
 
 # test type_info('','','', '%')  which should return table types only
+if ($dbh->get_info($GetInfoType{SQL_DRIVER_NAME}) =~ /sqlite/) {
+    diag("SQLite is known to fail the next test because catalog, schema and table are returned as '' instead of undef");
+}
+
 my $s = $dbh->table_info('', '', '', '%');
 my $r = $s->fetchall_arrayref;
 if ($r && scalar(@$r)) {        # assuming we get something back
