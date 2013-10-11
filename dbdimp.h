@@ -126,6 +126,12 @@ struct imp_dbh_st {
        bytes whereas MS Access at 256. We set the switch point once we know
        the database. */
     int switch_to_longvarchar;
+    /* Initially -1 and if someone sets ReadOnly to true it becomes 1.
+       Even if the ODBC driver cannot set SQL_ATTR_ACCESS_MODE but
+       ReadOnly is set to 1, read_only is 1 and that is returned without asking
+       the ODBC Driver what it is currently set to, Of course setting it
+       to false works similarly. */
+    int read_only;
 };
 
 /* Define sth implementor data structure */

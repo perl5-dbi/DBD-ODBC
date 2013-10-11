@@ -21,6 +21,10 @@ $Revision: 10667 $
   resolved you won't get this warning. As DBI 1.628 it is not
   resolved. I've only seen the SQLite ODBC driver do this.
 
+  If you set ReadOnly and the underlying ODBC driver does not
+  support this then any subsequent attempts to fetch the ReadOnly
+  attribute will return the value you set.
+
   [BUG FIXES]
 
   The 82_table_info test assumed all database and ODBC Drivers

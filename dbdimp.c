@@ -328,7 +328,7 @@ static void odbc_handle_outparams(imp_sth_t *imp_sth, int debug)
                           "    outparam %s = '%s'\t(len %ld), is numeric end"
                           " of buffer = %ld\n",
                           phs->name, SvPV(sv,PL_na), (long)phs->strlen_or_ind,
-                          p - pstart);
+                          (long)(p - pstart));
                   }
                   SvCUR_set(sv, p - pstart);
               }
@@ -4922,11 +4922,21 @@ int dbd_db_STORE_attrib(SV *dbh, imp_dbh_t *imp_dbh, SV *keysv, SV *valuesv)
         if (!SQL_SUCCEEDED(rc)) {
             dbd_error(dbh, rc, "db_STORE/SQLSetConnectAttr");
             return FALSE;
-        } else if (SQL_SUCCESS_WITH_INFO == rc) {
+        }
+        else if ((SQL_SUCCESS_WITH_INFO == rc) &&
+                   (pars->fOption == SQL_ATTR_ACCESS_MODE)) {
             char state[SQL_SQLSTATE_SIZE+1];
             SQLINTEGER native;
             char msg[256];
             SQLSMALLINT msg_len;
+
+            /* If we attempted to set SQL_ATTR_ACCESS_MODE, save the result
+               to return from FETCH, even if it didn't work */
+            if (vParam == (SQLPOINTER)pars->atrue) {
+                imp_dbh->read_only = 1;
+            } else {
+                imp_dbh->read_only = 0;
+            }
 
             (void)SQLGetDiagRec(SQL_HANDLE_DBC, imp_dbh->hdbc, 1,
                                 (SQLCHAR *)state, &native, msg, sizeof(msg), &msg_len);
@@ -5095,6 +5105,13 @@ SV *dbd_db_FETCH_attrib(SV *dbh, imp_dbh_t *imp_dbh, SV *keysv)
           char strval[256];
           SQLUINTEGER uval = 0;
           SQLINTEGER retstrlen;
+
+          if ((pars->fOption == SQL_ATTR_ACCESS_MODE) &&
+              (imp_dbh->read_only != -1)) {
+
+              retsv = newSViv(imp_dbh->read_only);
+              break;
+          }
 
           /*
            * The remainders we support are ODBC attributes like
@@ -6414,22 +6431,21 @@ static int set_odbc_version(
 
 
 
-/************************************************************************/
-/*                                                                      */
-/*  post_connect                                                        */
-/*  ============                                                        */
-/*                                                                      */
-/*  Operations to perform immediately after we have connected.          */
-/*                                                                      */
-/*  NOTE: prior to DBI subversion version 11605 (fixed post 1.607)      */
-/*    DBD_ATTRIB_DELETE segfaulted so instead of calling:               */
-/*    DBD_ATTRIB_DELETE(attr, "odbc_cursortype",                        */
-/*                      strlen("odbc_cursortype"));                     */
-/*    we do the following:                                              */
-/*      hv_delete((HV*)SvRV(attr), "odbc_cursortype",                   */
-/*                strlen("odbc_cursortype"), G_DISCARD);                */
-/*                                                                      */
-/************************************************************************/
+/*
+ *  post_connect
+ *  ==========
+ *
+ *  Operations to perform immediately after we have connected.
+ *
+ *  NOTE: prior to DBI subversion version 11605 (fixed post 1.607)
+ *    DBD_ATTRIB_DELETE segfaulted so instead of calling:
+ *    DBD_ATTRIB_DELETE(attr, "odbc_cursortype",
+ *                      strlen("odbc_cursortype"));
+ *    we do the following:
+ *      hv_delete((HV*)SvRV(attr), "odbc_cursortype",
+ *                strlen("odbc_cursortype"), G_DISCARD);
+ */
+
 static int post_connect(
     SV *dbh,
     imp_dbh_t *imp_dbh,
@@ -6599,6 +6615,8 @@ static int post_connect(
     imp_dbh->odbc_query_timeout = -1;
     imp_dbh->odbc_putdata_start = 32768;
     imp_dbh->odbc_batch_size = 10;
+    imp_dbh->read_only = -1;                    /* show not set yet */
+
     /*printf("odbc_batch_size defaulted to %d\n", imp_dbh->odbc_batch_size);*/
     imp_dbh->odbc_column_display_size = 2001;
     imp_dbh->odbc_utf8_on = 0;
@@ -7411,7 +7429,6 @@ static int get_row_diag(SQLSMALLINT recno,
     return 0;
 
 }
-
 
 
 
