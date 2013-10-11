@@ -53,7 +53,13 @@ my $driver_name;
 
 # ReadOnly
 {
+    # NOTE: the catching of warnings here needs a DBI > 1.628
+    my $warning;
+    local $SIG{__WARN__} = sub {diag @_; $warning = 1};
     $dbh->{ReadOnly} = 1;
+    if ($warning) {
+        diag "Your ODBC driver does not support setting ReadOnly";
+    }
     is($dbh->{ReadOnly}, 1, 'ReadOnly set');
     $dbh->{ReadOnly} = 0;
     is($dbh->{ReadOnly}, 0, 'ReadOnly cleared');
@@ -183,7 +189,7 @@ if ($sth) {
       'NUM_OF_FIELDS = ColAttributes(SQL_COLUMN_COUNT)');
    my ($coltype, $colname, $i, @row);
    my $is_ok = 0;
-   for ($i = 1; $i <= $colcount; $i++) {
+   for ($i = 1; $i <= $sth->{NUM_OF_FIELDS}; $i++) {
       # $i is colno (1 based) 2 is for SQL_COLUMN_TYPE, 1 is for SQL_COLUMN_NAME
       $coltype = $sth->func($i, 2, 'ColAttributes');
       # NOTE: changed below to uc (uppercase) as keys in TestFieldInfo are
@@ -192,9 +198,9 @@ if ($sth) {
       $colname = uc($sth->func($i, 1, 'ColAttributes'));
       #diag("$i: $colname = $coltype ", $coltype+1-1);
       if (grep { $coltype == $_ } @{$ODBCTEST::TestFieldInfo{$colname}}) {
-	 $is_ok++;
+          $is_ok++;
       } else {
-	 diag("Coltype $coltype for column $colname not found in list ", join(', ', @{$ODBCTEST::TestFieldInfo{$colname}}), "\n");
+          diag("Coltype $coltype for column $colname not found in list ", join(', ', @{$ODBCTEST::TestFieldInfo{$colname}}), "\n");
       }
    }
    is($is_ok, $colcount, "Col count matches correct col count");
