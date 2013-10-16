@@ -6,13 +6,12 @@ use strict;
 
 DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
 
-=head2 1.44_4 2013-10-14
+=head2 1.44_4 2013-10-16
 
   [BUG FIXES]
 
   Fix method redefinition warnings in threads on Perl >= 5.16 thanks
   Dagfinn Ilmari Mannsåker
-
 
   [MISCELLANEOUS]
 
