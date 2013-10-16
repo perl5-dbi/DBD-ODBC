@@ -23,6 +23,9 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
 
   Added recommends Test::Version.
 
+  Updates to the odbc_more_results pod to help clarify its use after
+  some confusion was seen in a perlmonks thread.
+
 =head2 1.44_3 2013-10-11
 
   [CHANGE IN BEHAVIOUR]

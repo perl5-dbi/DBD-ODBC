@@ -1413,7 +1413,15 @@ files for short periods of ODBC activity.
 =head3 odbc_more_results
 
 Use this attribute to determine if there are more result sets
-available.  SQL Server supports this feature.  Use this as follows:
+available.
+
+Any ODBC Driver which batches results or counts of inserts/updates
+will need you to loop on odbc_more_results until there are no more
+results. e.g., if you are performing multiple selects in a procedure or
+multiple inserts/updates/deletes then you will probably need to loop on
+odbc_more_results.
+
+Use odbc_more_results as follows:
 
   do {
      my @row;
@@ -1425,6 +1433,11 @@ available.  SQL Server supports this feature.  Use this as follows:
 Note that with multiple result sets and output parameters (i.e,. using
 bind_param_inout), don't expect output parameters to written to until ALL
 result sets have been retrieved.
+
+Under the hood this attribute causes a call to the ODBC API
+SQLMoreResults and then any result set, insert/update/delete or output
+parameters are described by DBD::ODBC and the statement handle will be
+ready for processing the new result.
 
 =head2 Private statement methods
 
