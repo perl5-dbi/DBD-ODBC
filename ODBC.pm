@@ -95,6 +95,7 @@ $DBD::ODBC::VERSION = '1.44_3';
         return DBI::parse_trace_flags($class, $flags);
     }
 
+    my $methods_are_installed = 0;
     sub driver{
         return $drh if $drh;
         my($class, $attr) = @_;
@@ -111,13 +112,16 @@ $DBD::ODBC::VERSION = '1.44_3';
             'State' => \$DBD::ODBC::sqlstate,
             'Attribution' => 'DBD::ODBC by Jeff Urlwin, Tim Bunce and Martin J. Evans',
 	    });
-        DBD::ODBC::st->install_method("odbc_lob_read");
-        DBD::ODBC::st->install_method("odbc_rows", { O=>0x00000000 });
-        # don't clear errors - IMA_KEEP_ERR = 0x00000004
-        DBD::ODBC::st->install_method("odbc_getdiagrec", { O=>0x00000004 });
-        DBD::ODBC::db->install_method("odbc_getdiagrec", { O=>0x00000004 });
-        DBD::ODBC::db->install_method("odbc_getdiagfield", { O=>0x00000004 });
-        DBD::ODBC::st->install_method("odbc_getdiagfield", { O=>0x00000004 });
+        if (!$methods_are_installed) {
+            DBD::ODBC::st->install_method("odbc_lob_read");
+            DBD::ODBC::st->install_method("odbc_rows", { O=>0x00000000 });
+            # don't clear errors - IMA_KEEP_ERR = 0x00000004
+            DBD::ODBC::st->install_method("odbc_getdiagrec", { O=>0x00000004 });
+            DBD::ODBC::db->install_method("odbc_getdiagrec", { O=>0x00000004 });
+            DBD::ODBC::db->install_method("odbc_getdiagfield", { O=>0x00000004 });
+            DBD::ODBC::st->install_method("odbc_getdiagfield", { O=>0x00000004 });
+            $methods_are_installed++;
+        }
         return $drh;
     }
 
