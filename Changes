@@ -35,6 +35,8 @@ $Revision: 10667 $
   The rt_79190.t could incorrectly fail if your test DSN contained
   the DRIVER attribute.
 
+  Fix method redefinition warnings in threads on Perl >= 5.16
+
   [MISCELLANEOUS]
 
   Added RedHat spec file to examples courtesy of Michiel Beijen.
