@@ -6,7 +6,12 @@ use Test::More;
 plan skip_all => 'This test is only run for the module author'
     unless -d '.git' || $ENV{IS_MAINTAINER};
 
-BEGIN { eval "use Test::Version; 1;" or die $@; }
+eval {
+     require Test::Version;
+     1;
+};
+
+plan skip_all => 'Cannot find Test::Version' if $@;
 
 my @imports = ( 'version_all_ok' );
 
@@ -18,8 +23,7 @@ my $params = {
 push @imports, $params
     if version->parse( $Test::Version::VERSION ) >= version->parse('1.002');
 
-
 Test::Version->import(@imports);
 
-version_all_ok;
+version_all_ok();
 done_testing;
