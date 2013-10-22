@@ -6,3 +6,14 @@ perl:
   - "5.14"
   - "5.12"
   - "5.10"
+notifications:
+  email:
+    recipents:
+      - mjevans@cpan.org
+    on_success: always
+    on_failure: always
+  irc:
+    channels:
+      - "irc.perl.org#dbi"
+    on_success: change
+    on_failure: always
