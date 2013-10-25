@@ -1,6 +1,4 @@
 #!/usr/bin/perl -w -I./t
-# $Id$
-
 use Test::More;
 use strict;
 
@@ -15,23 +13,24 @@ plan tests => $tests;
 
 my $dbh;
 
-# use_ok('DBI', qw(:sql_types));
-# can't seem to get the imports right this way
 use DBI qw(:sql_types);
+use DBI::Const::GetInfoType;
+
 use_ok('ODBCTEST');
-#use_ok('Data::Dumper');
 
 BEGIN {
-    plan skip_all => "DBI_DSN is undefined"
-        if (!defined $ENV{DBI_DSN});
+    plan skip_all => "DBI_DSN is undefined" if (!defined $ENV{DBI_DSN});
 }
+
 END {
+    # tidy up
     if ($dbh) {
         local $dbh->{PrintError} = 0;
         local $dbh->{PrintWarn} = 0;
         eval {
             $dbh->do(q/drop procedure PERL_DBD_PROC1/);
             $dbh->do(q/drop procedure PERL_DBD_PROC2/);
+            $dbh->do(q/drop table PERL_DBD_TABLE1/);
         };
     }
     Test::NoWarnings::had_no_warnings()
@@ -47,14 +46,14 @@ sub getinfo
 {
     my $dbh = shift;
 
-    $dbms_name = $dbh->get_info(17);
+    $dbms_name = $dbh->get_info($GetInfoType{SQL_DBMS_NAME});
     ok($dbms_name, "got DBMS name: $dbms_name");
-    $dbms_version = $dbh->get_info(18);
+    $dbms_version = $dbh->get_info($GetInfoType{SQL_DBMS_VER});
     ok($dbms_version, "got DBMS version: $dbms_version");
     $m_dbmsversion = $dbms_version;
     $m_dbmsversion =~ s/^(\d+).*/$1/;
     ok($m_dbmsversion, "got DBMS major version: $m_dbmsversion");
-    $driver_name = $dbh->get_info(6);
+    $driver_name = $dbh->get_info($GetInfoType{SQL_DRIVER_NAME});
     ok($driver_name, "got Driver Name: $driver_name");
 }
 
@@ -227,7 +226,7 @@ unless($dbh) {
 }
 my $sth;
 
-my $dbname = $dbh->get_info(17); # DBI::SQL_DBMS_NAME
+my $dbname = $dbh->get_info($GetInfoType{SQL_DBMS_NAME});
 SKIP: {
    skip "Microsoft SQL Server tests not supported using $dbname", 63
        unless ($dbname =~ /Microsoft SQL Server/i);
@@ -456,7 +455,7 @@ EOT
    my $cres = $sth->execute();
    is($cres, '0E0', "0 rows updated on a non searched query with no rows in table");
    if (!defined($cres))  {
-       note("Your driver has a bug which means it is probably incorrectly returning SQL_NO_DATA from a non-searched update");
+       diag("Your driver has a bug which means it is probably incorrectly returning SQL_NO_DATA from a non-searched update");
    }
  SKIP: {
        skip "execute failed - probably SQL_NO_DATA bug", 3 if !defined($cres);
