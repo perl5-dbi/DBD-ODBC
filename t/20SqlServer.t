@@ -454,30 +454,35 @@ EOT
 
    $sth->bind_param (1, 99, SQL_INTEGER);
    my $cres = $sth->execute();
-   is($cres, '0E0', "unknown rows updated");
-   $success = -1;
-   while (my @data = $sth->fetchrow_array()) {($success) = @data;}
-   is($success, 100, 'procedure outputs results as result set');
+   is($cres, '0E0', "0 rows updated on a non searched query with no rows in table");
+   if (!defined($cres))  {
+       note("Your driver has a bug which means it is probably incorrectly returning SQL_NO_DATA from a non-searched update");
+   }
+ SKIP: {
+       skip "execute failed - probably SQL_NO_DATA bug", 3 if !defined($cres);
+       $success = -1;
+       while (my @data = $sth->fetchrow_array()) {($success) = @data;}
+       is($success, 100, 'procedure outputs results as result set');
 
-   $sth->bind_param (1, 10, SQL_INTEGER);
-   $sth->execute();
-   $success = -1;
-   while (my @data = $sth->fetchrow_array()) {($success) = @data;}
-   is($success,10, 'procedure outputs results as result set2');
+       $sth->bind_param (1, 10, SQL_INTEGER);
+       $sth->execute();
+       $success = -1;
+       while (my @data = $sth->fetchrow_array()) {($success) = @data;}
+       is($success,10, 'procedure outputs results as result set2');
 
-   $sth->bind_param (1, 111, SQL_INTEGER);
-   $sth->execute();
-   $success = -1;
-   do {
-      my @data;
-      while (@data = $sth->fetchrow_array()) {
-	 if ($#data == 0) {
-	    ($success) = @data;
-	 }
-      }
-   } while ($sth->{odbc_more_results});
-   is($success, 111, 'procedure outputs results as result set 3');
-
+       $sth->bind_param (1, 111, SQL_INTEGER);
+       $sth->execute();
+       $success = -1;
+       do {
+           my @data;
+           while (@data = $sth->fetchrow_array()) {
+               if ($#data == 0) {
+                   ($success) = @data;
+               }
+           }
+       } while ($sth->{odbc_more_results});
+       is($success, 111, 'procedure outputs results as result set 3');
+   };
 
 #
 # special tests for even stranger cases...
