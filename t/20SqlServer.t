@@ -9,7 +9,7 @@ $| = 1;
 my $has_test_nowarnings = 1;
 eval "require Test::NoWarnings";
 $has_test_nowarnings = undef if $@;
-my $tests = 64;
+my $tests = 65;
 $tests += 1 if $has_test_nowarnings;
 plan tests => $tests;
 
@@ -454,7 +454,7 @@ EOT
 
    $sth->bind_param (1, 99, SQL_INTEGER);
    my $cres = $sth->execute();
-   is($cres, -1, "unknown rows updated");
+   is($cres, '0E0', "unknown rows updated");
    $success = -1;
    while (my @data = $sth->fetchrow_array()) {($success) = @data;}
    is($success, 100, 'procedure outputs results as result set');
