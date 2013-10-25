@@ -17,6 +17,9 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
 
   Added another link to resources for supplementary characters.
 
+  Added 1 more test to 20SqlServer.t for update statement.
+
+
 
 =head2 1.44_4 2013-10-16
 
