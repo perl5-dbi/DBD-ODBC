@@ -2912,9 +2912,12 @@ int dbd_st_execute(
      * Call dbd_error regardless of the value of rc so we can
      * get any status messages that are desired.
      */
-    dbd_error(sth, rc, "st_execute/SQLExecute");
+    if (SQL_SUCCESS_WITH_INFO == rc) {
+        dbd_error(sth, rc, "st_execute/SQLExecute");
+    }
+
     if (!SQL_SUCCEEDED(rc) && rc != SQL_NO_DATA) {
-        /* dbd_error(sth, rc, "st_execute/SQLExecute"); */
+        dbd_error(sth, rc, "st_execute/SQLExecute");
         if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 3))
             TRACE1(imp_dbh, "    -dbd_st_execute(%p)=-2\n", sth);
         return -2;

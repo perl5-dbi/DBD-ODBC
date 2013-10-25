@@ -445,12 +445,16 @@ BEGIN
 END
 EOT
    $dbh->{RaiseError} = 0;
+   # NOTE: MS SQL native client for linux fails this test because
+   # SQLExecute returns SQL_NO_DATA even though the proc never did
+   # a searched update/delete - AND it works on the same Windows driver.
    eval {$dbh->do($proc1)} or diag($@);
    my $sth = $dbh->prepare ('{call PERL_DBD_PROC1 (?)}');
    my $success = -1;
 
    $sth->bind_param (1, 99, SQL_INTEGER);
-   $sth->execute();
+   my $cres = $sth->execute();
+   is($cres, -1, "unknown rows updated");
    $success = -1;
    while (my @data = $sth->fetchrow_array()) {($success) = @data;}
    is($success, 100, 'procedure outputs results as result set');

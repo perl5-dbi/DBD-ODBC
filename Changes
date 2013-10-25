@@ -6,6 +6,18 @@ use strict;
 
 DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
 
+=head2 NEXT_VERSION YYYY-MM-DD
+
+  [BUG FIXES]
+
+  If an SQLExecute ODBC API call returned SQL_NO_DATA DBD::ODBC was
+  still calling SQLError (which was a waste of time).
+
+  [MISCELLANEOUS]
+
+  Added another link to resources for supplementary characters.
+
+
 =head2 1.44_4 2013-10-16
 
   [BUG FIXES]

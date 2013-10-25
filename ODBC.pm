@@ -2539,6 +2539,10 @@ L<http://www.easysoft.com/developer/languages/perl/multiple-active-statements.ht
 
 L<http://www.easysoft.com/developer/interfaces/odbc/64-bit.html>
 
+How do I insert Unicode supplementary characters into SQL Server from Perl?
+
+L<http://www.easysoft.com/support/kb/kb01043.html>
+
 =head2 Frequently Asked Questions
 
 Frequently asked questions are now in L<DBD::ODBC::FAQ>. Run
