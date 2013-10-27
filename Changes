@@ -13,6 +13,8 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
   If an SQLExecute ODBC API call returned SQL_NO_DATA DBD::ODBC was
   still calling SQLError (which was a waste of time).
 
+  Since 1.44_1 odbc_out_connect_string stopped returning anything.
+
   [MISCELLANEOUS]
 
   Added another link to resources for supplementary characters.
