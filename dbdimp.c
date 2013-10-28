@@ -4562,6 +4562,7 @@ static db_params S_db_options[] =  {
    { "odbc_utf8_on", ODBC_UTF8_ON, PARAM_READWRITE, PARAM_TYPE_CUSTOM },
    { "odbc_old_unicode", ODBC_OLD_UNICODE, PARAM_READWRITE, PARAM_TYPE_CUSTOM },
    { "odbc_has_unicode", ODBC_HAS_UNICODE, PARAM_READ, PARAM_TYPE_CUSTOM },
+   {"odbc_out_connect_string", ODBC_OUTCON_STR, PARAM_READ, PARAM_TYPE_CUSTOM},
    { "odbc_describe_parameters", ODBC_DESCRIBE_PARAMETERS, PARAM_READWRITE, PARAM_TYPE_CUSTOM },
    { "odbc_batch_size", ODBC_BATCH_SIZE, PARAM_READWRITE, PARAM_TYPE_CUSTOM },
    { "odbc_array_operations", ODBC_ARRAY_OPERATIONS, PARAM_READWRITE, PARAM_TYPE_CUSTOM },
