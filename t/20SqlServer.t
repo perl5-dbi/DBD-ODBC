@@ -9,7 +9,7 @@ $| = 1;
 my $has_test_nowarnings = 1;
 eval "require Test::NoWarnings";
 $has_test_nowarnings = undef if $@;
-my $tests = 64;
+my $tests = 65;
 $tests += 1 if $has_test_nowarnings;
 plan tests => $tests;
 
@@ -453,31 +453,33 @@ EOT
    my $success = -1;
 
    $sth->bind_param (1, 99, SQL_INTEGER);
-   my $cres = $sth->execute();
-   is($cres, -1, "unknown rows updated");
-   $success = -1;
-   while (my @data = $sth->fetchrow_array()) {($success) = @data;}
-   is($success, 100, 'procedure outputs results as result set');
+   my $cres = $sth->execute() or note("Your driver has a bug which means it is probably incorrectly returning SQL_NO_DATA from a non-searched update");
+ SKIP: {
+       skip "execute failed - probably SQL_NO_DATA bug", 4 if !defined($cres);
+       ok($cres eq '0E0' || $cres == -1, "0 rows updated");
+       $success = -1;
+       while (my @data = $sth->fetchrow_array()) {($success) = @data;}
+       is($success, 100, 'procedure outputs results as result set');
 
-   $sth->bind_param (1, 10, SQL_INTEGER);
-   $sth->execute();
-   $success = -1;
-   while (my @data = $sth->fetchrow_array()) {($success) = @data;}
-   is($success,10, 'procedure outputs results as result set2');
+       $sth->bind_param (1, 10, SQL_INTEGER);
+       $sth->execute();
+       $success = -1;
+       while (my @data = $sth->fetchrow_array()) {($success) = @data;}
+       is($success,10, 'procedure outputs results as result set2');
 
-   $sth->bind_param (1, 111, SQL_INTEGER);
-   $sth->execute();
-   $success = -1;
-   do {
-      my @data;
-      while (@data = $sth->fetchrow_array()) {
-	 if ($#data == 0) {
-	    ($success) = @data;
-	 }
-      }
-   } while ($sth->{odbc_more_results});
-   is($success, 111, 'procedure outputs results as result set 3');
-
+       $sth->bind_param (1, 111, SQL_INTEGER);
+       $sth->execute();
+       $success = -1;
+       do {
+           my @data;
+           while (@data = $sth->fetchrow_array()) {
+               if ($#data == 0) {
+                   ($success) = @data;
+               }
+           }
+       } while ($sth->{odbc_more_results});
+       is($success, 111, 'procedure outputs results as result set 3');
+   };
 
 #
 # special tests for even stranger cases...

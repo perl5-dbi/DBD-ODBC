@@ -2909,8 +2909,8 @@ int dbd_st_execute(
     }
 
     /*
-     * Call dbd_error regardless of the value of rc so we can
-     * get any status messages that are desired.
+     * Call dbd_error if we get SQL_SUCCESS_WITH_INFO as there may
+     * be some status msgs for us.
      */
     if (SQL_SUCCESS_WITH_INFO == rc) {
         dbd_error(sth, rc, "st_execute/SQLExecute");
