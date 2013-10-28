@@ -19,7 +19,7 @@ require 5.008;
 # see discussion on dbi-users at
 # http://www.nntp.perl.org/group/perl.dbi.dev/2010/07/msg6096.html and
 # http://www.dagolden.com/index.php/369/version-numbers-should-be-boring/
-$DBD::ODBC::VERSION = '1.44_4';
+$DBD::ODBC::VERSION = '1.45';
 
 {
     ## no critic (ProhibitMagicNumbers ProhibitExplicitISA)
@@ -659,7 +659,16 @@ DBD::ODBC - ODBC Driver for DBI
 
 =head1 VERSION
 
-This documentation refers to DBD::ODBC version 1.44_4.
+This documentation refers to DBD::ODBC version 1.45.
+
+=head1 WARNING
+
+Due to the discovery of a long standing unicode issue in DBD::ODBC the
+next development release (1.46_N) of DBD::ODBC is likely to exhibit a
+significant change in behaviour when retrieving CHAR/VARCHAR columns
+in a Unicode DBD::ODBC build. If you believe you have experienced any
+unicode issues with DBD::ODBC you are well advised to tell me now
+before it is too late.
 
 =head1 SYNOPSIS
 

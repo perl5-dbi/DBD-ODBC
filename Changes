@@ -6,7 +6,14 @@ use strict;
 
 DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
 
-=head2 NEXT_VERSION YYYY-MM-DD
+=head2 1.45 2013-10-28
+
+  [CHANGE IN BEHAVIOUR]
+
+  There is no intentional change in behaviour in this release but I'm
+  adding a warning that the next development release is highly liking
+  to contain some significant unicode changes in behaviour to fix some
+  bugs which have been around for quite a long time now.
 
   [BUG FIXES]
 
@@ -21,7 +28,8 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
 
   Added 1 more test to 20SqlServer.t for update statement.
 
-
+  Small changes to 20SqlServer.t test to skip some tests and note the
+  problem if SQLExecute returns SQL_NO_DATA on a non searched update.
 
 =head2 1.44_4 2013-10-16
 
