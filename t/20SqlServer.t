@@ -7,7 +7,7 @@ $| = 1;
 my $has_test_nowarnings = 1;
 eval "require Test::NoWarnings";
 $has_test_nowarnings = undef if $@;
-my $tests = 65;
+my $tests = 67;
 $tests += 1 if $has_test_nowarnings;
 plan tests => $tests;
 
@@ -452,7 +452,11 @@ EOT
    my $success = -1;
 
    $sth->bind_param (1, 99, SQL_INTEGER);
-   my $cres = $sth->execute() or note("Your driver has a bug which means it is probably incorrectly returning SQL_NO_DATA from a non-searched update");
+   my $cres = $sth->execute();
+   ok(defined($cres), "execute for non searched update via procedure");
+   if (!defined($cres)) {
+       note("Your driver has a bug which means it is probably incorrectly returning SQL_NO_DATA from a non-searched update");
+   }
  SKIP: {
        skip "execute failed - probably SQL_NO_DATA bug", 4 if !defined($cres);
        ok($cres eq '0E0' || $cres == -1, "0/unknown rows updated");
@@ -481,9 +485,9 @@ EOT
        is($success, 111, 'procedure outputs results as result set 3');
    };
 
-#
-# special tests for even stranger cases...
-#
+   #
+   # special tests for even stranger cases...
+   #
    eval {$dbh->do("DROP PROCEDURE PERL_DBD_PROC1");};
    $proc1 = <<EOT;
    CREATE PROCEDURE PERL_DBD_PROC1 (\@i INT) AS
@@ -517,36 +521,42 @@ EOT
    $success = -1;
 
    $sth->bind_param (1, 99, SQL_INTEGER);
-   $sth->execute();
-   $success = -1;
-   while (my @data = $sth->fetchrow_array()) {($success) = @data;}
-   is($success, 100, "force rebind test part 2");
+   $cres = $sth->execute();
+   ok(defined($cres), "execute for non searched update via procedure, force_rebind");
+   if (!defined($cres)) {
+       note("Your driver has a bug which means it is probably incorrectly returning SQL_NO_DATA from a non-searched update");
+   }
+ SKIP: {
+       skip "execute failed - probably SQL_NO_DATA bug", 3 if !defined($cres);
+       $success = -1;
+       while (my @data = $sth->fetchrow_array()) {($success) = @data;}
+       is($success, 100, "force rebind test part 2");
 
-   $sth->bind_param (1, 10, SQL_INTEGER);
-   $sth->execute();
-   $success = -1;
-   while (my @data = $sth->fetchrow_array()) {($success) = @data;}
-   is($success, 10, "force rebind test part 3");
+       $sth->bind_param (1, 10, SQL_INTEGER);
+       $sth->execute();
+       $success = -1;
+       while (my @data = $sth->fetchrow_array()) {($success) = @data;}
+       is($success, 10, "force rebind test part 3");
 
-   $sth->bind_param (1, 111, SQL_INTEGER);
-   $sth->execute();
-   $success = -1;
-   do {
-      my @data;
-      while (@data = $sth->fetchrow_array()) {
-	 if ($#data == 0) {
-	    ($success) = @data;
-	 } else {
-	    # diag("Data: ", join(',', @data), "\n");
-	 }
-      }
-   } while ($sth->{odbc_more_results});
-   is($success, 111, "force rebind test part 4");
+       $sth->bind_param (1, 111, SQL_INTEGER);
+       $sth->execute();
+       $success = -1;
+       do {
+           my @data;
+           while (@data = $sth->fetchrow_array()) {
+               if ($#data == 0) {
+                   ($success) = @data;
+               } else {
+                   # diag("Data: ", join(',', @data), "\n");
+               }
+           }
+       } while ($sth->{odbc_more_results});
+       is($success, 111, "force rebind test part 4");
 
-   # ensure the attribute is automatically set.
-   # the multiple result sets will trigger this.
-   is($sth->{odbc_force_rebind}, 1, "forced rebind final");
-
+       # ensure the attribute is automatically set.
+       # the multiple result sets will trigger this.
+       is($sth->{odbc_force_rebind}, 1, "forced rebind final");
+   }
 
    #
    # more special tests
@@ -633,6 +643,8 @@ AS
    $dbh->{odbc_async_exec} = 0;
    is($dbh->{odbc_async_exec}, 0, "reset async exec");
 
+   $dbh->do(q/delete from PERL_DBD_TABLE1/);
+   $dbh->do(q/insert into PERL_DBD_TABLE1 values(1, 1)/);
    $dbh->{odbc_exec_direct} = 1;
    is($dbh->{odbc_exec_direct}, 1, "test setting odbc_exec_direct");
    $sth2 = $dbh->prepare("print 'START' select count(*) from PERL_DBD_TABLE1 print 'END'");
