@@ -3591,7 +3591,7 @@ static void get_param_type(
        /* As SQLDescribeParam is not supported by the ODBC driver we need to
           default a SQL type to bind the parameter as. The default is either
           the value set with odbc_default_bind_type or a fallback of
-          SQL_VARCHAR. */
+          SQL_VARCHAR/SQL_WVARCHAR depending on your data and whether we are unicode build. */
        phs->sql_type = default_parameter_type(
            "SQLDescribeParam not supported", imp_sth, phs);
    } else if (!imp_sth->odbc_describe_parameters) {
@@ -3653,8 +3653,25 @@ static void get_param_type(
                           (unsigned long)phs->param_size);
                phs->sql_type = SQL_VARCHAR;
                break;
-             default:
-               phs->sql_type = phs->described_sql_type;
+  	     default: {
+	       if (SvUTF8(phs->sv)) {
+		 if (phs->described_sql_type == SQL_CHAR) {
+		   phs->sql_type = SQL_WCHAR;
+		 } else if (phs->described_sql_type == SQL_VARCHAR) {
+		   phs->sql_type = SQL_WVARCHAR;
+		 } else if (phs->described_sql_type == SQL_LONGVARCHAR) {
+		   phs->sql_type = SQL_WLONGVARCHAR;
+		 } else {
+		   phs->sql_type = phs->described_sql_type;
+		 }
+		 if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 5) && (phs->sql_type != phs->described_sql_type))
+		   TRACE1(imp_dbh, "      SvUTF8 parameter - changing to %s type\n",
+			  S_SqlTypeToString(phs->sql_type));
+	       } else {
+		 phs->sql_type = phs->described_sql_type;
+	       }
+	       break;
+	     }
            }
        }
    } else if (phs->describe_param_called) {
@@ -4562,7 +4579,7 @@ static db_params S_db_options[] =  {
    { "odbc_utf8_on", ODBC_UTF8_ON, PARAM_READWRITE, PARAM_TYPE_CUSTOM },
    { "odbc_old_unicode", ODBC_OLD_UNICODE, PARAM_READWRITE, PARAM_TYPE_CUSTOM },
    { "odbc_has_unicode", ODBC_HAS_UNICODE, PARAM_READ, PARAM_TYPE_CUSTOM },
-   {"odbc_out_connect_string", ODBC_OUTCON_STR, PARAM_READ, PARAM_TYPE_CUSTOM},
+   { "odbc_out_connect_string", ODBC_OUTCON_STR, PARAM_READ, PARAM_TYPE_CUSTOM},
    { "odbc_describe_parameters", ODBC_DESCRIBE_PARAMETERS, PARAM_READWRITE, PARAM_TYPE_CUSTOM },
    { "odbc_batch_size", ODBC_BATCH_SIZE, PARAM_READWRITE, PARAM_TYPE_CUSTOM },
    { "odbc_array_operations", ODBC_ARRAY_OPERATIONS, PARAM_READWRITE, PARAM_TYPE_CUSTOM },
@@ -6780,14 +6797,28 @@ static int post_connect(
 
 
 
+/*
+ * Called when we don't know what to bind a parameter as. This can happen for all sorts
+ * of reasons like:
+ *
+ * o SQLDescribeParam is not supported
+ * o odbc_describe_parameters is set to 0 (in other words telling us not to describe)
+ * o SQLDescribeParam was called and failed
+ * o SQLDescribeParam was called but returned an unrecognised parameter type
+ *
+ * If the data to bind is unicode (SvUTF8 is true) it is bound as SQL_WCHAR
+ * or SQL_WLONGVARCHAR depending on its size. Otherwise it is bound as
+ * SQL_VARCHAR/SQL_LONGVARCHAR.
+ */
 static SQLSMALLINT default_parameter_type(
     char *why, imp_sth_t *imp_sth, phs_t *phs)
 {
+    SQLSMALLINT sql_type;
     struct imp_dbh_st *imp_dbh = NULL;
     imp_dbh = (struct imp_dbh_st *)(DBIc_PARENT_COM(imp_sth));
 
     if (imp_sth->odbc_default_bind_type != 0) {
-        return imp_sth->odbc_default_bind_type;
+        sql_type = imp_sth->odbc_default_bind_type;
     } else {
         /* MS Access can return an invalid precision error in the 12blob
            test unless the large value is bound as an SQL_LONGVARCHAR
@@ -6800,22 +6831,35 @@ static SQLSMALLINT default_parameter_type(
           Of course, being SQL Server, it also has this problem with the
           newer varchar(8000)! */
         if (!SvOK(phs->sv)) {
+	  sql_type = ODBC_BACKUP_BIND_TYPE_VALUE;
            if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 3))
                TRACE2(imp_sth, "%s, sv is not OK, defaulting to %d\n",
-                      why, ODBC_BACKUP_BIND_TYPE_VALUE);
-            return ODBC_BACKUP_BIND_TYPE_VALUE;
+                      why, sql_type);
         } else if (SvCUR(phs->sv) > imp_dbh->switch_to_longvarchar) {
+#if defined(WITH_UNICODE)
+	   if (SvUTF8(phs->sv))
+	     sql_type = SQL_WLONGVARCHAR;
+	   else
+#endif
+	     sql_type = SQL_LONGVARCHAR;
+	   /*return ODBC_BACKUP_LONG_BIND_TYPE_VALUE;*/
            if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 3))
                TRACE3(imp_sth, "%s, sv=%"UVuf" bytes, defaulting to %d\n",
-                      why, (UV)SvCUR(phs->sv), ODBC_BACKUP_LONG_BIND_TYPE_VALUE);
-            return ODBC_BACKUP_LONG_BIND_TYPE_VALUE;
+                      why, (UV)SvCUR(phs->sv), sql_type);
         } else {
+#if defined(WITH_UNICODE)
+	   if (SvUTF8(phs->sv))
+	     sql_type = SQL_WVARCHAR;
+	   else
+#endif
+	     sql_type = SQL_VARCHAR;
+	   /*return ODBC_BACKUP_BIND_TYPE_VALUE;*/
            if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 3))
                TRACE3(imp_sth, "%s, sv=%"UVuf" bytes, defaulting to %d\n",
-                      why, (UV)SvCUR(phs->sv), ODBC_BACKUP_BIND_TYPE_VALUE);
-            return ODBC_BACKUP_BIND_TYPE_VALUE;
+                      why, (UV)SvCUR(phs->sv), sql_type);
         }
     }
+    return sql_type;
 }
 
 

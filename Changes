@@ -6,6 +6,14 @@ use strict;
 
 DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
 
+=head2 1.46_1 yyyy-mm-dd
+
+  [CHANGE IN BEHAVIOUR]
+
+  As warned in release 1.45, the binding of parameters to char/varchar
+  columns has changed significantly - see warning at start of
+  DBD::ODBC pod.
+
 =head2 1.45 2013-10-28
 
   [CHANGE IN BEHAVIOUR]

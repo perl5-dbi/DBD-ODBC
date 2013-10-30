@@ -19,7 +19,7 @@ require 5.008;
 # see discussion on dbi-users at
 # http://www.nntp.perl.org/group/perl.dbi.dev/2010/07/msg6096.html and
 # http://www.dagolden.com/index.php/369/version-numbers-should-be-boring/
-$DBD::ODBC::VERSION = '1.45';
+$DBD::ODBC::VERSION = '1.46_1';
 
 {
     ## no critic (ProhibitMagicNumbers ProhibitExplicitISA)
@@ -659,16 +659,81 @@ DBD::ODBC - ODBC Driver for DBI
 
 =head1 VERSION
 
-This documentation refers to DBD::ODBC version 1.45.
+This documentation refers to DBD::ODBC version 1.46_1.
 
 =head1 WARNING
 
-Due to the discovery of a long standing unicode issue in DBD::ODBC the
-next development release (1.46_N) of DBD::ODBC is likely to exhibit a
-significant change in behaviour when retrieving CHAR/VARCHAR columns
-in a Unicode DBD::ODBC build. If you believe you have experienced any
-unicode issues with DBD::ODBC you are well advised to tell me now
-before it is too late.
+This development version of DBD::ODBC contains a significant fix to
+unicode when inserting into CHAR/VARCHAR columns and it is a change in
+behaviour. The change B<only> applies to unicode builds of DBD::ODBC
+(the default on Windows but you can build it for unicode on unix
+too). Please test it and report and issues back to me. Read on for the
+description.
+
+Prior to this release of DBD::ODBC when you are using the unicode
+build of DBD::ODBC and inserted data into a CHAR/VARCHAR columns using
+parameters DBD::ODBC did this:
+
+1 if you set odbc_describe_parameters to 0, (thus preventing DBD::ODBC from calling
+  SQLDescribeParam) parameters for CHAR/VARCHAR columns were bound as SQL_WVARCHAR or
+  SQL_WLONGVARCHAR (depending on the length of the parameter).
+
+2 if you set odbc_force_bind_type then all parameters are bound as you
+  specified.
+
+3 if you overroad the parameter type in the bind_param method, the
+  type you specified would be used.
+
+4 if the driver does not support SQLDescribeParam or SQLDescribeParam
+  was called and failed then the bind type defaulted as in 1.
+
+5 if none of the above (and I'd guess that is the normal case for most
+  people) then DBD::ODBC calls SQLDescribeParam to find the parameter
+  type. This usually returns SQL_CHAR or SQL_VARCHAR for CHAR/VARCHAR
+  columns unsurprisingly. The parameter was then bound as SQL_VARCHAR.
+
+Items 1 to 4 still apply. 5 now has a different bahaviour. In this
+development release, DBD::ODBC now looks at your bound data first
+before using the type returned by SQLDescribeParam. If you data looks
+like unicode (i.e., SvUTF8() is true) it now binds the parameter as
+SQL_WVARCHAR.
+
+What might this might mean to you?
+
+If you had Perl scalars that were bound to CHAR/VARCHAR columns in an
+insert/update/delete and those scalars contained unicode, DBD::ODBC
+would actually pass the individual octets in your scalar not
+characters.  For instance, if you had the Perl scalar "\x{20ac" (the
+Euro unicode character) and you bound it to a CHAR/VARCHAR, DBD::ODBC
+would pass 0xe2, 0x82, 0xc2 as separate characters because those bytes
+were Perl's UTF-8 encoding of a euro. These would probably be
+interpreted by your database engine as 3 characters in its current
+codepage. If you queried your database to find the length of the data
+inserted you'd probably get back 3, not 1.
+
+However, when DBD::ODBC read that column back in a select
+statement, it would bind the column as SQL_WCHAR and you'd get back 3
+characters with the utf8 flag on (what those characters were depends
+on how your database of driver translates code page characters to wide
+characters). 
+
+What should happen now is that if your bound parameters are unicode,
+DBD::ODBC will bind them as wide characters (unicode) and your driver
+or database will attempt to convert them into the code page it is
+using. This means so long as your database can store the data you are
+inserting, when you read it back you should get what you inserted.
+
+
+Looking ahead
+
+I'm hoping not to have to go through some kind of deprecation cycle as
+clearly what DBD::ODBC did in this case was plain wrong and I don't
+see how anyone could have realistically used the data returned. B<If you know
+better now is your chance to tell me>.
+
+I'm also going through the reading of unicode data with a fine tooth comb
+so there could be other changes to come.
+
 
 =head1 SYNOPSIS
 
@@ -719,6 +784,12 @@ to C<SQL_MODE_READ_ONLY> does B<not> prevent your script from running
 updates or deletes; it is simply a hint to the driver/database that
 you won't being doing updates.
 
+B<Note:> Since DBD::ODCB 1.44_3, if the driver does not support
+setting C<SQL_ATTR_ACCESS_MODE> and returns SQL_SUCCESS_WITJH_INFO and
+"option value changed" a warning is issued (which you'll only see if
+you have DBI > 1.628).  In addition, an subsequent attempts to fetch
+the ReadOnly attribute will return the value last set.
+
 This attribute requires DBI version 1.55 or better.
 
 =head2 Private attributes common to connection and statement handles
@@ -727,7 +798,7 @@ This attribute requires DBI version 1.55 or better.
 
 Use this if you have special needs (such as Oracle triggers, etc)
 where :new or :name mean something special and are not just place
-holder names. You I<must> then use ? for binding parameters.  Example:
+holder names. You B<must> then use ? for binding parameters.  Example:
 
  $dbh->{odbc_ignore_named_placeholders} = 1;
  $dbh->do("create trigger foo as if :new.x <> :old.x then ... etc");
@@ -744,9 +815,10 @@ was 12 (C<SQL_VARCHAR>).  Newer versions always attempt to call
 C<SQLDescribeParam> to find the parameter types but if
 C<SQLDescribeParam> is unavailable DBD::ODBC falls back to a default
 bind type. The internal default bind type is C<SQL_VARCHAR> (for
-non-unicode build) and C<SQL_WVARCHAR> (for a unicode build). If you
-set C<odbc_default_bind_type> to a value other than 0 you override the
-internal default.
+non-unicode build) and C<SQL_WVARCHAR> or C<SQL_VARCHAR> (for a
+unicode build depending on whether the parameter is unicode or
+not). If you set C<odbc_default_bind_type> to a value other than 0 you
+override the internal default.
 
 B<N.B> If you call the C<bind_param> method with a SQL type this
 overrides everything else above.
@@ -756,7 +828,8 @@ overrides everything else above.
 This value defaults to 0.
 
 If set to anything other than 0 this will force bound parameters to be
-bound as this type and C<SQLDescribeParam> will not be used.
+bound as this type and C<SQLDescribeParam> will not be used; in other
+words it implies L</odbc_describe_parameters> is set to false too.
 
 Older versions of DBD::ODBC assumed the parameter binding type was 12
 (C<SQL_VARCHAR>) and newer versions always attempt to call
@@ -767,8 +840,9 @@ with some SQL like I<select myfunc(?)  where 1 = 1>). Setting
 C<odbc_force_bind_type> to C<SQL_VARCHAR> will force DBD::ODBC to bind
 all the parameters as C<SQL_VARCHAR> and ignore SQLDescribeParam.
 
-Bare in mind that if you are inserting unicode data you probably want
-to use C<SQL_WVARCHAR> and not C<SQL_VARCHAR>.
+Bear in mind that if you are inserting unicode data you probably want
+to use C<SQL_WVARCHAR>/C<SQL_WCHAR>/C<SQL_WLONGVARCHAR> and not
+C<SQL_VARCHAR>.
 
 As this attribute was created to work around buggy ODBC Drivers which
 support SQLDescribeParam but describe the parameters incorrectly you
@@ -891,6 +965,10 @@ L<http://rt.cpan.org/Public/Bug/Display.html?id=67994> and lastly a
 small discussion on dbi-dev at
 L<http://www.nntp.perl.org/group/perl.dbi.dev/2011/05/msg6559.html>.
 
+B<Warning:> I am hoping to remove this attribute in the near
+future. If you use it you are well advised to let me know and explain
+why.
+
 =head3 odbc_describe_parameters
 
 Defaults to on. When set this allows DBD::ODBC to call SQLDescribeParam
@@ -899,13 +977,13 @@ parameters.
 
 When off/false DBD::ODBC will not call SQLDescribeParam and defaults
 to binding parameters as SQL_CHAR/SQL_WCHAR depending on the build
-type.
+type and whether your data is unicode or not.
 
 You do not have to disable odbc_describe_parameters just because your
 driver does not support SQLDescribeParam as DBD::ODBC will work this
 out at the start via SQLGetFunctions.
 
-Note: disabling odbc_describe_parameters when your driver does support
+B<Note>: disabling odbc_describe_parameters when your driver does support
 SQLDescribeParam may prevent DBD::ODBC binding parameters for some
 column types properly.
 
@@ -1167,17 +1245,18 @@ When odbc_has_unicode is 1, DBD::ODBC will:
 
 =over
 
-=item bind columns the database declares as wide characters as SQL_Wxxx
+=item bind all string columns as wide characters (SQL_Wxxx)
 
 This means that UNICODE data stored in these columns will be returned
-to Perl in UTF-8 and with the UTF-8 flag set.
+to Perl correctly as unicode (i.e., encoded in UTF-8 and the UTF-8 flag set).
 
-=item bind parameters the database declares as wide characters as SQL_Wxxx
+=item bind parameters the database declares as wide characters or unicode parameters as SQL_Wxxx
 
 Parameters bound where the database declares the parameter as being a
-wide character (or where the parameter type is explicitly set to a
-wide type - SQL_Wxxx) can be UTF-8 in Perl and will be mapped to
-UTF-16 before passing to the driver.
+wide character, or where the parameter data is unicode, or where the
+parameter type is explicitly set to a wide type (e.g., SQL_Wxxx) are bound
+as wide characters in the ODBC API and DBD::ODBC encodes the perl parameters
+as UTF-16 before passing them to the driver.
 
 =item SQL
 
@@ -1214,6 +1293,10 @@ README.unicode file for further details.
 
 After calling the connect method this will be the ODBC driver's
 out connection string - see documentation on SQLDriverConnect.
+
+B<NOTE>: this value is only set if DBD::ODBC calls the
+SQLDriverConnect ODBC API (and not SQLConnect) which only happens if a) DSN or
+DRIVER is specified in the connection string or b) SQLConnect fails.
 
 Typically, applications (like MS Access and many others) which build a connection string via
 dialogs and possibly SQLBrowseConnect eventually end up with a successful ODBC connection
@@ -2348,9 +2431,9 @@ DBD::ODBC uses the C<SQLDescribeParam> API when parameters are bound
 to your SQL to find the types of the parameters. If the ODBC driver
 does not support C<SQLDescribeParam>, DBD::ODBC assumes the parameters
 are C<SQL_VARCHAR> or C<SQL_WVARCHAR> types (depending on whether
-DBD::ODBC is built for unicode or not). In any case, if you bind a
-parameter and specify a SQL type this overrides any type DBD::ODBC
-would choose.
+DBD::ODBC is built for unicode or not and whether your parameter is
+unicode data). In any case, if you bind a parameter and specify a SQL
+type this overrides any type DBD::ODBC would choose.
 
 For ODBC drivers which do not support C<SQLDescribeParam> the default
 behavior in DBD::ODBC may not be what you want. To change the default
