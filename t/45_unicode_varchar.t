@@ -123,7 +123,14 @@ if ($^O eq 'MSWin32') {
     code_page();
 }
 
-$dbh->do(q/create table PERL_DBD_TABLE1 (a varchar(100))/);
+eval {
+    $dbh->do(q/create table PERL_DBD_TABLE1 (a varchar(100) collate Latin1_General_CI_AS)/);
+};
+if ($@) {
+    diag "Cannot create table with collation - $@";
+    done_testing();
+    exit 0;
+}
 
 my $sql = q/insert into PERL_DBD_TABLE1 (a) values(?)/;
 
