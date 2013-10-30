@@ -666,9 +666,9 @@ This documentation refers to DBD::ODBC version 1.46_1.
 This development version of DBD::ODBC contains a significant fix to
 unicode when inserting into CHAR/VARCHAR columns and it is a change in
 behaviour. The change B<only> applies to unicode builds of DBD::ODBC
-(the default on Windows but you can build it for unicode on unix
-too). Please test it and report and issues back to me. Read on for the
-description.
+(the default on Windows but you can build it for unicode on unix too)
+and char/varchar columns and not nchar/nvarchar columns. Please test
+it and report and issues back to me. Read on for the description.
 
 Prior to this release of DBD::ODBC when you are using the unicode
 build of DBD::ODBC and inserted data into a CHAR/VARCHAR columns using
@@ -703,7 +703,7 @@ What might this might mean to you?
 If you had Perl scalars that were bound to CHAR/VARCHAR columns in an
 insert/update/delete and those scalars contained unicode, DBD::ODBC
 would actually pass the individual octets in your scalar not
-characters.  For instance, if you had the Perl scalar "\x{20ac" (the
+characters.  For instance, if you had the Perl scalar "\x{20ac}" (the
 Euro unicode character) and you bound it to a CHAR/VARCHAR, DBD::ODBC
 would pass 0xe2, 0x82, 0xc2 as separate characters because those bytes
 were Perl's UTF-8 encoding of a euro. These would probably be
@@ -715,7 +715,7 @@ However, when DBD::ODBC read that column back in a select
 statement, it would bind the column as SQL_WCHAR and you'd get back 3
 characters with the utf8 flag on (what those characters were depends
 on how your database of driver translates code page characters to wide
-characters). 
+characters).
 
 What should happen now is that if your bound parameters are unicode,
 DBD::ODBC will bind them as wide characters (unicode) and your driver
