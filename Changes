@@ -10,9 +10,11 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
 
   [CHANGE IN BEHAVIOUR]
 
-  As warned in release 1.45, the binding of parameters to char/varchar
-  columns has changed significantly - see warning at start of
-  DBD::ODBC pod.
+  As warned in release 1.45, the binding of unicode parameters to
+  char/varchar columns has changed significantly - see warning at
+  start of DBD::ODBC pod. If you don't attempt to insert unicode into
+  char/varchar columns or if you only inserted unicode into
+  nchar/nvarchar columns you should see no difference.
 
 =head2 1.45 2013-10-28
 
