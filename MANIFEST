@@ -102,6 +102,7 @@ t/20SqlServer.t
 t/30Oracle.t
 t/40UnicodeRoundTrip.t
 t/41Unicode.t
+t/45_unicode_varchar.t
 t/50_odbc_utf8_on.t
 t/70execute_array_dbi.t
 t/70execute_array_native.t

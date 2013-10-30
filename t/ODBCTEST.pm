@@ -49,6 +49,7 @@ require 5.004;
       my $type;
       my $type_info_all;
 
+      # yes, you can pass an array of types to type_info:
       $type_info = $dbh->type_info($TestFieldInfo{$column});
 
       if (!$type_info) {
