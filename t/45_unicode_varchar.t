@@ -3,6 +3,7 @@
 use open ':std', ':encoding(utf8)';
 use Test::More;
 use strict;
+use Data::Dumper;
 
 $| = 1;
 
@@ -118,10 +119,11 @@ sub ords {
 }
 
 sub show_it {
-    my ($h, $expected_perl_length, $expected_db_length) = @_;
+    my ($h, $expected_perl_length, $expected_db_length, $hex) = @_;
 
-    my $r = $h->selectall_arrayref(q/select len(a), a from PERL_DBD_TABLE1/);
+    my $r = $h->selectall_arrayref(q/select len(a), a from PERL_DBD_TABLE1 order by b asc/);
 
+    diag( Dumper($r));
     foreach my $row(@$r) {
         is($row->[0], shift @{$expected_db_length}, "db character length") or
             diag("dsc: " . data_string_desc($row->[0]));
@@ -129,6 +131,13 @@ sub show_it {
                 "expected perl length")) {
             diag(data_string_desc($row->[1]));
             ords($row->[1]);
+        }
+    }
+
+    if ($hex) {
+        foreach my $hex_val(@$hex) {
+            $r = $h->selectrow_arrayref(q/select count(*) from PERL_DBD_TABLE1 where cast(a as varbinary(100)) = / . $hex_val);
+            is($r->[0], 1, "hex comparison $hex_val");
         }
     }
     $h->do(q/delete from PERL_DBD_TABLE1/);
@@ -162,7 +171,11 @@ unless($dbh) {
    BAIL_OUT("Unable to connect to the database $DBI::errstr\nTests skipped.\n");
    exit 0;
 }
+my $driver_name = $dbh->get_info($GetInfoType{SQL_DRIVER_NAME});
+diag "Driver: ", $driver_name;
+
 $dbh->{RaiseError} = 1;
+eval {local $dbh->{PrintWarn} =0; $dbh->{PrintError} = 0;$dbh->do(q/drop table PERL_DBD_TABLE1/)};
 
 my $dbname = $dbh->get_info($GetInfoType{SQL_DBMS_NAME});
 
@@ -183,7 +196,7 @@ if ($^O eq 'MSWin32') {
 }
 
 eval {
-    $dbh->do(q/create table PERL_DBD_TABLE1 (a varchar(100) collate Latin1_General_CI_AS)/);
+    $dbh->do(q/create table PERL_DBD_TABLE1 (b integer, a varchar(100) collate Latin1_General_CI_AS)/);
 };
 if ($@) {
     diag "Cannot create table with collation - $@";
@@ -193,14 +206,25 @@ if ($@) {
 
 collations($dbh, 'PERL_DBD_TABLE1');
 
-my $sql = q/insert into PERL_DBD_TABLE1 (a) values(?)/;
+my $sql = q/insert into PERL_DBD_TABLE1 (b, a) values(?, ?)/;
 
 # a simple unicode string
 my $euro = "\x{20ac}\x{a3}";
 diag "Inserting a unicode euro, utf8 flag on:\n";
 my $s = $dbh->prepare($sql); # redo to ensure no sticky params
-execute($s, $euro);
-show_it($dbh, [2], [2]);
+$s->execute(1, $euro);
+show_it($dbh, [2], [2], ['0x80a3']);
+
+# a simple unicode string
+my $str;
+{
+    use bytes;
+    $str = chr(0x80) . chr(0xa3);
+}
+diag "Inserting a unicode euro, utf8 flag on:\n";
+$s = $dbh->prepare($sql); # redo to ensure no sticky params
+$s->execute(1, $str);
+show_it($dbh, [2], [2], ['0x80a3']);
 
 Test::NoWarnings::had_no_warnings() if ($has_test_nowarnings);
 done_testing();
