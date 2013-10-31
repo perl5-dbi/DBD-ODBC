@@ -2156,6 +2156,38 @@ than SQL_NUMERIC or SQL_DOUBLE) your code is probably wrong.
 Significant changes occurred in DBD::ODBC at 1.38_1 for binding
 columns. Please see the Changes file.
 
+=head3 bind_param
+
+DBD::ODBC follows the DBI specification for bind_param however the
+third argument (a type or a hashref containing a type) is loosely
+defined by DBI. From the DBI pod:
+
+I<The \%attr parameter can be used to hint at the data type the placeholder should have. This is rarely needed. >
+
+As a general rule, don't specify a type when calling bind_param. If you stick to inserting appropriate data into the appropriate column DBD::ODBC will mostly do the right thing espcially if the ODBC driver supports SQLDescribeParam.
+
+In particular don't just add a type of SQL_DATE because you are inserting a date (it will not work). The correct syntax in ODBC for inserting dates, times and timestamps is:
+
+insert into mytable (mydate, mttime, mytimestamp) values(?,?,?);
+bind_param(1, "{d 'YYYY-MM-DD'}");
+bind_param(2, "{t 'HH:MM:SS.MM'}"); # :MM can be omitted and some dbs support :MMM
+bind_param(3, "{ts 'YYYY-MM-DD HH:MM:SS'}");
+
+See http://technet.microsoft.com/en-US/library/ms190234%28v=SQL.90%29.aspx
+
+The only times when you might want to add a type are:
+
+1. If your ODBC driver does not support SQLDescribeParam (or if you
+told DBD::ODBC not to use it) then DBD::ODBC will default to inserting
+each parameter as a string (which is usually thr ight thing
+anyway). This is ok, most of the time, but is probably not what you
+want when inserting a binary (use TYPE => SQL_BINARY).
+
+2. If for some reason your driver describes the parameter
+incorrectly. It is difficult to describe an example of this.
+
+Also, DBI exports some types which are not available in ODBC e.g., SQL_BLOB. If you are unsure about ODBC types look at your ODBC header files or look up valid types in the ODBC specification.
+
 =head2 Unicode
 
 The ODBC specification supports wide character versions (a postfix of
