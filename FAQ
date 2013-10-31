@@ -1264,6 +1264,22 @@ instead of 15.
 
 See rt 75687.
 
+=head2 Why are my pound signs (£), dashes and quotes (and other characters) returned garbled
+
+The first question in response is why do you think what you got back was incorrect? Did you print the data to a terminal and it looks wrong, or perhaps sent it to a browser in a piece of CGI or even wrote it to a file? The mantra you need to stick to is decode all input to Perl and encode all output but DBD::ODBC does the decoding of data retrieved from the database for you.
+
+The classic case I keep seeing I've repeated here because it illustrates the most common problem. Database is MS SQL Server, data is viewed in the management console and looks good but when retrieved via DBD::ODBC it looks wrong. The most common cause of this is the data you've retrieved is stored as unicode in Perl and you output it to somewhere without encoding it first with an encoding appropriate for the output e.g., you printed it from a windows terminal without setting the STDOUT encoding to cp1252 (or whatever your codepage in your terminal is). The first thing I'd suggest is to print the data with Data::Dumper and if any of the output contains \x{NNNN} your data is unicode (there are other ways like using DBI's data_string_desc utility method or Encode's is_utf8).
+
+Bear in mind that in a unicode build of DBD::ODBC (the default on Windows) all string data is retrieved as unicode. When you output your unicode data anywhere you need to encode it with Encode::encode e.g.,
+
+binmode(STDOUT, ":encoding(cp1252)");
+
+Just because you think you are working in a single codepage does not mean the data you retrieve will be returned as single byte characters in that codepage. DBD::ODBC (in a unicode build) retrieves all string data as wide (unicode) characters and most ODBC drivers will convert the codepage data returned by the database to unicode. For example, your column is windows-1252 codepage and contains a euro symbol which is character 0xA3. When retrieved by DBD::ODBC, the ODBC driver will convert this to unicode character 0x20ac. If you output this without encoding you'll likely see rubbish.
+
+If you are absolutely sure you are using a single code page and don't want to be bothered with unicode, look up the odbc_old_unicode attribute but better still, rebuild DBD::ODBC without unicode support using:
+
+perl Makefile.PL -nou
+
 =head1 AUTHOR
 
 Parts of this document were written by Tim Bunce,
