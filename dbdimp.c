@@ -176,6 +176,7 @@ int dbd_st_finish(SV *sth, imp_sth_t *imp_sth);
 
 static int  rebind_param(SV *sth, imp_sth_t *imp_sth, imp_dbh_t *imp_dbh, phs_t *phs);
 static void get_param_type(SV *sth, imp_sth_t *imp_sth, imp_dbh_t *imp_dbh, phs_t *phs);
+static void check_for_unicode_param(imp_sth_t *imp_sth, phs_t *phs);
 
 DBISTATE_DECLARE;
 
@@ -3654,22 +3655,7 @@ static void get_param_type(
                phs->sql_type = SQL_VARCHAR;
                break;
   	     default: {
-	       if (SvUTF8(phs->sv)) {
-		 if (phs->described_sql_type == SQL_CHAR) {
-		   phs->sql_type = SQL_WCHAR;
-		 } else if (phs->described_sql_type == SQL_VARCHAR) {
-		   phs->sql_type = SQL_WVARCHAR;
-		 } else if (phs->described_sql_type == SQL_LONGVARCHAR) {
-		   phs->sql_type = SQL_WLONGVARCHAR;
-		 } else {
-		   phs->sql_type = phs->described_sql_type;
-		 }
-		 if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 5) && (phs->sql_type != phs->described_sql_type))
-		   TRACE1(imp_dbh, "      SvUTF8 parameter - changing to %s type\n",
-			  S_SqlTypeToString(phs->sql_type));
-	       } else {
-		 phs->sql_type = phs->described_sql_type;
-	       }
+             check_for_unicode_param(imp_sth, phs);
 	       break;
 	     }
            }
@@ -3679,6 +3665,7 @@ static void get_param_type(
            TRACE1(imp_dbh,
                   "      SQLDescribeParam already run and returned rc=%d\n",
                   phs->describe_param_status);
+       check_for_unicode_param(imp_sth, phs);
    }
 
    if (phs->requested_type != 0) {
@@ -7519,6 +7506,28 @@ static int taf_callback_wrapper (
 
     PUTBACK;
     return ret;
+}
+
+static void check_for_unicode_param(
+    imp_sth_t *imp_sth,
+    phs_t *phs) {
+
+    if (SvUTF8(phs->sv)) {
+        if (phs->described_sql_type == SQL_CHAR) {
+            phs->sql_type = SQL_WCHAR;
+        } else if (phs->described_sql_type == SQL_VARCHAR) {
+            phs->sql_type = SQL_WVARCHAR;
+        } else if (phs->described_sql_type == SQL_LONGVARCHAR) {
+            phs->sql_type = SQL_WLONGVARCHAR;
+        } else {
+            phs->sql_type = phs->described_sql_type;
+        }
+        if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 5) && (phs->sql_type != phs->described_sql_type))
+            TRACE1(imp_sth, "      SvUTF8 parameter - changing to %s type\n",
+                   S_SqlTypeToString(phs->sql_type));
+    } else {
+        phs->sql_type = phs->described_sql_type;
+    }
 }
 
 /* end */
