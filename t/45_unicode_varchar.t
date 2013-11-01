@@ -1,5 +1,9 @@
 #!/usr/bin/perl -w -I./t
-
+#
+# Test insertion into varchar columns using unicode and codepage chrs
+# Must be a unicode build of DBD::ODBC
+# Currently needs MS SQL Server
+#
 use open ':std', ':encoding(utf8)';
 use Test::More;
 use strict;
@@ -34,6 +38,7 @@ END {
     }
 }
 
+# get the server, database and table collations
 sub collations {
     my ($h, $table) = @_;
 
@@ -93,6 +98,7 @@ sub collations {
     diag "Code page for column collation: ", $r->[0];
 }
 
+# output various codepage information
 sub code_page {
     eval {require Win32::API};
     if ($@) {
@@ -107,6 +113,7 @@ sub code_page {
     diag "active code page: $cp\n";
 }
 
+# given a string call diag to output the ord of each character
 sub ords {
     my $str = shift;
 
@@ -118,6 +125,11 @@ sub ords {
     }
 }
 
+# read back the length of the data inserted according to the db and the data
+# inserted (although nothing is done with the latter right now).
+# given a perl expected length and a db expected length check them
+# given a hex string of bytes the data should look like when cast to a
+# binary check the inserted data matches what we expect.
 sub show_it {
     my ($h, $expected_perl_length, $expected_db_length, $hex) = @_;
 
@@ -143,27 +155,30 @@ sub show_it {
     $h->do(q/delete from PERL_DBD_TABLE1/);
 }
 
+# insert the string into the database
+# daig output info about the inserted data
 sub execute {
-    my ($s, $string) = @_;
+    my ($s, @strings) = @_;
 
-    #diag "  INPUT:";
+    diag "  INPUT:";
+    foreach my $string(@strings) {
+        #diag "    input string: $string";
+        diag "    data_string_desc of input string: ", data_string_desc($string);
+        diag "    ords of input string: ";
+        foreach my $s(split(//, $string)) {
+            diag sprintf("%x,", ord($s));
+        }
 
-    #diag "    input string: $string";
-    #diag "    data_string_desc of input string: ", data_string_desc($string);
-    #diag "    ords of input string: ";
-    #foreach my $s(split(//, $string)) {
-    #    diag sprintf("%x,", ord($s));
-    #}
+        {
+            diag "    bytes of input string: ";
+            use bytes;
+            foreach my $s(split(//, $string)) {
+                diag sprintf("%x,", ord($s));
+            }
+        }
+    }
 
-    #{
-    #    diag "    bytes of input string: ";
-    #    use bytes;
-    #    foreach my $s(split(//, $string)) {
-    #        diag sprintf("%x,", ord($s));
-    #    }
-    #}
-
-    ok($s->execute($string), "execute");
+    ok($s->execute(@strings), "execute");
 }
 
 $dbh = DBI->connect();
@@ -178,7 +193,6 @@ $dbh->{RaiseError} = 1;
 eval {local $dbh->{PrintWarn} =0; $dbh->{PrintError} = 0;$dbh->do(q/drop table PERL_DBD_TABLE1/)};
 
 my $dbname = $dbh->get_info($GetInfoType{SQL_DBMS_NAME});
-
 if ($dbname !~ /Microsoft SQL Server/i) {
     note "Not MS SQL Server";
     done_testing();
@@ -199,7 +213,7 @@ eval {
     $dbh->do(q/create table PERL_DBD_TABLE1 (b integer, a varchar(100) collate Latin1_General_CI_AS)/);
 };
 if ($@) {
-    diag "Cannot create table with collation - $@";
+    fail("Cannot create table with collation - $@");
     done_testing();
     exit 0;
 }
@@ -208,23 +222,40 @@ collations($dbh, 'PERL_DBD_TABLE1');
 
 my $sql = q/insert into PERL_DBD_TABLE1 (b, a) values(?, ?)/;
 
+my $s;
 # a simple unicode string
-my $euro = "\x{20ac}\x{a3}";
-diag "Inserting a unicode euro, utf8 flag on:\n";
-my $s = $dbh->prepare($sql); # redo to ensure no sticky params
-$s->execute(1, $euro);
-show_it($dbh, [2], [2], ['0x80a3']);
-
-# a simple unicode string
-my $str;
-{
-    use bytes;
-    $str = chr(0x80) . chr(0xa3);
-}
+my $unicode = "\x{20ac}\x{a3}";
 diag "Inserting a unicode euro, utf8 flag on:\n";
 $s = $dbh->prepare($sql); # redo to ensure no sticky params
-$s->execute(1, $str);
+execute($s, 1, $unicode);
 show_it($dbh, [2], [2], ['0x80a3']);
+
+my $codepage;
+# a simple codepage string
+{
+    use bytes;
+    $codepage = chr(0xa3) . chr(0x80); # it is important this is different to $unicode
+}
+diag "Inserting a codepage/bytes string:\n";
+$s = $dbh->prepare($sql); # redo to ensure no sticky params
+execute($s, 1, $codepage);
+show_it($dbh, [2], [2], ['0xa380']);
+
+# inserting a mixture of unicode chrs and codepage chrs per row in same insert
+# unicode first - checks we rebind the 2nd parameter as SQL_CHAR
+diag "Inserting a unicode followed by codepage chrs:\n";
+$s = $dbh->prepare($sql); # redo to ensure no sticky params
+execute($s, 1, $unicode);
+execute($s, 2, $codepage);
+show_it($dbh, [2,2], [2,2], ['0x80a3', '0x80a3']);
+
+# inserting a mixture of unicode chrs and codepage chrs per row in same insert
+# codepage first - checks we rebind the 2nd parameter SQL_WCHAR
+diag "Inserting codepage chrs followed by unicode:\n";
+$s = $dbh->prepare($sql); # redo to ensure no sticky params
+execute($s, 1, $codepage);
+execute($s, 2, $unicode);
+show_it($dbh, [2,2], [2,2], ['0xa380', '0x80a3']);
 
 Test::NoWarnings::had_no_warnings() if ($has_test_nowarnings);
 done_testing();
