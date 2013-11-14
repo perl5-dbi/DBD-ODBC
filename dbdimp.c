@@ -1682,7 +1682,16 @@ int dbd_st_tables(
     }
 
     if (SvOK(catalog)) acatalog = SvPV_nolen(catalog);
+    if (!imp_dbh->catalogs_supported) {
+        acatalog = NULL;
+        *catalog = PL_sv_undef;
+    }
     if (SvOK(schema)) aschema = SvPV_nolen(schema);
+    if (!imp_dbh->schema_usage) {
+        aschema = NULL;
+        *schema = PL_sv_undef;
+    }
+
     if (SvOK(table)) atable = SvPV_nolen(table);
     if (SvOK(table_type)) atype = SvPV_nolen(table_type);
 
@@ -6570,6 +6579,41 @@ static int post_connect(
             TRACE1(imp_dbh, "MAX_COLUMN_NAME_LEN = %d\n",
                    imp_dbh->max_column_name_len);
     }
+
+    /* find catalog usage */
+    {
+        char yesno[10];
+
+        rc = SQLGetInfo(imp_dbh->hdbc, SQL_CATALOG_NAME,
+                        yesno,
+                        (SQLSMALLINT) sizeof(yesno), &dbvlen);
+        if (!SQL_SUCCEEDED(rc)) {
+            dbd_error(dbh, rc, "post_connect/SQLGetInfo(SQL_CATALOG_NAME)");
+            imp_dbh->catalogs_supported = 0;
+        } else if (yesno[0] == 'Y') {
+            imp_dbh->catalogs_supported = 1;
+        } else {
+            imp_dbh->catalogs_supported = 0;
+        }
+        if (DBIc_TRACE(imp_dbh, CONNECTION_TRACING, 0, 0))
+            TRACE1(imp_dbh, "SQL_CATALOG_NAME = %d\n",
+                       imp_dbh->catalogs_supported);
+    }
+
+    /* find schema usage */
+    {
+        rc = SQLGetInfo(imp_dbh->hdbc, SQL_SCHEMA_USAGE,
+                        &imp_dbh->schema_usage,
+                        (SQLSMALLINT) sizeof(imp_dbh->schema_usage), &dbvlen);
+        if (!SQL_SUCCEEDED(rc)) {
+            dbd_error(dbh, rc, "post_connect/SQLGetInfo(SQL_SCHEMA_USAGE)");
+            imp_dbh->schema_usage = 0;
+        }
+        if (DBIc_TRACE(imp_dbh, CONNECTION_TRACING, 0, 0))
+            TRACE1(imp_dbh, "SQL_SCHEMA_USAGE = %d\n",
+                       imp_dbh->schema_usage);
+    }
+
 #ifdef WITH_UNICODE
     imp_dbh->max_column_name_len = imp_dbh->max_column_name_len *
         sizeof(SQLWCHAR) + 2;
@@ -7514,6 +7558,15 @@ static int taf_callback_wrapper (
 static void check_for_unicode_param(
     imp_sth_t *imp_sth,
     phs_t *phs) {
+
+    if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 5)) {
+        TRACE2(imp_sth, "check_for_unicode_param - sql_type=%s, described=%s",
+               S_SqlTypeToString(phs->sql_type), S_SqlTypeToString(phs->described_sql_type));
+    }
+
+    /* If we didn't called SQLDescribeParam successfully, we've defaulted/guessed so just return
+       as sql_type will already be set */
+    if (!phs->described_sql_type) return;
 
     if (SvUTF8(phs->sv)) {
         if (phs->described_sql_type == SQL_CHAR) {

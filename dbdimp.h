@@ -132,6 +132,8 @@ struct imp_dbh_st {
        the ODBC Driver what it is currently set to, Of course setting it
        to false works similarly. */
     int read_only;
+    int catalogs_supported;
+    SQLUINTEGER schema_usage;
 };
 
 /* Define sth implementor data structure */
