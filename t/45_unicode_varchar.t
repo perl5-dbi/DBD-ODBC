@@ -100,9 +100,9 @@ sub collations {
 
 # output various codepage information
 sub code_page {
-    eval {require Win32::API};
+    eval {require Win32::API::More};
     if ($@) {
-        diag("Win32::API not available");
+        diag("Win32::API::More not available");
         return;
     }
     Win32::API::More->Import("kernel32", "UINT GetConsoleOutputCP()");
@@ -111,6 +111,7 @@ sub code_page {
     diag "Current active console code page: $cp\n";
     $cp = GetACP();
     diag "active code page: $cp\n";
+    1;
 }
 
 # given a string call diag to output the ord of each character
@@ -195,18 +196,20 @@ eval {local $dbh->{PrintWarn} =0; $dbh->{PrintError} = 0;$dbh->do(q/drop table P
 my $dbname = $dbh->get_info($GetInfoType{SQL_DBMS_NAME});
 if ($dbname !~ /Microsoft SQL Server/i) {
     note "Not MS SQL Server";
-    done_testing();
-    exit 0;
+    plan skip_all => "Not MS SQL Server";
+    exit;
 }
 
 if (!$dbh->{odbc_has_unicode}) {
     note "Not a unicode build of DBD::ODBC";
-    done_testing;
+    plan skip_all => "Not a unicode build of DBD::ODBC";
     exit 0;
 }
 
 if ($^O eq 'MSWin32') {
-    code_page();
+    if (!code_page()) {
+        note "Win32::API not found";
+    }
 }
 
 eval {
