@@ -228,7 +228,7 @@ my $sth;
 
 my $dbname = $dbh->get_info($GetInfoType{SQL_DBMS_NAME});
 SKIP: {
-   skip "Microsoft SQL Server tests not supported using $dbname", 63
+   skip "Microsoft SQL Server tests not supported using $dbname", 66
        unless ($dbname =~ /Microsoft SQL Server/i);
 
    getinfo($dbh);
