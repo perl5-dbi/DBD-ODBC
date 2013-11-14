@@ -1427,11 +1427,14 @@ void dbd_error2(
        error message */
 
     if (!error_found && (err_rc != SQL_NO_DATA_FOUND)) {
+        /* DON'T REMOVE "No error found" from the string below
+           people rely on it as the state was IM008 and I changed it
+           to HY000 */
         if (DBIc_TRACE(imp_xxh, DBD_TRACING, 0, 3))
             TRACE1(imp_dbh, "    ** No error found %d **\n", err_rc);
         DBIh_SET_ERR_CHAR(
             h, imp_xxh, Nullch, 1,
-            "    Unable to fetch information about the error", "IM008", Nullch);
+            "    Unable to fetch information about the error", "HY000", Nullch);
     }
 
 }
@@ -2590,8 +2593,8 @@ int dbd_describe(SV *sth, imp_sth_t *imp_sth, int more)
 # if defined(WITH_UNICODE)
             fbh->ftype = SQL_C_WCHAR;
             /* MS SQL returns bytes, Oracle returns characters ... */
-            fbh->ColLength*=sizeof(SQLWCHAR);
-            fbh->ColDisplaySize = DBIc_LongReadLen(imp_sth)+1;
+            fbh->ColLength *= sizeof(SQLWCHAR);
+            fbh->ColDisplaySize = DBIc_LongReadLen(imp_sth) + 1;
 # else  /* !WITH_UNICODE */
             fbh->ColDisplaySize = DBIc_LongReadLen(imp_sth) + 1;
 # endif	/* WITH_UNICODE */
@@ -2599,11 +2602,11 @@ int dbd_describe(SV *sth, imp_sth_t *imp_sth, int more)
 #endif  /* SQL_WLONGVARCHAR */
           case SQL_VARCHAR:
             if (fbh->ColDef == 0) {
-                fbh->ColDisplaySize = DBIc_LongReadLen(imp_sth)+1;
+                fbh->ColDisplaySize = DBIc_LongReadLen(imp_sth) + 1;
             }
             break;
           case SQL_LONGVARCHAR:
-            fbh->ColDisplaySize = DBIc_LongReadLen(imp_sth)+1;
+            fbh->ColDisplaySize = DBIc_LongReadLen(imp_sth) + 1;
             break;
           case MS_SQLS_XML_TYPE: {
               /* XML columns are inherently Unicode so bind them as such and in this case

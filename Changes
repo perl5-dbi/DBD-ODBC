@@ -16,6 +16,12 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
   char/varchar columns or if you only inserted unicode into
   nchar/nvarchar columns you should see no difference.
 
+  Previously if DBD::ODBC received an error or (SQL_SUCCESS_WITH_INFO)
+  from an ODBC API call and then the driver refused to return the
+  error state/text DBD::ODBC would issue its own error saying "Unable
+  to fetch information about the error" and state IM008. That state
+  was wrong and has been changed to HY000.
+
   [MISCELLANEOUS]
 
   Added test 45_unicode_varchar.t for MS SQL Server only so far.
