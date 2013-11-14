@@ -2667,6 +2667,14 @@ How do I insert Unicode supplementary characters into SQL Server from Perl?
 
 L<http://www.easysoft.com/support/kb/kb01043.html>
 
+Some Common Unicode Problems and Solutions using Perl DBD::ODBC and MS SQL Server
+
+L<http://www.easysoft.com/developer/languages/perl/sql-server-unicode.html>
+
+and a version possibly kept more up to date:
+
+L<https://github.com/mjegh/dbd_odbc_sql_server_unicode/blob/master/common_problems.pod>
+
 =head2 Frequently Asked Questions
 
 Frequently asked questions are now in L<DBD::ODBC::FAQ>. Run
