@@ -22,6 +22,16 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
   to fetch information about the error" and state IM008. That state
   was wrong and has been changed to HY000.
 
+  [BUG FIXES]
+
+  Some drivers cannot support catalogs and/or schema names in
+  SQLTables.  Recent changes set the schema/catalog name to the empty
+  string (good reasons below) which causes "optional feature not
+  implemented" from MS Access (which does not support schemas - even
+  for a simply ping (which uses SQLTables)). Now we call
+  SQLCATALOG_NAME and SQLSCHEMA_USAGE on connect to ascertain support
+  which modifies SQLTables call.
+
   [MISCELLANEOUS]
 
   Added test 45_unicode_varchar.t for MS SQL Server only so far.
