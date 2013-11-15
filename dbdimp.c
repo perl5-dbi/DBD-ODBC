@@ -6610,8 +6610,8 @@ static int post_connect(
             imp_dbh->schema_usage = 0;
         }
         if (DBIc_TRACE(imp_dbh, CONNECTION_TRACING, 0, 0))
-            TRACE1(imp_dbh, "SQL_SCHEMA_USAGE = %d\n",
-                       imp_dbh->schema_usage);
+            TRACE1(imp_dbh, "SQL_SCHEMA_USAGE = %lu\n",
+                   (unsigned long)imp_dbh->schema_usage);
     }
 
 #ifdef WITH_UNICODE
