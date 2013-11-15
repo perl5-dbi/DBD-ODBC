@@ -5,7 +5,7 @@
 #
 # DBD::ODBC was stringifying input bound parameters.
 # This script creates an object with an overriden stringifcation method
-# and test it is stringified when bound.
+# and tests it is stringified when bound.
 #
 use strict;
 use warnings;
