@@ -162,7 +162,8 @@ ok(!defined($dbh->err), 'err not set on LongTruncOk handle');
 # + 1 instead of LongReadLen. Not fixed yet and failing test causes loads
 # of people to post saying it fails so change to test not more than
 # LongReadLen + 1.
-ok($max_col_len <= 51, 'Truncated column to LongReadLen');
+ok($max_col_len <= 51, 'Truncated column to LongReadLen') or
+    diag("Got $max_col_len");
 
 # now force an error and ensure we get a long truncated event.
 $dbh->{LongTruncOk} = 0;
