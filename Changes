@@ -6,15 +6,27 @@ use strict;
 
 DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
 
-=head2 1.46_1 yyyy-mm-dd
+=head2 1.46_2 2013-12-11
+
+  [BUG FIXES]
+
+  When built with unicode support and odbc_old_unicode is not enabled
+  columns reported as SQL_LONGVARCHAR were not by default bound as
+  SQL_WCHAR and hence were not returned correctly unless the bind was
+  overridden.
+
+=head2 1.46_1 2013-11-16
 
   [CHANGE IN BEHAVIOUR]
 
   As warned in release 1.45, the binding of unicode parameters to
-  char/varchar columns has changed significantly - see warning at
-  start of DBD::ODBC pod. If you don't attempt to insert unicode into
-  char/varchar columns or if you only inserted unicode into
-  nchar/nvarchar columns you should see no difference.
+  char/varchar columns has changed significantly. If you don't attempt
+  to insert unicode into char/varchar columns or if you only inserted
+  unicode into nchar/nvarchar columns you should see no difference.
+  From this release, unicode data inserted into
+  char/varchar/longvarchar columns is bound as SQL_WCHAR and not
+  whatever the driver reports the parameter as (which is mostly
+  SQL_CHAR).
 
   Previously if DBD::ODBC received an error or (SQL_SUCCESS_WITH_INFO)
   from an ODBC API call and then the driver refused to return the

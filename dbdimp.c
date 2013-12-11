@@ -1347,7 +1347,8 @@ void dbd_error2(
                 PerlIO_printf(DBIc_LOGPIO(imp_dbh),
                               "    !SQLError(%p,%p,%p) = "
                               "(%s, %ld, %s)\n",
-                              henv, hdbc, hstmt, sqlstate, NativeError, ErrorMsg);
+                              henv, hdbc, hstmt, sqlstate,
+                              (long)NativeError, ErrorMsg);
             }
 
             /*
@@ -2519,9 +2520,18 @@ int dbd_describe(SV *sth, imp_sth_t *imp_sth, int more)
         fbh->ColLength += 1; /* add extra byte for double nul terminator */
 
         /* Unless old unicode behavior map SQL_CHAR to SQL_WCHAR */
-        if (!imp_sth->odbc_old_unicode &&
-        	 (fbh->ColSqlType == SQL_CHAR || fbh->ColSqlType == SQL_VARCHAR)) {
-        	  fbh->ColSqlType = SQL_WCHAR;
+        if (!imp_sth->odbc_old_unicode) {
+            switch(fbh->ColSqlType) {
+              case SQL_CHAR:
+                fbh->ColSqlType = SQL_WCHAR;
+                break;
+              case SQL_VARCHAR:
+                fbh->ColSqlType = SQL_WVARCHAR;
+                break;
+              case SQL_LONGVARCHAR:
+                fbh->ColSqlType = SQL_WLONGVARCHAR;
+                break;
+            }
         }
 # endif
 #else  /* !SQL_COLUMN_LENGTH */
@@ -3787,7 +3797,7 @@ static int rebind_param(
     if (phs->value_type == SQL_C_WCHAR) {
         if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 8)) {
             TRACE1(imp_dbh,
-                   "      Need to modify phs->sv in place: old length = %i\n",
+                   "      Need to modify phs->sv in place: old length = %lu\n",
                    value_len);
         }
         /* Convert the sv in place to UTF-16 encoded characters
@@ -3804,7 +3814,7 @@ static int rebind_param(
 
         if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 8)) {
             TRACE1(imp_dbh,
-                   "      Need to modify phs->sv in place: new length = %i\n",
+                   "      Need to modify phs->sv in place: new length = %lu\n",
                    value_len);
         }
     }
@@ -7470,7 +7480,8 @@ static int get_row_diag(SQLSMALLINT recno,
         SQLLEN row;
         if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 3))
             PerlIO_printf(DBIc_LOGPIO(imp_sth),
-                          "    diag %d %s, %ld, %s\n", i, state, *native, msg);
+                          "    diag %d %s, %ld, %s\n",
+                          i, state, (long)*native, msg);
         /*printf("diag %d %s, %ld, %s\n", i, state, native, msg);*/
         if (max_msg < 100) {
             croak("Come on, code needs some space to put the diag message");
