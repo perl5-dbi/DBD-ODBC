@@ -32,6 +32,8 @@ my $val;
 $val = $h->parse_trace_flags('odbcunicode|odbcconnection');
 is($val, 0x06_00_00_00, "parse_trace_flags");
 
+$h->disconnect;
+
 Test::NoWarnings::had_no_warnings()
   if ($has_test_nowarnings);
 
