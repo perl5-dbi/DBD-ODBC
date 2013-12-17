@@ -109,6 +109,7 @@ t/70execute_array_native.t
 t/80_odbc_diags.t
 t/82_table_info.t
 t/87_odbc_lob_read.t
+t/90_trace_flag.t
 t/ODBCTEST.pm
 t/ExecuteArray.pm
 t/UChelp.pm
