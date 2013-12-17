@@ -6,7 +6,7 @@ use strict;
 
 DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
 
-=head2 1.46_2 2013-12-11
+=head2 1.46_2 2013-12-17
 
   [BUG FIXES]
 
@@ -14,6 +14,10 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
   columns reported as SQL_LONGVARCHAR were not by default bound as
   SQL_WCHAR and hence were not returned correctly unless the bind was
   overridden.
+
+  [MISCELLANEOUS]
+
+  Added test 90_trace_flag.t
 
 =head2 1.46_1 2013-11-16
 
