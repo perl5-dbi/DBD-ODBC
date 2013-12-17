@@ -1,4 +1,3 @@
-
 #!perl
 use Test::More;
 use strict;

@@ -1,5 +1,3 @@
-# $Id$
-
 It is proving near impossible to workaround all the different bugs in
 the various SQL Server ODBC drivers and SQL Server Native Client
 drivers. From here on I am going to try and keep a record or what

@@ -1,5 +1,4 @@
 #!/usr/bin/perl -w -I./t
-# $Id$
 #
 # Test fix for rt 39841 - problem with SQLDecribeParam in MS SQL Server
 #

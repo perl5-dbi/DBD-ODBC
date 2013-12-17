@@ -1,6 +1,4 @@
 #
-# $Id$
-#
 # Package ODBCTEST
 #
 # This package is a common set of routines for the DBD::ODBC tests.

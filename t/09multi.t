@@ -1,5 +1,4 @@
 #!/usr/bin/perl -I./t -w
-# $Id$
 
 use Test::More;
 eval "require Test::NoWarnings";
@@ -52,13 +51,13 @@ SKIP:
 
 
    my $result_sets = 0;
-   
+
    my $sth;
    eval {
       $sth = $dbh->prepare($sqlStr);
       $sth->execute;
    };
-   
+
    if ($@) {
       skip("Multiple statements not supported using " . $dbh->get_info(17) . "\n", 4);
    }
@@ -141,7 +140,7 @@ sub RunMultiTest {
 	    # print join(":", @$ref), "\n";
          #}
 	 my $row = $ODBCTEST::tab_insert_values[$i];
-	 
+
 	 my $j;
 	 for ($j = 0; $j < $sth->{NUM_OF_FIELDS}; $j++) {
 	    if ($row->[$j] ne $ref->[$j]) {

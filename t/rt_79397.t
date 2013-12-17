@@ -1,5 +1,4 @@
 #!/usr/bin/perl -w -I./t
-# $Id$
 #
 # rt 79397
 #

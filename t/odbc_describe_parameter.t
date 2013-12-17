@@ -1,5 +1,4 @@
 #!/usr/bin/perl -w -I./t
-# $Id$
 #
 # Test odbc_describe_parameters
 # Should default to on but you can turn it off in the prepare or at the

@@ -1,4 +1,3 @@
-# $Id$
 use Test::More;
 
 plan skip_all => 'This test is only run for the module author'

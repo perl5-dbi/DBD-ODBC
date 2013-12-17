@@ -1,5 +1,4 @@
-#!perl
-# $Id$
+#!/usr/bin/perl -w -I./t
 ## Test META.yml for YAMLiciousness, requires Test::YAML::Meta
 
 use 5.006;

@@ -1,5 +1,4 @@
 #!/usr/bin/perl -w -I./t
-# $Id$
 # loads of execute_array and execute_for_fetch tests using DBD::ODBC's native methods
 
 use Test::More;

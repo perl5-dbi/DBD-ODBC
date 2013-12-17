@@ -1,4 +1,4 @@
-# $Id$
+#!/usr/bin/perl -w -I./t
 #
 # Test the experimental odbc_getdiagrec and odbc_getdiagfield
 #

@@ -1,4 +1,3 @@
-# $Id$
 package ExecuteArray;
 use Test::More;
 use Data::Dumper;

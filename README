@@ -1,5 +1,3 @@
-$Id$
-
 DBD::ODBC -- DBD module interfacing the ODBC databases.
 
    $Id$

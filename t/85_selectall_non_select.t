@@ -1,4 +1,4 @@
-# $Id$
+#!/usr/bin/perl -w -I./t
 #
 # Test what happens when selectall_* is called with a non select statement
 #

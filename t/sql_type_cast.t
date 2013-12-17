@@ -1,5 +1,4 @@
 #!/usr/bin/perl -w -I./t
-# $Id$
 #
 # Test sql_type_cast via DiscardString and StrictlyTyped
 # NOTE: as of post 1.37 you don't need DiscardString when binding SQL_INTEGER

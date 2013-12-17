@@ -1,6 +1,3 @@
-/*
- * $Id$
- */
 #ifdef WITH_UNICODE
 
 #include "ODBC.h"

@@ -1,6 +1,3 @@
-/*
- * $Id$
- */
 #ifdef WITH_UNICODE
 
 #ifndef unicode_helper_h

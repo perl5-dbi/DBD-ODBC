@@ -1,5 +1,4 @@
 #!/usr/bin/perl -w -I./t
-# $Id$
 # loads of execute_array and execute_for_fetch tests using DBI's methods
 
 use Test::More;

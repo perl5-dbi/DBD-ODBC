@@ -1,11 +1,10 @@
 /*
- * $Id$
  * Copyright (c) 1997-2001 Jeff Urlwin
  * portions Copyright (c) 1997  Thomas K. Wenrich
  * portions Copyright (c) 1994,1995,1996  Tim Bunce
  * portions Copyright (c) 1997-2001 Jeff Urlwin
  * portions Copyright (c) 2001 Dean Arnold
- * portions Copyright (c) 2007-2012 Martin J. Evans
+ * portions Copyright (c) 2007-2013 Martin J. Evans
  *
  * You may distribute under the terms of either the GNU General Public
  * License or the Artistic License, as specified in the Perl README file.

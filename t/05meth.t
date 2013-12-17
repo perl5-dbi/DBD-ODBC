@@ -1,5 +1,4 @@
 #!/usr/bin/perl -I./t
-# $Id$
 
 ## TBd: these tests don't seem to be terribly useful
 #use sigtrap;

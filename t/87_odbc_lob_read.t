@@ -1,3 +1,4 @@
+#!/usr/bin/perl -w -I./t
 use strict;
 use warnings;
 use DBI qw(:sql_types);

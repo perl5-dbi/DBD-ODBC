@@ -1,4 +1,4 @@
-# $Id$
+#!/usr/bin/perl -w -I./t
 #
 # Test type_info
 #

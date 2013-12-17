@@ -1,5 +1,4 @@
 #!/usr/bin/perl -I./t -w
-# $Id$
 
 use Test::More;
 $| = 1;

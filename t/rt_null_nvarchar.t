@@ -1,5 +1,4 @@
 #!/usr/bin/perl -w -I./t
-# $Id$
 #
 # test varbinary(MAX) and varchar(MAX) types in SQL Server
 # Mostly rt_38977 with additional:

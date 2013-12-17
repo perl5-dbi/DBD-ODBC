@@ -1,5 +1,4 @@
 #!/usr/bin/perl -w -I./t
-# $Id$
 #
 # rt62033 - not really this rt but a bug discovered when looking in to it
 #
