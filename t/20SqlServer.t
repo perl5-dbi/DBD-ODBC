@@ -612,7 +612,7 @@ AS
 
    $sth1->execute();
    is($output, 1, "test procedure with no input params");
-
+   $sth1 = undef;		# could still be active with some drivers
 
    $dbh->{odbc_async_exec} = 1;
    # print "odbc_async_exec is: $dbh->{odbc_async_exec}\n";
