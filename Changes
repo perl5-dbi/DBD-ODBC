@@ -1,6 +1,8 @@
 # satisfy kwalitee test
 use strict;
 
+=encoding utf8
+
 DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
 
 1.46_3 Unknown

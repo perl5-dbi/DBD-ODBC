@@ -1,5 +1,7 @@
 use strict;
 
+=encoding utf8
+
 =head1 NAME
 
 DBD::ODBC::FAQ - Frequently Asked Questions for DBD::ODBC
