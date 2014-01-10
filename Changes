@@ -1,3 +1,6 @@
+# statisfy kwalitee test
+use strict;
+
 DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
 
 1.46_3 Unknown
