@@ -1,5 +1,7 @@
 use strict;
 
+=encoding utf8
+
 =head1 NAME
 
 DBD::ODBC::FAQ - Frequently Asked Questions for DBD::ODBC
@@ -1279,6 +1281,10 @@ Just because you think you are working in a single codepage does not mean the da
 If you are absolutely sure you are using a single code page and don't want to be bothered with unicode, look up the odbc_old_unicode attribute but better still, rebuild DBD::ODBC without unicode support using:
 
 perl Makefile.PL -nou
+
+=head2 Does DBD::ODBC support the new table valued parameters?
+
+Not yet. Patches welcome.
 
 =head1 AUTHOR
 

@@ -117,6 +117,11 @@ static int check_connection_active(SV *h);
 static int build_results(SV *sth, imp_sth_t *imp_sth,
                          SV *dbh, imp_dbh_t *imp_dbh,
                          RETCODE orc);
+static int  rebind_param(SV *sth, imp_sth_t *imp_sth, imp_dbh_t *imp_dbh, phs_t *phs);
+static void get_param_type(SV *sth, imp_sth_t *imp_sth, imp_dbh_t *imp_dbh, phs_t *phs);
+static void check_for_unicode_param(imp_sth_t *imp_sth, phs_t *phs);
+
+/* Function to get the console window handle which we may use in SQLDriverConnect  on WIndows */
 #ifdef WIN32
 static HWND GetConsoleHwnd(void);
 #endif
@@ -127,8 +132,6 @@ int dbd_db_login6_sv(SV *dbh, imp_dbh_t *imp_dbh, SV *dbname,
 int dbd_db_login6(SV *dbh, imp_dbh_t *imp_dbh, char *dbname,
                   char *uid, char *pwd, SV *attr);
 int dbd_st_finish(SV *sth, imp_sth_t *imp_sth);
-
-#define av_sz(av) (av_len(av) + 1)
 
 /* for sanity/ease of use with potentially null strings */
 #define XXSAFECHAR(p) ((p) ? (p) : "(null)")
@@ -165,17 +168,11 @@ int dbd_st_finish(SV *sth, imp_sth_t *imp_sth);
    It also defines the point we switch from VARCHAR to LONGVARCHAR */
 #ifdef WITH_UNICODE
 # define ODBC_BACKUP_BIND_TYPE_VALUE	SQL_WVARCHAR
-# define ODBC_BACKUP_LONG_BIND_TYPE_VALUE    SQL_WLONGVARCHAR
 # define ODBC_SWITCH_TO_LONGVARCHAR 2000
 #else
 # define ODBC_BACKUP_BIND_TYPE_VALUE	SQL_VARCHAR
-# define ODBC_BACKUP_LONG_BIND_TYPE_VALUE	SQL_LONGVARCHAR
 # define ODBC_SWITCH_TO_LONGVARCHAR 4000
 #endif
-
-static int  rebind_param(SV *sth, imp_sth_t *imp_sth, imp_dbh_t *imp_dbh, phs_t *phs);
-static void get_param_type(SV *sth, imp_sth_t *imp_sth, imp_dbh_t *imp_dbh, phs_t *phs);
-static void check_for_unicode_param(imp_sth_t *imp_sth, phs_t *phs);
 
 DBISTATE_DECLARE;
 
@@ -186,7 +183,8 @@ void dbd_init(dbistate_t *dbistate)
 
 
 
-static RETCODE odbc_set_query_timeout(imp_dbh_t *imp_dbh, HSTMT hstmt, UV odbc_timeout)
+static RETCODE odbc_set_query_timeout(
+    imp_dbh_t *imp_dbh, HSTMT hstmt, UV odbc_timeout)
 {
    RETCODE rc;
 
@@ -196,11 +194,11 @@ static RETCODE odbc_set_query_timeout(imp_dbh_t *imp_dbh, HSTMT hstmt, UV odbc_t
    rc = SQLSetStmtAttr(hstmt,(SQLINTEGER)SQL_ATTR_QUERY_TIMEOUT,
                        (SQLPOINTER)odbc_timeout,(SQLINTEGER)SQL_IS_INTEGER);
    if (!SQL_SUCCEEDED(rc)) {
-       /* Some drivers get upset with this so we ignore errors */
+       /* Some drivers get upset with this so we ignore errors and just trace the problem */
        if (DBIc_TRACE(imp_dbh, DBD_TRACING, 0, 3))
            TRACE1(
                imp_dbh,
-               "    !!Failed to set Statement ATTR Query Timeout to %"UVuf"\n",
+               "    Failed to set Statement ATTR Query Timeout to %"UVuf"\n",
                odbc_timeout);
    }
    return rc;
@@ -6885,7 +6883,6 @@ static SQLSMALLINT default_parameter_type(
 	   else
 #endif
 	     sql_type = SQL_LONGVARCHAR;
-	   /*return ODBC_BACKUP_LONG_BIND_TYPE_VALUE;*/
            if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 3))
                TRACE3(imp_sth, "%s, sv=%"UVuf" bytes, defaulting to %d\n",
                       why, (UV)SvCUR(phs->sv), sql_type);
