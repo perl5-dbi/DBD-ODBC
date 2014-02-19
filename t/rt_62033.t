@@ -88,7 +88,7 @@ sub doit
     eval {$s->execute(@_)};
 
     if (!$expect) {
-        ok($@, 'Error for constraint - just inserted undef into not null column and it appeared to work');
+        ok($@, 'Error for constraint - expected');
         note("For some drivers (freeTDS/MS SQL Server for Linux) there is no way out of this so expect further errors");
     } else {
         ok(!$@, 'Execute ok') or diag($@);

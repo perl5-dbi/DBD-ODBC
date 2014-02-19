@@ -190,7 +190,7 @@ sub commitTest {
     my $supported = $dbh->get_info(46); # SQL_TXN_CAPABLE
     # print "Transactions supported: $supported\n";
     if (!$supported) {
-	return -1;
+        return -1;
     }
 
     my $row = ODBCTEST::get_type_for_column($dbh, 'COL_D');
@@ -211,7 +211,7 @@ sub commitTest {
         $rc = 1;
     }
     else {
-	$rc = 0;
+        $rc = 0;
     }
     # in case not all rows have been returned..there shouldn't be more than one.
     $sth->finish();

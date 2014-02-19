@@ -65,39 +65,34 @@ $sth->finish();
 my ($a, $b);
 $sth = $dbh->prepare('SELECT COL_A, COL_B FROM PERL_DBD_TEST');
 $sth->execute();
-while (@row = $sth->fetchrow())
-    {
+while (@row = $sth->fetchrow()) {
     print " \@row     a,b:", $row[0], ",", $row[1], "\n";
-    }
+}
 $sth->finish();
 
 $sth->execute();
 $sth->bind_col(1, \$a);
 $sth->bind_col(2, \$b);
-while ($sth->fetch())
-    {
+while ($sth->fetch()) {
     print " bind_col a,b:", $a, ",", $b, "\n";
-    unless (defined($a) && defined($b))
-    	{
-	print "not ";
-	last;
+    unless (defined($a) && defined($b)) {
+        print "not ";
+        last;
 	}
-    }
+}
 pass("?");
 $sth->finish();
 
 ($a, $b) = (undef, undef);
 $sth->execute();
 $sth->bind_columns(undef, \$b, \$a);
-while ($sth->fetch())
-    {
+while ($sth->fetch()) {
     print " bind_columns a,b:", $b, ",", $a, "\n";
-    unless (defined($a) && defined($b))
-    	{
-	print "not ";
-	last;
+    unless (defined($a) && defined($b)) {
+        print "not ";
+        last;
 	}
-    }
+}
 pass("??");
 
 $sth->finish();
