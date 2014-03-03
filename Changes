@@ -5,6 +5,15 @@ use strict;
 
 DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
 
+1.48 2014-03-03
+
+  [MISCELLANEOUS]
+
+  Manifest has wrong filename for 90_trace_flags.t
+
+  Forgot to remove warning from ODBC.pm that this is a development
+  release and unicode change when I released 1.47.
+
 1.47 2014-02-19
 
   Full release of the 1.46 development releases.

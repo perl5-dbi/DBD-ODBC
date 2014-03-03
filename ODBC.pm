@@ -2,7 +2,7 @@
 # Copyright (c) 1994,1995,1996,1998  Tim Bunce
 # portions Copyright (c) 1997-2004  Jeff Urlwin
 # portions Copyright (c) 1997  Thomas K. Wenrich
-# portions Copyright (c) 2007-2013 Martin J. Evans
+# portions Copyright (c) 2007-2014 Martin J. Evans
 #
 # You may distribute under the terms of either the GNU General Public
 # License or the Artistic License, as specified in the Perl README file.
@@ -18,7 +18,7 @@ require 5.008;
 # see discussion on dbi-users at
 # http://www.nntp.perl.org/group/perl.dbi.dev/2010/07/msg6096.html and
 # http://www.dagolden.com/index.php/369/version-numbers-should-be-boring/
-$DBD::ODBC::VERSION = '1.47';
+$DBD::ODBC::VERSION = '1.48';
 
 {
     ## no critic (ProhibitMagicNumbers ProhibitExplicitISA)
@@ -37,10 +37,10 @@ $DBD::ODBC::VERSION = '1.47';
 
     bootstrap DBD::ODBC $VERSION;
 
-    $err = 0;           # holds error code   for DBI::err
+    $err = 0;                   # holds error code   for DBI::err
     $errstr = q{};              # holds error string for DBI::errstr
-    $sqlstate = "00000";
-    $drh = undef;       # holds driver handle once initialised
+    $sqlstate = "00000";        # starting state
+    $drh = undef;               # holds driver handle once initialised
 
     use constant {
         # header fields in SQLGetDiagField:
@@ -135,27 +135,27 @@ $DBD::ODBC::VERSION = '1.47';
 
     ## no critic (ProhibitBuiltinHomonyms)
     sub connect {
-	my($drh, $dbname, $user, $auth, $attr)= @_;
-	#$user = q{} unless defined $user;
-	#$auth = q{} unless defined $auth;
+        my($drh, $dbname, $user, $auth, $attr)= @_;
+        #$user = q{} unless defined $user;
+        #$auth = q{} unless defined $auth;
 
-	# create a 'blank' dbh
-	my $this = DBI::_new_dbh($drh, {
-	    'Name' => $dbname,
-	    'USER' => $user,
-	    'CURRENT_USER' => $user,
+        # create a 'blank' dbh
+        my $this = DBI::_new_dbh($drh, {
+            'Name' => $dbname,
+            'USER' => $user,
+            'CURRENT_USER' => $user,
 	    });
 
-	# Call ODBC _login func in Driver.xst file => dbd_db_login6
-	# and populate internal handle data.
-	# There are 3 versions (currently) if you have a recent DBI:
-	# dbd_db_login (oldest)
-	# dbd_db_login6 (with attribs hash & char * args) and
-	# dbd_db_login6_sv (as dbd_db_login6 with perl scalar args
+        # Call ODBC _login func in Driver.xst file => dbd_db_login6
+        # and populate internal handle data.
+        # There are 3 versions (currently) if you have a recent DBI:
+        # dbd_db_login (oldest)
+        # dbd_db_login6 (with attribs hash & char * args) and
+        # dbd_db_login6_sv (as dbd_db_login6 with perl scalar args
 
-	DBD::ODBC::db::_login($this, $dbname, $user, $auth, $attr) or return;
+        DBD::ODBC::db::_login($this, $dbname, $user, $auth, $attr) or return;
 
-	return $this;
+        return $this;
     }
     ## use critic
 
@@ -241,19 +241,19 @@ $DBD::ODBC::VERSION = '1.47';
     }
 
     sub columns {
-	my ($dbh, $catalog, $schema, $table, $column) = @_;
+        my ($dbh, $catalog, $schema, $table, $column) = @_;
 
-	$catalog = q{} if (!$catalog);
-	$schema = q{} if (!$schema);
-	$table = q{} if (!$table);
-	$column = q{} if (!$column);
-	# create a "blank" statement handle
-	my $sth = DBI::_new_sth($dbh, { 'Statement' => "SQLColumns" });
+        $catalog = q{} if (!$catalog);
+        $schema = q{} if (!$schema);
+        $table = q{} if (!$table);
+        $column = q{} if (!$column);
+        # create a "blank" statement handle
+        my $sth = DBI::_new_sth($dbh, { 'Statement' => "SQLColumns" });
 
-	_columns($dbh,$sth, $catalog, $schema, $table, $column)
-	    or return;
+        _columns($dbh,$sth, $catalog, $schema, $table, $column)
+            or return;
 
-	return $sth;
+        return $sth;
     }
 
 
@@ -266,7 +266,7 @@ $DBD::ODBC::VERSION = '1.47';
             $schema = $attrs->{TABLE_SCHEM};
             $table = $attrs->{TABLE_NAME};
             $type = $attrs->{TABLE_TYPE};
- 	}
+        }
         # the following was causing a problem
         # changing undef to '' makes a big difference to SQLTables
         # as SQLTables has special cases for empty string calls
@@ -296,6 +296,7 @@ $DBD::ODBC::VERSION = '1.47';
 	     or return;
        return $sth;
     }
+
     sub statistics_info {
        my ($dbh, $catalog, $schema, $table, $unique, $quick ) = @_;
 
@@ -331,7 +332,7 @@ $DBD::ODBC::VERSION = '1.47';
     }
 
     sub ping {
-	my $dbh = shift;
+        my $dbh = shift;
 
         # DBD::Gofer does the following (with a 0 instead of "0") but it I
         # cannot make it set a warning.
@@ -409,14 +410,14 @@ $DBD::ODBC::VERSION = '1.47';
     # leaving support for ->func(xxx, GetInfo) (below) for a period of time
     # to support older applications which used this.
     sub get_info {
-	my ($dbh, $item) = @_;
-	# Ignore some we cannot do
-	if ($item == SQL_DRIVER_HSTMT ||
+        my ($dbh, $item) = @_;
+        # Ignore some we cannot do
+        if ($item == SQL_DRIVER_HSTMT ||
                 $item == SQL_DRIVER_HLIB ||
                     $item == SQL_DRIVER_HDESC) {
-	   return;
-	}
-	return _GetInfo($dbh, $item);
+            return;
+        }
+        return _GetInfo($dbh, $item);
     }
 
     # new override of do method provided by Merijn Broeren
@@ -427,8 +428,7 @@ $DBD::ODBC::VERSION = '1.47';
         my($dbh, $statement, $attr, @params) = @_;
         my $rows = 0;
         ## no critic (ProhibitMagicNumbers)
-        if( -1 == $#params )
-        {
+        if( -1 == $#params ) {
             $dbh->STORE(Statement => $statement);
             # No parameters, use execute immediate
             $rows = ExecDirect( $dbh, $statement );
@@ -444,6 +444,7 @@ $DBD::ODBC::VERSION = '1.47';
         }
         return $rows
     }
+
     ## use critic
     #
     # can also be called as $dbh->func($sql, ExecDirect);
@@ -462,8 +463,8 @@ $DBD::ODBC::VERSION = '1.47';
     # See the ODBC documentation for more information about this call.
     #
     sub GetInfo {
-	my ($dbh, $item) = @_;
-	return get_info($dbh, $item);
+        my ($dbh, $item) = @_;
+        return get_info($dbh, $item);
     }
 
     # Call the ODBC function SQLStatistics
@@ -510,12 +511,12 @@ $DBD::ODBC::VERSION = '1.47';
     # See the ODBC documentation for more information about this call.
     #
     sub GetSpecialColumns {
-	my ($dbh, $identifier, $catalog, $schema, $table, $scope, $nullable) = @_;
-	# create a "blank" statement handle
-	my $sth = DBI::_new_sth($dbh, { 'Statement' => "SQLSpecialColumns" });
-	_GetSpecialColumns($dbh, $sth, $identifier, $catalog, $schema,
-			   $table, $scope, $nullable) or return;
-	return $sth;
+        my ($dbh, $identifier, $catalog, $schema, $table, $scope, $nullable) = @_;
+        # create a "blank" statement handle
+        my $sth = DBI::_new_sth($dbh, { 'Statement' => "SQLSpecialColumns" });
+        _GetSpecialColumns($dbh, $sth, $identifier, $catalog, $schema,
+                           $table, $scope, $nullable) or return;
+        return $sth;
     }
 
 #    sub GetTypeInfo {
@@ -528,15 +529,15 @@ $DBD::ODBC::VERSION = '1.47';
 #    }
 
     sub type_info_all {
-	my ($dbh, $sqltype) = @_;
-	$sqltype = DBI::SQL_ALL_TYPES unless defined $sqltype;
-	my $sth = DBI::_new_sth($dbh, { 'Statement' => "SQLGetTypeInfo" });
-	_GetTypeInfo($dbh, $sth, $sqltype) or return;
-	my $info = $sth->fetchall_arrayref;
-	unshift @{$info}, {
-	    map { ($sth->{NAME}->[$_] => $_) } 0..$sth->{NUM_OF_FIELDS}-1
-	};
-	return $info;
+        my ($dbh, $sqltype) = @_;
+        $sqltype = DBI::SQL_ALL_TYPES unless defined $sqltype;
+        my $sth = DBI::_new_sth($dbh, { 'Statement' => "SQLGetTypeInfo" });
+        _GetTypeInfo($dbh, $sth, $sqltype) or return;
+        my $info = $sth->fetchall_arrayref;
+        unshift @{$info}, {
+            map { ($sth->{NAME}->[$_] => $_) } 0..$sth->{NUM_OF_FIELDS}-1
+           };
+        return $info;
     }
 }
 
@@ -567,15 +568,15 @@ $DBD::ODBC::VERSION = '1.47';
     }
 
     sub ColAttributes { # maps to SQLColAttributes
-	my ($sth, $colno, $desctype) = @_;
-	my $tmp = _ColAttributes($sth, $colno, $desctype);
-	return $tmp;
+        my ($sth, $colno, $desctype) = @_;
+        my $tmp = _ColAttributes($sth, $colno, $desctype);
+        return $tmp;
     }
 
     sub cancel {
-	my $sth = shift;
-	my $tmp = _Cancel($sth);
-	return $tmp;
+        my $sth = shift;
+        my $tmp = _Cancel($sth);
+        return $tmp;
     }
 
     sub execute_for_fetch {
@@ -599,7 +600,7 @@ $DBD::ODBC::VERSION = '1.47';
             return $sth->SUPER::execute_for_fetch(@_);
         }
 
-	$tuple_batch_status = [ ]; # we always want this here
+        $tuple_batch_status = [ ]; # we always want this here
         if (defined($tuple_status)) {
             @$tuple_status = ();
         }
@@ -650,6 +651,7 @@ $DBD::ODBC::VERSION = '1.47';
 }
 
 1;
+
 __END__
 
 =head1 NAME
@@ -658,24 +660,24 @@ DBD::ODBC - ODBC Driver for DBI
 
 =head1 VERSION
 
-This documentation refers to DBD::ODBC version 1.47.
+This documentation refers to DBD::ODBC version 1.48.
 
 =head1 WARNING
 
-This development version of DBD::ODBC contains a significant fix to
-unicode when inserting into CHAR/VARCHAR columns and it is a change in
-behaviour. The change B<only> applies to unicode builds of DBD::ODBC
+This version of DBD::ODBC contains a significant fix to unicode when
+inserting into CHAR/VARCHAR columns and it is a change in behaviour
+from 1.45. The change B<only> applies to unicode builds of DBD::ODBC
 (the default on Windows but you can build it for unicode on unix too)
-and char/varchar columns and not nchar/nvarchar columns. Please test
-it and report and issues back to me. Read on for the description.
+and char/varchar columns and not nchar/nvarchar columns.
 
 Prior to this release of DBD::ODBC when you are using the unicode
 build of DBD::ODBC and inserted data into a CHAR/VARCHAR columns using
 parameters DBD::ODBC did this:
 
-1 if you set odbc_describe_parameters to 0, (thus preventing DBD::ODBC from calling
-  SQLDescribeParam) parameters for CHAR/VARCHAR columns were bound as SQL_WVARCHAR or
-  SQL_WLONGVARCHAR (depending on the length of the parameter).
+1 if you set odbc_describe_parameters to 0, (thus preventing DBD::ODBC
+  from calling SQLDescribeParam) parameters for CHAR/VARCHAR columns
+  were bound as SQL_WVARCHAR or SQL_WLONGVARCHAR (depending on the
+  length of the parameter).
 
 2 if you set odbc_force_bind_type then all parameters are bound as you
   specified.
@@ -692,10 +694,9 @@ parameters DBD::ODBC did this:
   columns unsurprisingly. The parameter was then bound as SQL_VARCHAR.
 
 Items 1 to 4 still apply. 5 now has a different bahaviour. In this
-development release, DBD::ODBC now looks at your bound data first
-before using the type returned by SQLDescribeParam. If you data looks
-like unicode (i.e., SvUTF8() is true) it now binds the parameter as
-SQL_WVARCHAR.
+release, DBD::ODBC now looks at your bound data first before using the
+type returned by SQLDescribeParam. If you data looks like unicode
+(i.e., SvUTF8() is true) it now binds the parameter as SQL_WVARCHAR.
 
 What might this might mean to you?
 
@@ -713,7 +714,7 @@ inserted you'd probably get back 3, not 1.
 However, when DBD::ODBC read that column back in a select
 statement, it would bind the column as SQL_WCHAR and you'd get back 3
 characters with the utf8 flag on (what those characters were depends
-on how your database of driver translates code page characters to wide
+on how your database or driver translates code page characters to wide
 characters).
 
 What should happen now is that if your bound parameters are unicode,
@@ -721,18 +722,6 @@ DBD::ODBC will bind them as wide characters (unicode) and your driver
 or database will attempt to convert them into the code page it is
 using. This means so long as your database can store the data you are
 inserting, when you read it back you should get what you inserted.
-
-
-Looking ahead
-
-I'm hoping not to have to go through some kind of deprecation cycle as
-clearly what DBD::ODBC did in this case was plain wrong and I don't
-see how anyone could have realistically used the data returned. B<If you know
-better now is your chance to tell me>.
-
-I'm also going through the reading of unicode data with a fine tooth comb
-so there could be other changes to come.
-
 
 =head1 SYNOPSIS
 
@@ -784,7 +773,7 @@ updates or deletes; it is simply a hint to the driver/database that
 you won't being doing updates.
 
 B<Note:> Since DBD::ODCB 1.44_3, if the driver does not support
-setting C<SQL_ATTR_ACCESS_MODE> and returns SQL_SUCCESS_WITJH_INFO and
+setting C<SQL_ATTR_ACCESS_MODE> and returns SQL_SUCCESS_WITH_INFO and
 "option value changed" a warning is issued (which you'll only see if
 you have DBI > 1.628).  In addition, an subsequent attempts to fetch
 the ReadOnly attribute will return the value last set.
