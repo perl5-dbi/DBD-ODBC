@@ -81,13 +81,13 @@ pass('created test table');
 sub doit
 {
     my $dbh = shift;
-    my $expect = shift;
+    my $expect = shift;         # undef if we expect this to fail
 
     my $s = $dbh->prepare_cached(
         q/insert into PERL_DBD_RT_62033 (b) values(?);select @@identity/);
     eval {$s->execute(@_)};
 
-    if (!$expect) {
+    if (!$expect) {             # expected to fail
         ok($@, 'Error for constraint - expected');
         note("For some drivers (freeTDS/MS SQL Server for Linux) there is no way out of this so expect further errors");
     } else {
