@@ -682,7 +682,7 @@ parameters DBD::ODBC did this:
 2 if you set odbc_force_bind_type then all parameters are bound as you
   specified.
 
-3 if you overroad the parameter type in the bind_param method, the
+3 if you override the parameter type in the bind_param method, the
   type you specified would be used.
 
 4 if the driver does not support SQLDescribeParam or SQLDescribeParam
@@ -693,7 +693,7 @@ parameters DBD::ODBC did this:
   type. This usually returns SQL_CHAR or SQL_VARCHAR for CHAR/VARCHAR
   columns unsurprisingly. The parameter was then bound as SQL_VARCHAR.
 
-Items 1 to 4 still apply. 5 now has a different bahaviour. In this
+Items 1 to 4 still apply. 5 now has a different behaviour. In this
 release, DBD::ODBC now looks at your bound data first before using the
 type returned by SQLDescribeParam. If you data looks like unicode
 (i.e., SvUTF8() is true) it now binds the parameter as SQL_WVARCHAR.
@@ -1612,7 +1612,7 @@ You use DBD::ODBC private functions like this:
 
 =head3 GetInfo
 
-B<This private function is now superceded by DBI's get_info method.>
+B<This private function is now superseded by DBI's get_info method.>
 
 This function maps to the ODBC SQLGetInfo call and the argument
 should be a valid ODBC information type (see ODBC specification).
@@ -1627,7 +1627,7 @@ value depending on the information value requested.
 
 =head3 GetTypeInfo
 
-B<This private function is now superceded by DBI's type_info and
+B<This private function is now superseded by DBI's type_info and
 type_info_all methods however as it is used by those methods it
 still exists.>
 
@@ -1683,7 +1683,7 @@ or
 
 =head3 GetStatistics
 
-B<This private function is now superceded by DBI's statistics_info
+B<This private function is now superseded by DBI's statistics_info
 method.>
 
 See the ODBC specification for the SQLStatistics API.
@@ -1700,7 +1700,7 @@ SQL_INDEX_ALL for false.
 
 =head3 GetForeignKeys
 
-B<This private function is now superceded by DBI's foreign_key_info
+B<This private function is now superseded by DBI's foreign_key_info
 method.>
 
 See the ODBC specification for the SQLForeignKeys API.
@@ -1712,7 +1712,7 @@ You call SQLForeignKeys like this:
 
 =head3 GetPrimaryKeys
 
-B<This private function is now superceded by DBI's primary_key_info
+B<This private function is now superseded by DBI's primary_key_info
 method.>
 
 See the ODBC specification for the SQLPrimaryKeys API.
@@ -1722,7 +1722,7 @@ You call SQLPrimaryKeys like this:
 
 =head3 data_sources
 
-B<This private function is now superceded by DBI's data_sources
+B<This private function is now superseded by DBI's data_sources
 method.>
 
 You call data_sources like this:
@@ -1743,7 +1743,7 @@ Handled as of version 0.28
 
 =head3 ColAttributes
 
-B<This private function is now superceded by DBI's statement attributes
+B<This private function is now superseded by DBI's statement attributes
 NAME, TYPE, PRECISION, SCALE, NULLABLE etc).>
 
 See the ODBC specification for the SQLColAttributes API.
@@ -2152,7 +2152,7 @@ defined by DBI. From the DBI pod:
 
 I<The \%attr parameter can be used to hint at the data type the placeholder should have. This is rarely needed. >
 
-As a general rule, don't specify a type when calling bind_param. If you stick to inserting appropriate data into the appropriate column DBD::ODBC will mostly do the right thing espcially if the ODBC driver supports SQLDescribeParam.
+As a general rule, don't specify a type when calling bind_param. If you stick to inserting appropriate data into the appropriate column DBD::ODBC will mostly do the right thing especially if the ODBC driver supports SQLDescribeParam.
 
 In particular don't just add a type of SQL_DATE because you are inserting a date (it will not work). The correct syntax in ODBC for inserting dates, times and timestamps is:
 
@@ -2167,7 +2167,7 @@ The only times when you might want to add a type are:
 
 1. If your ODBC driver does not support SQLDescribeParam (or if you
 told DBD::ODBC not to use it) then DBD::ODBC will default to inserting
-each parameter as a string (which is usually thr ight thing
+each parameter as a string (which is usually the right thing
 anyway). This is ok, most of the time, but is probably not what you
 want when inserting a binary (use TYPE => SQL_BINARY).
 
