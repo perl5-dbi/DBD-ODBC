@@ -43,5 +43,6 @@ int dbd_st_statistics(SV *dbh, SV *sth, char *catalog, char *schema,
                       char *table, int unique, int quick);
 int dbd_st_bind_col(SV *sth, imp_sth_t *imp_sth, SV *col, SV *ref,
                     IV type, SV *attribs);
+AV* dbd_data_sources(SV *drh );
 
 /* end of ODBC.h */

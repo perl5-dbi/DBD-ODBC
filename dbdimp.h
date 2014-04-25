@@ -265,6 +265,7 @@ struct phs_st {             /* scalar placeholder */
 #define dbd_init		odbc_init
 #define dbd_db_login		odbc_db_login
 #define dbd_db_login6		odbc_db_login6
+#define dbd_data_sources dbd_data_sources
 /*
  * Not defined by DBI
  * #define dbd_db_do		odbc_db_do

@@ -5,6 +5,24 @@ use strict;
 
 DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
 
+1.49 2014-04-25
+
+  [BUG FIXES]
+
+  If you had a lot of DSNs on Windows (more than 280 but it depends on
+  the length of their names) and called the data_sources method it
+  could crash your script. Code internally changed to stop putting the DSNs
+  returned on the stack.
+
+  [CHANGE IN BEHAVIOUR]
+
+  As warned years ago, the private data_sources method has been
+  removed - use DBI one instead.
+
+  [MISCELLANEOUS]
+
+  Added FAQ entry of maximum number of allowed parameters.
+
 1.48 2014-03-03
 
   [MISCELLANEOUS]

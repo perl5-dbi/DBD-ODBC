@@ -1286,6 +1286,17 @@ perl Makefile.PL -nou
 
 Not yet. Patches welcome.
 
+=head2 Why do I get "COUNT field incorrect or syntax error (SQL-07002)"?
+
+In general this error is telling you the number of parameters bound or
+passed to execute does not match the number of parameter markers in
+your SQL. However, this can also happen if you attempt to use too many
+parameters.
+
+For instance, for MS SQL Server
+(http://msdn.microsoft.com/en-us/library/ms143432.aspx) the maximum is
+2100.
+
 =head1 AUTHOR
 
 Parts of this document were written by Tim Bunce,

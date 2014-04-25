@@ -7593,4 +7593,56 @@ static void check_for_unicode_param(
     }
 }
 
+
+AV* dbd_data_sources(SV *drh ) {
+	int numDataSources = 0;
+	SQLUSMALLINT fDirection = SQL_FETCH_FIRST;
+	RETCODE rc;
+    SQLCHAR dsn[SQL_MAX_DSN_LENGTH+1+9 /* strlen("DBI:ODBC:") */];
+    SQLSMALLINT dsn_length;
+    SQLCHAR description[256];
+    SQLSMALLINT description_length;
+    AV *ds = newAV();
+	D_imp_drh(drh);
+
+	if (!imp_drh->connects) {
+	    rc = SQLAllocEnv(&imp_drh->henv);
+	    if (!SQL_ok(rc)) {
+            imp_drh->henv = SQL_NULL_HENV;
+            dbd_error(drh, rc, "data_sources/SQLAllocEnv");
+            return;
+
+	    }
+	}
+	strcpy(dsn, "dbi:ODBC:");
+	while (1) {
+        description[0] = '\0';
+        rc = SQLDataSources(imp_drh->henv, fDirection,
+                            dsn+9, /* strlen("dbi:ODBC:") */
+                            SQL_MAX_DSN_LENGTH,
+                            &dsn_length,
+                            description, sizeof(description),
+                            &description_length);
+        if (!SQL_ok(rc)) {
+            if (rc != SQL_NO_DATA_FOUND) {
+                /*
+                 *  Temporarily increment imp_drh->connects, so
+                 *  that dbd_error uses our henv.
+                 */
+                imp_drh->connects++;
+                dbd_error(drh, rc, "data_sources/SQLDataSources");
+                imp_drh->connects--;
+            }
+            break;
+        }
+        av_push( ds, newSVpv(dsn, dsn_length + 9 ) );
+	    fDirection = SQL_FETCH_NEXT;
+	}
+	if (!imp_drh->connects) {
+	    SQLFreeEnv(imp_drh->henv);
+	    imp_drh->henv = SQL_NULL_HENV;
+	}
+    return ds;
+
+}
 /* end */

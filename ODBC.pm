@@ -18,7 +18,7 @@ require 5.008;
 # see discussion on dbi-users at
 # http://www.nntp.perl.org/group/perl.dbi.dev/2010/07/msg6096.html and
 # http://www.dagolden.com/index.php/369/version-numbers-should-be-boring/
-$DBD::ODBC::VERSION = '1.48';
+$DBD::ODBC::VERSION = '1.49_1';
 
 {
     ## no critic (ProhibitMagicNumbers ProhibitExplicitISA)
@@ -159,6 +159,14 @@ $DBD::ODBC::VERSION = '1.48';
     }
     ## use critic
 
+    sub data_sources {
+        my ($drh, $attr) = @_;
+        my $dsref = DBD::ODBC::dr::_data_sources( $drh, $attr );
+        if( defined( $dsref ) && ref( $dsref ) eq "ARRAY" ) {
+            return @$dsref;
+        }
+        return ();  # Return empty array
+    }
 }
 
 
@@ -660,7 +668,7 @@ DBD::ODBC - ODBC Driver for DBI
 
 =head1 VERSION
 
-This documentation refers to DBD::ODBC version 1.48.
+This documentation refers to DBD::ODBC version 1.49_1.
 
 =head1 WARNING
 
@@ -1723,13 +1731,7 @@ You call SQLPrimaryKeys like this:
 =head3 data_sources
 
 B<This private function is now superseded by DBI's data_sources
-method.>
-
-You call data_sources like this:
-
-  @dsns = $dbh->func("data_sources);
-
-Handled since 0.21.
+method and was finally removed in 1.49>
 
 =head3 GetSpecialColumns
 
