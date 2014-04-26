@@ -95,9 +95,17 @@ require 5.004;
                    }
                } elsif (!exists($row->{COLUMN_SIZE})) {
                    # Postgres 9 seems to omit COLUMN_SIZE
-                   $fields .= '(4000)';
-                   note("WARNING Your ODBC driver is broken - DBI's type_info method should return a hashref containing a key of COLUMN_SIZE and we got " .
-                            join(",", sort keys %$row));
+                   # however see discussion at
+                   # http://www.postgresql.org/message-id/5315E336.40603@vmware.com and
+                   # http://www.postgresql.org/message-id/5315E622.2010904@ntlworld.com
+                   # try and use old ODBC 2 PRECISION value
+                   if (exists($row->{PRECISION})) {
+                       $fields .= '(' . $row->{PRECISION} . ')';
+                   } else {
+                       $fields .= '(4000)';
+                       note("WARNING Your ODBC driver is broken - DBI's type_info method should return a hashref containing a key of COLUMN_SIZE and we got " .
+                                join(",", sort keys %$row));
+                   }
                } else {
                    $fields .= "($row->{COLUMN_SIZE})" if ($row->{CREATE_PARAMS} =~ /LENGTH/i);
                    $fields .= "($row->{COLUMN_SIZE},0)" if ($row->{CREATE_PARAMS} =~ /PRECISION,SCALE/i);

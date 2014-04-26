@@ -5,7 +5,21 @@ use strict;
 
 DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
 
-1.49 2014-04-25
+1.49_3 2014-04-27
+
+  [BUG FIXES]
+
+  Fix rt89255: Fails to create test table for tests using PostgreSQL odbc driver.
+  Change test suite to fallback on PRECISION if COLUMN_SIZE is not found.
+
+1.49_2 2014-04-26
+
+  [BUG FIXES]
+
+  Change to data_sources in 1.49_1 could lead to a compile error since
+  data_sources was not returning a value if an error occurred.
+
+1.49_1 2014-04-25
 
   [BUG FIXES]
 
