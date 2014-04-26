@@ -7610,7 +7610,7 @@ AV* dbd_data_sources(SV *drh ) {
 	    if (!SQL_ok(rc)) {
             imp_drh->henv = SQL_NULL_HENV;
             dbd_error(drh, rc, "data_sources/SQLAllocEnv");
-            return;
+            return NULL;
 
 	    }
 	}
