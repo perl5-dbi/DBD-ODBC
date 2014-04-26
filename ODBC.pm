@@ -18,7 +18,7 @@ require 5.008;
 # see discussion on dbi-users at
 # http://www.nntp.perl.org/group/perl.dbi.dev/2010/07/msg6096.html and
 # http://www.dagolden.com/index.php/369/version-numbers-should-be-boring/
-$DBD::ODBC::VERSION = '1.49_1';
+$DBD::ODBC::VERSION = '1.49_2';
 
 {
     ## no critic (ProhibitMagicNumbers ProhibitExplicitISA)
@@ -668,7 +668,7 @@ DBD::ODBC - ODBC Driver for DBI
 
 =head1 VERSION
 
-This documentation refers to DBD::ODBC version 1.49_1.
+This documentation refers to DBD::ODBC version 1.49_2.
 
 =head1 WARNING
 
@@ -1731,7 +1731,7 @@ You call SQLPrimaryKeys like this:
 =head3 data_sources
 
 B<This private function is now superseded by DBI's data_sources
-method and was finally removed in 1.49>
+method and was finally removed in 1.49_1>
 
 =head3 GetSpecialColumns
 
