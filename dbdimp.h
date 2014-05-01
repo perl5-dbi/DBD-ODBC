@@ -67,8 +67,6 @@ struct imp_dbh_st {
     /* flag indicating if we should pass SQL_DRIVER_COMPLETE to
        SQLDriverConnect */
     int  odbc_driver_complete;
-    /* use old unicode behaviour of binding varchar/longvarchar as SQL_CHAR */
-    int odbc_old_unicode;
     /* used to disable describing paramters with SQLDescribeParam */
     int odbc_describe_parameters;
     /* flag to store the type of asynchronous execution the driver supports */
@@ -180,7 +178,6 @@ struct imp_sth_st {
     IV odbc_putdata_start;
     IV odbc_column_display_size;
     int odbc_utf8_on;
-    int odbc_old_unicode;
     int odbc_describe_parameters;
     SQLUSMALLINT *param_status_array; /* array for execute_for_fetch parameter status */
     SQLULEN params_processed;	      /* for execute_for_fetch */

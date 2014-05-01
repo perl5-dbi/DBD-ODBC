@@ -114,6 +114,7 @@ $DBD::ODBC::VERSION = '1.49_3';
         if (!$methods_are_installed) {
             DBD::ODBC::st->install_method("odbc_lob_read");
             DBD::ODBC::st->install_method("odbc_rows", { O=>0x00000000 });
+            DBD::ODBC::st->install_method("odbc_describe_param", { O=>0x00000000 });
             # don't clear errors - IMA_KEEP_ERR = 0x00000004
             DBD::ODBC::st->install_method("odbc_getdiagrec", { O=>0x00000004 });
             DBD::ODBC::db->install_method("odbc_getdiagrec", { O=>0x00000004 });
@@ -192,7 +193,6 @@ $DBD::ODBC::VERSION = '1.49_3';
             odbc_force_rebind              => undef, # sth and dbh
             odbc_async_exec                => undef, # sth and dbh
             odbc_exec_direct               => undef,
-            odbc_old_unicode               => undef,
             odbc_describe_parameters       => undef,
             odbc_SQL_ROWSET_SIZE           => undef,
             odbc_SQL_DRIVER_ODBC_VER       => undef,
@@ -568,7 +568,6 @@ $DBD::ODBC::VERSION = '1.49_3';
             odbc_column_display_size       => undef, # sth and dbh
             odbc_utf8_on                   => undef, # sth and dbh
             odbc_exec_direct               => undef, # sth and dbh
-            odbc_old_unicode               => undef, # sth and dbh
             odbc_describe_parameters       => undef, # sth and dbh
             odbc_batch_size                => undef, # sth and dbh
             odbc_array_operations          => undef, # sth and dbh
@@ -783,7 +782,7 @@ you won't being doing updates.
 B<Note:> Since DBD::ODCB 1.44_3, if the driver does not support
 setting C<SQL_ATTR_ACCESS_MODE> and returns SQL_SUCCESS_WITH_INFO and
 "option value changed" a warning is issued (which you'll only see if
-you have DBI > 1.628).  In addition, an subsequent attempts to fetch
+you have DBI > 1.628).  In addition, any subsequent attempts to fetch
 the ReadOnly attribute will return the value last set.
 
 This attribute requires DBI version 1.55 or better.
@@ -934,37 +933,6 @@ Do not confuse this with DBD::ODBC's unicode support. The
 C<odbc_utf8_on> attribute only applies to non-unicode enabled builds
 of DBD::ODBC.
 
-=head3 odbc_old_unicode
-
-Defaults to off. If set to true returns DBD::ODBC to the old unicode
-behavior in 1.29 and earlier. You can also set this on the prepare
-method.
-
-By default DBD::ODBC now binds all char columns as SQL_WCHARs meaning
-the driver is asked to return the bound data as wide (Unicode)
-characters encoded in UCS2. So long as the driver supports the ODBC
-Unicode API properly this should mean you get your data back correctly
-in Perl even if it is in a character set (codepage) different from the
-one you are working in.
-
-However, if you wrote code using DBD::ODBC 1.29 or earlier and knew
-DBD::ODBC bound varchar/longvarchar columns as SQL_CHARs and decoded
-them yourself the new behaviour will adversely affect you (sorry). To
-revert to the old behaviour set odbc_old_unicode to true.
-
-You can also set this attribute in the attributes passed to the
-prepare method.
-
-See the stackoverflow question at
-L<http://stackoverflow.com/questions/5912082>, the RT at
-L<http://rt.cpan.org/Public/Bug/Display.html?id=67994> and lastly a
-small discussion on dbi-dev at
-L<http://www.nntp.perl.org/group/perl.dbi.dev/2011/05/msg6559.html>.
-
-B<Warning:> I am hoping to remove this attribute in the near
-future. If you use it you are well advised to let me know and explain
-why.
-
 =head3 odbc_describe_parameters
 
 Defaults to on. When set this allows DBD::ODBC to call SQLDescribeParam
@@ -999,8 +967,6 @@ not a supported date format.
 
   @diags = $handle->odbc_getdiagrec($record_number);
 
-NOTE: This is an experimental method and may change.
-
 Introduced in 1.34_3.
 
 This is just a wrapper around the ODBC API SQLGetDiagRec. When a
@@ -1027,8 +993,6 @@ happens.
 =head3 odbc_getdiagfield
 
   $diag = $handle->odbc_getdiagfield($record, $identifier);
-
-NOTE: This is an experimental method and may change.
 
 This is just a wrapper around the ODBC API SQLGetDiagField. When a
 method on a connection or statement handle fails if there are any
@@ -1279,7 +1243,7 @@ NOTE: When building DBD::ODBC on Windows ($^O eq 'MSWin32') the
 WITH_UNICODE macro is automatically added. To disable specify -nou as
 an argument to Makefile.PL (e.g. C<perl Makefile.PL -nou>). On non-Windows
 platforms the WITH_UNICODE macro is B<not> enabled by default and to enable
-you need to specify the -u argument to Makefile.PL. Please bare in mind
+you need to specify the -u argument to Makefile.PL. Please bear in mind
 that some ODBC drivers do not support SQL_Wxxx columns or parameters.
 
 UNICODE support in ODBC Drivers differs considerably. Please read the
@@ -1347,7 +1311,7 @@ connect to and possibly other attributes.
 =head3 odbc_batch_size
 
 Sets the batch size for execute_for_fetch which defaults to 10.
-Bare in mind the bigger you set this the more memory DBD::ODBC will need
+Bear in mind the bigger you set this the more memory DBD::ODBC will need
 to allocate when running execute_for_fetch and the memory required is
 max_length_of_pn * odbc_batch_size * n_parameters.
 
@@ -1961,7 +1925,7 @@ an error like:
 =head3 Using the same placeholder more than once
 
 DBD::ODBC does not support (currently) the use of one named placeholder
-more than once in the a single SQL string. i.e.,
+more than once in a single SQL string. i.e.,
 
   insert into foo values (:bar, :p1, :p2, :bar);
 
@@ -2036,7 +2000,7 @@ NOTE: DBD::ODBC 1.34_1 to DBD::ODBC 1.36_1 set the default to use
 DBD::ODBC's own execute_for_fetch but quite a few ODBC drivers just
 cannot handle it. As such, from DBD::ODBC 1.36_2 the default was
 changed to not use DBD::ODBC's execute_for_fetch (i.e., you need to
-enable it with odbc_array_operations).
+enable it with L</odbc_array_operations>).
 
 NOTE: Some ODBC drivers don't support setting SQL_ATTR_PARAMSET_SIZE >
 1, and hence cannot support binding arrays of parameters. The only way
@@ -2176,7 +2140,12 @@ want when inserting a binary (use TYPE => SQL_BINARY).
 2. If for some reason your driver describes the parameter
 incorrectly. It is difficult to describe an example of this.
 
-Also, DBI exports some types which are not available in ODBC e.g., SQL_BLOB. If you are unsure about ODBC types look at your ODBC header files or look up valid types in the ODBC specification.
+3. If SQLDescribeParam is supported but fails e.g., MS SQL Server has
+problems with SQL like "select myfunc(?) where 1 = 1".
+
+Also, DBI exports some types which are not available in ODBC e.g.,
+SQL_BLOB. If you are unsure about ODBC types look at your ODBC header
+files or look up valid types in the ODBC specification.
 
 =head2 Unicode
 
@@ -2326,8 +2295,8 @@ managers. I have only tested the unixODBC driver manager
 defaults which set WCHAR as 2 bytes.
 
 I believe that the iODBC driver manager expects wide characters to be
-wchar_t types (which are usually 4) and hence DBD::ODBC will not work
-iODBC when built for unicode.
+wchar_t types (which are usually 4 bytes) and hence DBD::ODBC will not
+work iODBC when built for unicode.
 
 The ODBC Driver must expect Unicode data specified in SQLBindParameter
 and SQLBindCol to be UTF-16 in local endianness. Similarly, in calls to
@@ -2470,6 +2439,63 @@ SQL type to the end of the C<bind_param> method.
   # bind a parameter with a specific type
   $s = $h->prepare(q/insert into mytable values(?)/);
   $s->bind_param(1, "\x{263a}", SQL_WVARCHAR);
+
+=head2 MS SQL Server Query Notification
+
+Query notifications were introduced in SQL Server 2005 and SQL Server
+Native Client.  Query notifications allow applications to be notified
+when data has changed.
+
+DBD::ODBC supports query notification with MS SQL Server using the additional
+prepare attributes odbc_qn_msgtxt, odbc_qn_options and odbc_qn_timeout. When
+you pass suitable values for these attributes to the prepare method, DBD::ODBC
+will make the appropriate SQLSetStmtAttr calls after the statement
+has been allocated.
+
+It is beyond the scope of this document to provide a tutorial on doing this
+but here are some notes that might help you get started.
+
+On SQL Server
+
+  create database MyDatabase
+  ALTER DATABASE MyDatabase SET ENABLE_BROKER
+  use MyDatabase
+  CREATE TABLE QNtest (a int NOT NULL PRIMARY KEY,
+                       b nchar(5) NOT NULL,
+                       c datetime NOT NULL)
+  INSERT QNtest (a, b, c) SELECT 1, 'ALFKI', '19991212'
+  CREATE QUEUE myQueue
+  CREATE SERVICE myService ON QUEUE myQueue
+  See L<http://schemas.microsoft.com/SQL/Notifications/PostQueryNotification>
+
+To subscribe to query notification for this example:
+
+  # Prepare the statement.
+  # This is the SQL you want to know if the result changes later
+  my $sth = $dbh->prepare(q/SELECT a, b, c FROM dbo.QNtest WHERE a = 1/,
+                          {odbc_qn_msgtxt => 'Message text',
+                           odbc_qn_options => 'service=myService;local database=MyDatabase',
+                           odbc_qn_timeout=> 430000});
+  # Fetch and display the result set value.
+  while ( my @row = $sth->fetchrow_array ) {
+     print "@row\n";
+  }
+  # select * from sys.dm_qn_subscriptions will return a record now you are subscribed
+
+To wait for notification:
+
+  # This query generates a result telling you which query has changed
+  # It will block until the timeout or the query changes
+  my $sth = $dbh->prepare(q/WAITFOR (RECEIVE * FROM MyQueue)/);
+  $sth->execute();
+
+  # in the mean time someone does UPDATE dbo.QNtest SET c = '19981212' WHERE a = 1
+
+  # Fetch and display the result set value.
+  while ( my @row = $sth->fetchrow_array ) {
+     print "@row\n";
+  }
+  # You now need to understand the result and look to decide which query has changed
 
 =head2 Version Control
 

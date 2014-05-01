@@ -5,16 +5,38 @@ use strict;
 
 DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
 
-1.49_3 2014-04-27
+1.49_3 2014-05-01
+
+  [CHANGE IN BEHAVIOUR]
+
+  As warned years ago, this release removes the odbc_old_unicode attribute.
+  If you have a good reason to use it speak up now before the next non-development
+  release.
 
   [BUG FIXES]
 
   Fix rt89255: Fails to create test table for tests using PostgreSQL odbc driver.
   Change test suite to fallback on PRECISION if COLUMN_SIZE is not found.
 
+  [ENHANCEMENTS]
+
+  Added support for MS SQL Server Query Notification. See the new
+  section in the pod.
+
+  Added a currently undocumented (and experimental)
+  odbc_describe_param method on a statement handle which takes a
+  parameter number as the only argument and returns an array of the
+  data type, parameter size, decimal digits and nullable (as per
+  SQLDescribeParam).
+
   [DOCUMENTATION]
 
   Added FAQ on truncated column names with freeTDS.
+
+  [MISCELLANEOUS]
+
+  I have removed the "experimental" tag for odbc_getdiaffield and odbc_getdiagrec
+  methods.
 
 1.49_2 2014-04-26
 

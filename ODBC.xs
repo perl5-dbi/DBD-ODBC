@@ -21,6 +21,32 @@ _data_sources( drh, attribs=Nullsv )
 
 MODULE = DBD::ODBC    PACKAGE = DBD::ODBC::st
 
+void odbc_describe_param(sth, param)
+    SV * sth
+    SV * param
+    PPCODE:
+    D_imp_sth(sth);
+    D_imp_xxh(sth);
+    SQLRETURN rc;
+    SQLSMALLINT data_type;
+    SQLULEN size;
+    SQLSMALLINT dd;
+    SQLSMALLINT nullable;
+
+    rc = SQLDescribeParam(imp_sth->hstmt, SvIV(param), &data_type, &size, &dd, &nullable);
+    if (SQL_SUCCEEDED(rc)) {
+        XPUSHs(sv_2mortal(newSViv(data_type)));
+        XPUSHs(sv_2mortal(newSViv(size)));
+        XPUSHs(sv_2mortal(newSViv(dd)));
+        XPUSHs(sv_2mortal(newSViv(nullable)));
+    } else {
+        DBIh_SET_ERR_CHAR(
+                sth, imp_xxh, Nullch, 1,
+                "SQLDescribeParam failed",
+                "IM008", Nullch);
+    }
+
+
 IV odbc_rows(sth)
     SV *    sth
 
@@ -89,9 +115,9 @@ void odbc_getdiagfield(sth, record, identifier)
     PPCODE:
     SQLCHAR buf[256];
     SQLSMALLINT buf_len;
-    SQLLEN len_type;
-    SQLINTEGER int_type;
-    SQLRETURN ret_type;
+    SQLLEN len_type = 0;
+    SQLINTEGER int_type = 0;
+    SQLRETURN ret_type = 0;
     SQLPOINTER info_ptr;
     SQLRETURN rc;
 	D_imp_sth(sth);

@@ -155,7 +155,6 @@ int dbd_st_finish(SV *sth, imp_sth_t *imp_sth);
 #define ODBC_COLUMN_DISPLAY_SIZE       0x8340
 #define ODBC_UTF8_ON                   0x8341
 #define ODBC_FORCE_BIND_TYPE           0x8342
-#define ODBC_OLD_UNICODE               0x8343
 #define ODBC_DESCRIBE_PARAMETERS       0x8344
 #define ODBC_DRIVER_COMPLETE           0x8345
 #define ODBC_BATCH_SIZE                0x8346
@@ -260,8 +259,8 @@ static void odbc_handle_outparams(imp_sth_t *imp_sth, int debug)
       phs_t *phs = (phs_t*)(void*)SvPVX(AvARRAY(imp_sth->out_params_av)[i]);
       SV *sv = phs->sv;
       if (debug >= 8) {
-	 TRACE2(imp_sth, "    outparam %s, length:%ld\n",
-                phs->name, (long)phs->strlen_or_ind);
+          TRACE2(imp_sth, "    outparam %s, length:%ld\n",
+                 phs->name, (long)phs->strlen_or_ind);
       }
 
       /* phs->strlen_or_ind has been updated by ODBC to hold the length
@@ -2044,7 +2043,6 @@ int odbc_st_prepare_sv(
    imp_sth->odbc_column_display_size = imp_dbh->odbc_column_display_size;
    imp_sth->odbc_utf8_on = imp_dbh->odbc_utf8_on;
    imp_sth->odbc_exec_direct = imp_dbh->odbc_exec_direct;
-   imp_sth->odbc_old_unicode = imp_dbh->odbc_old_unicode;
    imp_sth->odbc_describe_parameters = imp_dbh->odbc_describe_parameters;
    imp_sth->odbc_batch_size = imp_dbh->odbc_batch_size;
    imp_sth->odbc_array_operations = imp_dbh->odbc_array_operations;
@@ -2088,21 +2086,6 @@ int odbc_st_prepare_sv(
 
    {
        /*
-        * allow setting of odbc_old_unicode in prepare() or overriding
-        */
-       SV **attr_sv;
-       /* if the attribute is there, let it override what the default
-        * value from the dbh is (set above).
-        */
-       if ((attr_sv =
-            DBD_ATTRIB_GET_SVP(attribs, "odbc_old_unicode",
-                               (I32)strlen("odbc_old_unicode"))) != NULL) {
-           imp_sth->odbc_old_unicode = SvIV(*attr_sv) != 0;
-       }
-   }
-
-   {
-       /*
         * allow setting of odbc_describe_parameters in prepare() or overriding
         */
        SV **attr_sv;
@@ -2114,6 +2097,52 @@ int odbc_st_prepare_sv(
                 attribs, "odbc_describe_parameters",
                 (I32)strlen("odbc_describe_parameters"))) != NULL) {
            imp_sth->odbc_describe_parameters = SvIV(*attr_sv) != 0;
+       }
+   }
+
+   {                                            /* MS SQL Server query notification */
+       SV **attr_sv;
+       if ((attr_sv =
+            DBD_ATTRIB_GET_SVP(
+                attribs, "odbc_qn_msgtxt",
+                (I32)strlen("odbc_qn_msgtxt"))) != NULL) {
+           rc = SQLSetStmtAttr(imp_sth->hstmt,
+                               1234 /*SQL_SOPT_SS_QUERYNOTIFICATION_MSGTEXT*/,
+                               (SQLPOINTER)SvPV_nolen(*attr_sv), SQL_NTS);
+           if (!SQL_SUCCEEDED(rc)) {
+               dbd_error(sth, rc, "SQLSetStmtAttr(QUERYNOTIFICATION_MSGTXT)");
+               SQLFreeHandle(SQL_HANDLE_STMT, imp_sth->hstmt);
+               imp_sth->hstmt = SQL_NULL_HSTMT;
+               return 0;
+           }
+       }
+       if ((attr_sv =
+            DBD_ATTRIB_GET_SVP(
+                attribs, "odbc_qn_options",
+                (I32)strlen("odbc_qn_options"))) != NULL) {
+           rc = SQLSetStmtAttr(imp_sth->hstmt,
+                               1235 /*SQL_SOPT_SS_QUERYNOTIFICATION_OPTIONS*/,
+                               (SQLPOINTER)SvPV_nolen(*attr_sv), SQL_NTS);
+           if (!SQL_SUCCEEDED(rc)) {
+               dbd_error(sth, rc, "SQLSetStmtAttr(QUERYNOTIFICATION_OPTIONS)");
+               SQLFreeHandle(SQL_HANDLE_STMT, imp_sth->hstmt);
+               imp_sth->hstmt = SQL_NULL_HSTMT;
+               return 0;
+           }
+       }
+       if ((attr_sv =
+            DBD_ATTRIB_GET_SVP(
+                attribs, "odbc_qn_timeout",
+                (I32)strlen("odbc_qn_timeout"))) != NULL) {
+           rc = SQLSetStmtAttr(imp_sth->hstmt,
+                               1233 /*SQL_SOPT_SS_QUERYNOTIFICATION_TIMEOUT*/,
+                               (SQLPOINTER)SvIV(*attr_sv), SQL_NTS);
+           if (!SQL_SUCCEEDED(rc)) {
+               dbd_error(sth, rc, "SQLSetStmtAttr(QUERYNOTIFICATION_TIMEOUT)");
+               SQLFreeHandle(SQL_HANDLE_STMT, imp_sth->hstmt);
+               imp_sth->hstmt = SQL_NULL_HSTMT;
+               return 0;
+           }
        }
    }
 
@@ -2164,7 +2193,7 @@ int odbc_st_prepare_sv(
 
        if (!SQL_SUCCEEDED(rc)) {
            dbd_error(sth, rc, "st_prepare/SQLPrepare");
-           SQLFreeHandle(SQL_HANDLE_STMT,imp_sth->hstmt);
+           SQLFreeHandle(SQL_HANDLE_STMT, imp_sth->hstmt);
            imp_sth->hstmt = SQL_NULL_HSTMT;
            return 0;
        }
@@ -2516,19 +2545,16 @@ int dbd_describe(SV *sth, imp_sth_t *imp_sth, int more)
 # if defined(WITH_UNICODE)
         fbh->ColLength += 1; /* add extra byte for double nul terminator */
 
-        /* Unless old unicode behavior map SQL_CHAR to SQL_WCHAR */
-        if (!imp_sth->odbc_old_unicode) {
-            switch(fbh->ColSqlType) {
-              case SQL_CHAR:
-                fbh->ColSqlType = SQL_WCHAR;
-                break;
-              case SQL_VARCHAR:
-                fbh->ColSqlType = SQL_WVARCHAR;
-                break;
-              case SQL_LONGVARCHAR:
-                fbh->ColSqlType = SQL_WLONGVARCHAR;
-                break;
-            }
+        switch(fbh->ColSqlType) {
+          case SQL_CHAR:
+            fbh->ColSqlType = SQL_WCHAR;
+            break;
+          case SQL_VARCHAR:
+            fbh->ColSqlType = SQL_WVARCHAR;
+            break;
+          case SQL_LONGVARCHAR:
+            fbh->ColSqlType = SQL_WLONGVARCHAR;
+            break;
         }
 # endif
 #else  /* !SQL_COLUMN_LENGTH */
@@ -4583,7 +4609,6 @@ static db_params S_db_options[] =  {
    { "odbc_putdata_start", ODBC_PUTDATA_START, PARAM_READWRITE, PARAM_TYPE_CUSTOM },
    { "odbc_column_display_size", ODBC_COLUMN_DISPLAY_SIZE, PARAM_READWRITE, PARAM_TYPE_CUSTOM },
    { "odbc_utf8_on", ODBC_UTF8_ON, PARAM_READWRITE, PARAM_TYPE_CUSTOM },
-   { "odbc_old_unicode", ODBC_OLD_UNICODE, PARAM_READWRITE, PARAM_TYPE_CUSTOM },
    { "odbc_has_unicode", ODBC_HAS_UNICODE, PARAM_READ, PARAM_TYPE_CUSTOM },
    { "odbc_out_connect_string", ODBC_OUTCON_STR, PARAM_READ, PARAM_TYPE_CUSTOM},
    { "odbc_describe_parameters", ODBC_DESCRIBE_PARAMETERS, PARAM_READWRITE, PARAM_TYPE_CUSTOM },
@@ -4800,11 +4825,6 @@ int dbd_db_STORE_attrib(SV *dbh, imp_dbh_t *imp_dbh, SV *keysv, SV *valuesv)
          * _only_ support SQLExecDirect.
          */
         imp_dbh->odbc_exec_direct = SvTRUE(valuesv);
-        break;
-
-      case ODBC_OLD_UNICODE:
-        bSetSQLConnectionOption = FALSE;
-        imp_dbh->odbc_old_unicode = SvTRUE(valuesv);
         break;
 
       case ODBC_DESCRIBE_PARAMETERS:
@@ -5095,10 +5115,6 @@ SV *dbd_db_FETCH_attrib(SV *dbh, imp_dbh_t *imp_dbh, SV *keysv)
 
       case ODBC_DRIVER_COMPLETE:
         retsv = newSViv(imp_dbh->odbc_driver_complete);
-        break;
-
-      case ODBC_OLD_UNICODE:
-        retsv = newSViv(imp_dbh->odbc_old_unicode);
         break;
 
       case ODBC_DESCRIBE_PARAMETERS:
@@ -6683,7 +6699,6 @@ static int post_connect(
     imp_dbh->odbc_column_display_size = 2001;
     imp_dbh->odbc_utf8_on = 0;
     imp_dbh->odbc_exec_direct = 0; /* default to not having SQLExecDirect used */
-    imp_dbh->odbc_old_unicode = 0;
     imp_dbh->odbc_describe_parameters = 1;
     imp_dbh->RowCacheSize = 1;	/* default value for now */
 
