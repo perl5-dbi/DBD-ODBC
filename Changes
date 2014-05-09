@@ -5,6 +5,14 @@ use strict;
 
 DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
 
+1.49_4 XXXX-XX-XX
+
+  [DOCUMENTATION]
+
+  Revised the query notification example and documentation.
+
+  Added a link to a better Query Notification article.
+
 1.49_3 2014-05-01
 
   [CHANGE IN BEHAVIOUR]

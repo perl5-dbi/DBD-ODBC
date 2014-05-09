@@ -18,7 +18,7 @@ require 5.008;
 # see discussion on dbi-users at
 # http://www.nntp.perl.org/group/perl.dbi.dev/2010/07/msg6096.html and
 # http://www.dagolden.com/index.php/369/version-numbers-should-be-boring/
-$DBD::ODBC::VERSION = '1.49_3';
+$DBD::ODBC::VERSION = '1.49_4';
 
 {
     ## no critic (ProhibitMagicNumbers ProhibitExplicitISA)
@@ -667,7 +667,7 @@ DBD::ODBC - ODBC Driver for DBI
 
 =head1 VERSION
 
-This documentation refers to DBD::ODBC version 1.49_3.
+This documentation refers to DBD::ODBC version 1.49_4.
 
 =head1 WARNING
 
@@ -2468,13 +2468,18 @@ On SQL Server
   CREATE SERVICE myService ON QUEUE myQueue
   See L<http://schemas.microsoft.com/SQL/Notifications/PostQueryNotification>
 
+You need to set these SQL Server permissions unless the subscriber is a sysadmin:
+
+  GRANT RECEIVE ON QueryNotificationErrorsQueue TO "<login-for-subscriber>"
+  GRANT SUBSCRIBE QUERY NOTIFICATIONS TO "<login-for-subscriber>"
+
 To subscribe to query notification for this example:
 
   # Prepare the statement.
   # This is the SQL you want to know if the result changes later
   my $sth = $dbh->prepare(q/SELECT a, b, c FROM dbo.QNtest WHERE a = 1/,
                           {odbc_qn_msgtxt => 'Message text',
-                           odbc_qn_options => 'service=myService;local database=MyDatabase',
+                           odbc_qn_options => 'service=myService',
                            odbc_qn_timeout=> 430000});
   # Fetch and display the result set value.
   while ( my @row = $sth->fetchrow_array ) {
@@ -2483,6 +2488,10 @@ To subscribe to query notification for this example:
   # select * from sys.dm_qn_subscriptions will return a record now you are subscribed
 
 To wait for notification:
+
+  # Avoid "String data, right truncation" error when retrieving
+  # the message.
+  $dbh->{LongReadLen} = 800;
 
   # This query generates a result telling you which query has changed
   # It will block until the timeout or the query changes
@@ -2690,6 +2699,10 @@ L<http://www.easysoft.com/developer/languages/perl/sql-server-unicode.html>
 and a version possibly kept more up to date:
 
 L<https://github.com/mjegh/dbd_odbc_sql_server_unicode/blob/master/common_problems.pod>
+
+How do I use SQL Server Query Notifications from Linux and UNIX?
+
+L<http://www.easysoft.com/support/kb/kb01069.html>
 
 =head2 Frequently Asked Questions
 
