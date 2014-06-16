@@ -7,6 +7,14 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
 
 1.49_4 XXXX-XX-XX
 
+  [BUG FIXES]
+
+  Fixed sql_type_cast.t test which assumed column aliases which stay
+  lowercase.
+
+  Fixed 87_odbc_lob_read.t test which did not bow out of the test
+  properly if the database was not M SQL Server.
+
   [DOCUMENTATION]
 
   Revised the query notification example and documentation.

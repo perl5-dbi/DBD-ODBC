@@ -42,6 +42,7 @@ $h->{PrintError} = 0;
 my $dbname = $h->get_info(17); # DBI::SQL_DBMS_NAME
 unless ($dbname =~ /Microsoft SQL Server/i) {
     note("Not MS SQL Server");
+    skip_all => "Not MS SQL Server";
     exit 0;
 }
 
