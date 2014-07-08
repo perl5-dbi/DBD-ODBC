@@ -84,7 +84,7 @@ unless($dbh) {
    BAIL_OUT("Unable to connect to the database $DBI::errstr\nTests skipped.\n");
    exit 0;
 }
-$dbh->{FetchHashKeyName} = NAME_lc;
+$dbh->{FetchHashKeyName} = 'NAME_lc';
 
 my ($ev, $sth);
 
