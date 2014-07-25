@@ -5,6 +5,13 @@ use strict;
 
 DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
 
+1.50 2014-07-25
+
+  [BUG FIXES]
+
+  The 80_odbc_diags.t test could fail if a driver fails a table does
+  not exist test in the prepare instead of the execute.
+
 1.49_4 2014-07-08
 
   [BUG FIXES]
@@ -13,7 +20,7 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
   lowercase.
 
   Fixed 87_odbc_lob_read.t test which did not bow out of the test
-  properly if the database was not M SQL Server.
+  properly if the database was not MS SQL Server.
 
   [DOCUMENTATION]
 

@@ -91,12 +91,13 @@ $ok = eval {
     1;
 };
 ok(!$ok, "select on non-existant table fails");
-my $hd = $s || $h;
-@diags = $hd->odbc_getdiagrec(1);
-is(scalar(@diags), 3, '   and 3 diag fields returned');
-note(Data::Dumper->Dump([\@diags], [qw(diags)]));
+if ($s) {
+    @diags = $s->odbc_getdiagrec(1);
+    is(scalar(@diags), 3, '   and 3 diag fields returned');
+    note(Data::Dumper->Dump([\@diags], [qw(diags)]));
 
-get_fields($hd, 1);
+    get_fields($s, 1);
+}
 
 Test::NoWarnings::had_no_warnings()
   if ($has_test_nowarnings);
