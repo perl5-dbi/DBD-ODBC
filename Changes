@@ -58,7 +58,7 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
 
   [MISCELLANEOUS]
 
-  I have removed the "experimental" tag for odbc_getdiaffield and odbc_getdiagrec
+  I have removed the "experimental" tag for odbc_getdiagfield and odbc_getdiagrec
   methods.
 
 1.49_2 2014-04-26
