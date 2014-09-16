@@ -42,6 +42,7 @@ resources:
   bugtracker: http://rt.cpan.org/Public/Dist/Display.html?Name=DBD-ODBC
   MailingList: http://dbi.perl.org/support
   repository: https://github.com/perl5-dbi/DBD-ODBC.git
+  IRC: irc://irc.perl.org/#dbi
 installdirs:  site
 keywords:
   - ODBC
