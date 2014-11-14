@@ -4152,6 +4152,8 @@ static int rebind_param(
      * [SQL Server]The size (4001) given to the parameter '@P1' exceeds the
      *   maximum allowed (4000)
      *
+     * Update, see RT100186 - same applies to VARBINARY(MAX)
+     *
      * So to sum up for the native client when the parameter size is 0 or
      * when the database is sql server and wchar and sql type not overwritten
      * we need to use column size 0. We cannot do this if the requested_type
@@ -4167,7 +4169,7 @@ static int rebind_param(
         /* See rt 55736 */
         if ((imp_dbh->driver_type == DT_SQL_SERVER_NATIVE_CLIENT) ||
             ((strcmp(imp_dbh->odbc_dbms_name, "Microsoft SQL Server") == 0) &&
-             (phs->sql_type == SQL_WVARCHAR) &&
+             ((phs->sql_type == SQL_WVARCHAR) || (phs->sql_type == SQL_VARBINARY)) &&
              (phs->requested_type == 0))) {
             column_size = 0;
         }
@@ -6541,7 +6543,8 @@ static int post_connect(
         if (strcmp(imp_dbh->odbc_driver_name, "SQLSRV32.DLL") == 0) {
             imp_dbh->driver_type = DT_SQL_SERVER;
         } else if ((strcmp(imp_dbh->odbc_driver_name, "sqlncli10.dll") == 0) ||
-                   (strcmp(imp_dbh->odbc_driver_name, "SQLNCLI.DLL") == 0)) {
+                   (strcmp(imp_dbh->odbc_driver_name, "SQLNCLI.DLL") == 0) ||
+		   (memcmp(imp_dbh->odbc_driver_name, "libmsodbcsql", 13) == 0)) {
             imp_dbh->driver_type = DT_SQL_SERVER_NATIVE_CLIENT;
         } else if (strcmp(imp_dbh->odbc_driver_name, "odbcjt32.dll") == 0) {
             imp_dbh->driver_type = DT_MS_ACCESS_JET;
