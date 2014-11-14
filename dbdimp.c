@@ -29,7 +29,7 @@
  *   http://perldoc.perl.org/perlguts.html#Formatted-Printing-of-IVs,-UVs,-and-NVs
  *   http://cpansearch.perl.org/src/RURBAN/illguts-0.44/index.html
  * Internal replacements for standard C library functions:
- * http://search.cpan.org/~jesse/perl-5.12.1/pod/perlclib.pod
+ * http://perldoc.perl.org/perlclib.html
  * http://search.cpan.org/dist/Devel-PPPort/PPPort.pm
  *
  * MS ODBC 64 bit:
@@ -6544,7 +6544,7 @@ static int post_connect(
             imp_dbh->driver_type = DT_SQL_SERVER;
         } else if ((strcmp(imp_dbh->odbc_driver_name, "sqlncli10.dll") == 0) ||
                    (strcmp(imp_dbh->odbc_driver_name, "SQLNCLI.DLL") == 0) ||
-		   (memcmp(imp_dbh->odbc_driver_name, "libmsodbcsql", 13) == 0)) {
+                   (memcmp(imp_dbh->odbc_driver_name, "libmsodbcsql", 13) == 0)) {
             imp_dbh->driver_type = DT_SQL_SERVER_NATIVE_CLIENT;
         } else if (strcmp(imp_dbh->odbc_driver_name, "odbcjt32.dll") == 0) {
             imp_dbh->driver_type = DT_MS_ACCESS_JET;
