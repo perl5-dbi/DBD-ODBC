@@ -1754,7 +1754,7 @@ int dbd_st_tables(
                       acatalog ? acatalog : NULL, SQL_NTS,
                       aschema ? aschema : NULL, SQL_NTS,
                       atable ? atable : NULL, SQL_NTS,
-                      atype ? atable : NULL, SQL_NTS /* type (view, table, etc) */
+                      atype ? atype : NULL, SQL_NTS /* type (view, table, etc) */
                       );
    }
 

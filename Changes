@@ -5,9 +5,17 @@ use strict;
 
 DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
 
+1.52_2 XXXX-XX-XX
+
+  [BUG FIXES]
+
+  The table_info method (ANSI version only) was incorrectly passing
+  the table name for the type argument. I think this bug was
+  introduced last year.
+
 1.51_1 2014-11-14
 
-  [Bug FIXES]
+  [BUG FIXES]
 
   RT100186 - handle VARBINARY(MAX) parameters with SQL Server native
   client. Identify "libmsodbcsql*" as the MS ODBC Driver for Linux as
