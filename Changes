@@ -5,7 +5,7 @@ use strict;
 
 DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
 
-1.52_2 XXXX-XX-XX
+1.51_2 2014-11-19
 
   [BUG FIXES]
 
