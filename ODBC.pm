@@ -2466,7 +2466,8 @@ On SQL Server
   INSERT QNtest (a, b, c) SELECT 1, 'ALFKI', '19991212'
   CREATE QUEUE myQueue
   CREATE SERVICE myService ON QUEUE myQueue
-  See L<http://schemas.microsoft.com/SQL/Notifications/PostQueryNotification>
+  See L<http://technet.microsoft.com/en-us/library/ms175110%28v=SQL.105%29.aspx>
+
 
 You need to set these SQL Server permissions unless the subscriber is a sysadmin:
 
