@@ -7585,7 +7585,7 @@ static void check_for_unicode_param(
     phs_t *phs) {
 
     if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 5)) {
-        TRACE2(imp_sth, "check_for_unicode_param - sql_type=%s, described=%s",
+        TRACE2(imp_sth, "check_for_unicode_param - sql_type=%s, described=%s\n",
                S_SqlTypeToString(phs->sql_type), S_SqlTypeToString(phs->described_sql_type));
     }
 
