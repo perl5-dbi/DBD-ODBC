@@ -7607,7 +7607,15 @@ static void check_for_unicode_param(
             TRACE1(imp_sth, "      SvUTF8 parameter - changing to %s type\n",
                    S_SqlTypeToString(phs->sql_type));
     } else {
-        phs->sql_type = phs->described_sql_type;
+        if (phs->described_sql_type == SQL_NUMERIC ||
+            phs->described_sql_type == SQL_DECIMAL ||
+            phs->described_sql_type == SQL_FLOAT ||
+            phs->described_sql_type == SQL_REAL ||
+            phs->described_sql_type == SQL_DOUBLE) {
+            phs->sql_type = SQL_VARCHAR;
+        } else {
+            phs->sql_type = phs->described_sql_type;
+        }
     }
 }
 

@@ -5,6 +5,15 @@ use strict;
 
 DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
 
+1.51_3 2015-01-17
+
+  [BUG FIXES]
+
+  RT101579 - using bound input parameters for numeric columns (e.g.,
+  SQL_NUMERIC) only works the first time and will quite likey fail
+  with "string data, right truncation" on the second and subsequent
+  calls to execute. Thanks to Laura for finding.
+
 1.51_2 2014-11-19
 
   [BUG FIXES]
