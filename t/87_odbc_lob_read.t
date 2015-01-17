@@ -17,6 +17,8 @@ BEGIN {
    }
 }
 
+my $not_sql_server;
+
 END {
     if ($dbh) {
         local $dbh->{PrintError} = 0;
@@ -26,7 +28,7 @@ END {
         };
     }
     Test::NoWarnings::had_no_warnings()
-          if ($has_test_nowarnings);
+          if ($has_test_nowarnings && !$not_sql_server);
 
     done_testing();
 }
@@ -41,9 +43,9 @@ $h->{PrintError} = 0;
 
 my $dbname = $h->get_info(17); # DBI::SQL_DBMS_NAME
 unless ($dbname =~ /Microsoft SQL Server/i) {
+    $not_sql_server = 1;
     note("Not MS SQL Server");
     plan skip_all => "Not MS SQL Server";
-    exit 0;
 }
 
 eval {

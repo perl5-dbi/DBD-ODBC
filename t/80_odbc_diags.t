@@ -61,6 +61,11 @@ unless($h) {
    BAIL_OUT("Unable to connect to the database ($DBI::errstr)\nTests skipped.\n");
    exit 0;
 }
+my $dbname = $h->get_info(17); # DBI::SQL_DBMS_NAME
+if ($dbname =~ /sqlite/i) {
+    plan skip_all => "sqlite core dumps with this test - I can't find anywhere to report it";
+}
+
 $h->{RaiseError} = 1;
 $h->{PrintError} = 0;
 

@@ -2,11 +2,12 @@
 
 use Test::More;
 use strict;
+use Data::Dumper;
 
 my $has_test_nowarnings = 1;
 eval "require Test::NoWarnings";
 $has_test_nowarnings = undef if $@;
-my $tests = 25 + 4;
+my $tests = 26 + 4;
 
 $tests += 1 if $has_test_nowarnings;
 plan tests => $tests;
@@ -16,19 +17,24 @@ $|=1;
 use_ok('DBI', qw(:sql_types));
 use_ok('ODBCTEST');
 
+my $dbh;
+
 BEGIN {
    if (!defined $ENV{DBI_DSN}) {
       plan skip_all => "DBI_DSN is undefined";
    }
 }
 END {
+    if ($dbh) {
+        ODBCTEST::tab_delete($dbh);
+    }
     Test::NoWarnings::had_no_warnings()
           if ($has_test_nowarnings);
 }
 
 my @row;
 
-my $dbh = DBI->connect();
+$dbh = DBI->connect();
 unless($dbh) {
    BAIL_OUT("Unable to connect to the database $DBI::errstr\nTests skipped.\n");
    exit 0;
@@ -37,6 +43,8 @@ unless($dbh) {
 $dbh->{LongReadLen} = 1000;
 is($dbh->{LongReadLen}, 1000, "Set Long Read Len");
 my $dbname = $dbh->{odbc_SQL_DBMS_NAME};
+
+ok(ODBCTEST::tab_create($dbh), "Create tables");
 
 #### testing set/get of connection attributes
 $dbh->{RaiseError} = 0;
@@ -103,7 +111,6 @@ SKIP:  {
     $sth->finish();
 };
 
-
 $rows = 0;
 $dbh->{PrintError} = 0;
 my @tables = $dbh->tables;
@@ -111,12 +118,10 @@ my @tables = $dbh->tables;
 cmp_ok(@tables, '>', 0, "tables returns array");
 $rows = 0;
 if ($sth = $dbh->column_info(undef, undef, $ODBCTEST::table_name, undef)) {
-    while (@row = $sth->fetchrow()) {
-        $rows++;
-    }
-    $sth->finish();
+    my $fetched = $sth->fetchall_arrayref;
+    cmp_ok(scalar(@$fetched), '>', 0, "column info returns more than one row for test table") or
+        diag(Dumper($fetched));
 }
-cmp_ok($rows, '>', 0, "column info returns more than one row for test table");
 
 $rows = 0;
 

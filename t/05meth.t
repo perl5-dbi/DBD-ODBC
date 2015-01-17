@@ -10,12 +10,15 @@ $| = 1;
 my $has_test_nowarnings = 1;
 eval "require Test::NoWarnings";
 $has_test_nowarnings = undef if $@;
-my $tests = 13;
+my $tests = 15;
 $tests += 1 if $has_test_nowarnings;
 plan tests => $tests;
 
 use_ok('DBI', qw(:sql_types));
+use_ok('ODBCTEST');
 use strict;
+
+my $dbh;
 
 BEGIN {
    if (!defined $ENV{DBI_DSN}) {
@@ -23,6 +26,9 @@ BEGIN {
    }
 }
 END {
+    if ($dbh) {
+        ODBCTEST::tab_delete($dbh);
+    }
     Test::NoWarnings::had_no_warnings()
           if ($has_test_nowarnings);
 }
@@ -30,7 +36,7 @@ END {
 
 my @row;
 
-my $dbh = DBI->connect();
+$dbh = DBI->connect();
 unless($dbh) {
    BAIL_OUT("Unable to connect to the database $DBI::errstr\nTests skipped.\n");
    exit 0;
@@ -39,10 +45,12 @@ unless($dbh) {
 
 #### testing Tim's early draft DBI methods
 
+ok(ODBCTEST::tab_create($dbh), "Create tables");
+
 my $r1 = $DBI::rows;
 $dbh->{AutoCommit} = 0;
 my $sth;
-$sth = $dbh->prepare("DELETE FROM PERL_DBD_TEST");
+$sth = $dbh->prepare("DELETE FROM $ODBCTEST::table_name");
 ok($sth, "delete prepared statement");
 $sth->execute();
 cmp_ok($sth->rows, '>=', 0, "Number of rows > 0");
@@ -51,7 +59,7 @@ $sth->finish();
 $dbh->rollback();
 pass("finished and rolled back");
 
-$sth = $dbh->prepare('SELECT * FROM PERL_DBD_TEST WHERE 1 = 0');
+$sth = $dbh->prepare("SELECT * FROM $ODBCTEST::table_name WHERE 1 = 0");
 $sth->execute();
 @row = $sth->fetchrow();
 if ($sth->err) {
@@ -63,7 +71,7 @@ ok(!$sth->err, "no error");
 $sth->finish();
 
 my ($a, $b);
-$sth = $dbh->prepare('SELECT COL_A, COL_B FROM PERL_DBD_TEST');
+$sth = $dbh->prepare("SELECT COL_A, COL_B FROM $ODBCTEST::table_name");
 $sth->execute();
 while (@row = $sth->fetchrow()) {
     print " \@row     a,b:", $row[0], ",", $row[1], "\n";

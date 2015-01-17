@@ -8,7 +8,7 @@ $| = 1;
 my $has_test_nowarnings = 1;
 eval "require Test::NoWarnings";
 $has_test_nowarnings = undef if $@;
-my $tests = 5;
+my $tests = 6;
 $tests += 1 if $has_test_nowarnings;
 plan tests => $tests;
 
@@ -18,21 +18,28 @@ use DBI qw(:sql_types);
 use_ok('ODBCTEST');             # 1
 use_ok('Data::Dumper');         # 2
 
+my $dbh;
+
 BEGIN {
    if (!defined $ENV{DBI_DSN}) {
       plan skip_all => "DBI_DSN is undefined";
    }
 }
 END {
+    if ($dbh) {
+        ODBCTEST::tab_delete($dbh);
+    }
     Test::NoWarnings::had_no_warnings()
           if ($has_test_nowarnings);
 }
 
-my $dbh = DBI->connect();
+$dbh = DBI->connect();
 unless($dbh) {
    BAIL_OUT("Unable to connect to the database $DBI::errstr\nTests skipped.\n");
    exit 0;
 }
+
+ok(ODBCTEST::tab_create($dbh), "Create tables");
 
 SKIP:
 {

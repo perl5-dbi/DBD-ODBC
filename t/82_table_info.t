@@ -108,38 +108,38 @@ if ($dbh->get_info($GetInfoType{SQL_SCHEMA_USAGE}) != 0) {
 }
 
 # test type_info('','','', '%')  which should return table types only
-if ($dbh->get_info($GetInfoType{SQL_DRIVER_NAME}) =~ /sqlite/) {
-    diag("SQLite is known to fail the next test because catalog, schema and table are returned as '' instead of undef");
-}
 
-my $s = $dbh->table_info('', '', '', '%');
-my $r = $s->fetchall_arrayref;
-if ($r && scalar(@$r)) {        # assuming we get something back
-    my $pass = 1;
-    foreach my $row (@$r) {
-        if (defined($row->[0])) {
-            $pass = 0;
-            diag("Catalog is defined as $row->[0]");
-        }
+SKIP: {
+    skip "SQLite is known to fail the next test because catalog, schema and table are returned as '' instead of undef", 1
+        if ($dbh->get_info($GetInfoType{SQL_DRIVER_NAME}) =~ /sqlite/);
+    my $s = $dbh->table_info('', '', '', '%');
+    my $r = $s->fetchall_arrayref;
+    if ($r && scalar(@$r)) {    # assuming we get something back
+        my $pass = 1;
+        foreach my $row (@$r) {
+            if (defined($row->[0])) {
+                $pass = 0;
+                diag("Catalog is defined as $row->[0]");
+            }
 
-        if (defined($row->[1])) {
-            $pass = 0;
-            diag("Schema is defined as $row->[1]");
-        }
+            if (defined($row->[1])) {
+                $pass = 0;
+                diag("Schema is defined as $row->[1]");
+            }
 
-        if (defined($row->[2])) {
-            $pass = 0;
-            diag("Table is defined as $row->[2]");
-        }
+            if (defined($row->[2])) {
+                $pass = 0;
+                diag("Table is defined as $row->[2]");
+            }
 
-        if (!defined($row->[3])) {
-            $pass = 0;
-            diag("table type is not defined");
+            if (!defined($row->[3])) {
+                $pass = 0;
+                diag("table type is not defined");
+            }
         }
+        ok($pass, "table type only") or diag(Dumper($r));
     }
-    ok($pass, "table type only") or diag(Dumper($r));
-}
-
+};
 
 Test::NoWarnings::had_no_warnings()
   if ($has_test_nowarnings);

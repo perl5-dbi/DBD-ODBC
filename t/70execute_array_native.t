@@ -43,7 +43,11 @@ unless($dbh) {
             ($driver_name =~ /ACEODBC.DLL/i) ||
                 ($dbms_name eq 'ACCESS')) { # for OOB
         $has_test_nowarnings = 0;
-        plan skip_all => 'MS Access does not support array operations'
+        plan skip_all => 'MS Access does not support array operations';
+    }
+    if ($driver_name =~ /sqlite/) {
+        $has_test_nowarnings = 0;
+        plan skip_all => "SQLite fails this test horribly - I can't find anywhere to report it";
     }
 
     diag("\n\nNOTE: This is an experimental test. Since DBD::ODBC added the execute_for_fetch method this tests the native method and not DBI's fallback method. If you fail this test it probably means the ODBC driver you are using does not have sufficient support (or is buggy) for array operations. If you pass this test your ODBC Driver seems ok and you can get faster insert/update/delete operations using DBI's execute_array or execute_for_fetch methods by setting the odbc_array_operations to true.
