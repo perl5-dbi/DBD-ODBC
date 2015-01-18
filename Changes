@@ -5,6 +5,13 @@ use strict;
 
 DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
 
+1.xx 2015-xx-xx
+
+  [MISCELLANEOUS]
+
+  Changes to the test suite to make it run better with Postgres thanks
+  to  Greg Sabino Mullane.
+  
 1.51_4 2015-01-18
 
   [BUG FIXES]
@@ -24,7 +31,7 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
   RT101579 - using bound input parameters for numeric columns (e.g.,
   SQL_NUMERIC) only works the first time and will quite likey fail
   with "string data, right truncation" on the second and subsequent
-  calls to execute. Thanks to Laura for finding.
+  calls to execute. Thanks to Laura Cox for finding.
 
 1.51_2 2014-11-19
 
