@@ -36,7 +36,7 @@ require 5.004;
    %TestFieldInfo = (
 		     'COL_A' => [SQL_SMALLINT,-5, SQL_TINYINT, SQL_NUMERIC, SQL_DECIMAL, SQL_FLOAT, SQL_REAL, SQL_INTEGER],
 		     'COL_B' => [SQL_VARCHAR, SQL_CHAR, SQL_WVARCHAR, SQL_WCHAR],
-		     'COL_C' => [SQL_LONGVARCHAR, -1, SQL_WLONGVARCHAR],
+		     'COL_C' => [SQL_LONGVARCHAR, -1, SQL_WLONGVARCHAR, SQL_VARCHAR],
 		     'COL_D' => [SQL_TYPE_TIMESTAMP, SQL_TYPE_DATE, SQL_DATE, SQL_TIMESTAMP ],
 		    );
 
@@ -78,14 +78,16 @@ require 5.004;
            $fields .= "$f ";
            # print "-- $fields\n";
            my $row = get_type_for_column($dbh, $f);
-           $fields .= $row->{TYPE_NAME};
-           if ($row->{CREATE_PARAMS}) {
+           $fields .= $row->{TYPE_NAME};    
+      if ($row->{CREATE_PARAMS}) {
                if ($drvname =~ /OdbcFb/i) {
                    # Firebird ODBC driver seems to be badly broken - for
                    # varchars it reports max size of 32765 when it is 4000
                    if ($row->{TYPE_NAME} eq 'VARCHAR') {
                        $fields .= "(4000)";
                    }
+			   } elsif ($drvname =~ /Pg/) {
+				   ## No lengths ever for TEXT!
                } elsif ($drvname =~ /lib.*db2/) {
                    # in DB2 a row cannot be longer than the page size which is usually 32K
                    # but can be as low as 4K
@@ -187,6 +189,9 @@ require 5.004;
 			$dbh->quote($_->[1]),
 			$dbh->quote($_->[2]),
 			$_->[isDateType($row->{DATA_TYPE}) ? 3 : 4]). ")";
+	 if ('Pg' eq $dbh->{Driver}{Name}) {
+		 $sql =~ s/{(?:ts|d) (.+?)}/$1/g;
+	 }
         #diag($sql);
 	 if (!$dbh->do($sql)) {
            diag($dbh->errstr);

@@ -3,6 +3,7 @@
 use Test::More;
 use strict;
 use Config;
+use DBD::ODBC;
 
 $| = 1;
 
@@ -28,7 +29,6 @@ END {
 }
 
 
-#DBI->trace(2);
 my $dbh = DBI->connect();
 unless($dbh) {
    BAIL_OUT("Unable to connect to the database ($DBI::errstr)\nTests skipped.\n");
@@ -47,14 +47,15 @@ my $driver_name;
     $driver_name = DBI::neat($dbh->get_info(6));
     diag("Using DRIVER_NAME $driver_name\n");
     diag("Using DRIVER_VER " . DBI::neat($dbh->get_info(7)) . "\n");
-    diag("odbc_has_unicode " . $dbh->{odbc_has_unicode} . "\n");
+    diag("odbc_has_unicode " . ($dbh->{odbc_has_unicode} || '') . "\n");
 }
 
 # ReadOnly
 {
     # NOTE: the catching of warnings here needs a DBI > 1.628
+	local $dbh->{AutoCommit} = 0;
     my $warning;
-    local $SIG{__WARN__} = sub {diag @_; $warning = 1};
+    local $SIG{__WARN__} = sub {diag "AA:"; diag @_; $warning = 1};
     $dbh->{ReadOnly} = 1;
     if ($warning) {
         diag "Your ODBC driver does not support setting ReadOnly";
@@ -104,7 +105,7 @@ SKIP: {
 };
 
 #
-# Test changing of AutoCommit - start be setting away from the default
+# Test changing of AutoCommit - start by setting away from the default
 #
 $dbh->{AutoCommit} = 0;
 pass("Set Auto commit off");
