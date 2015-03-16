@@ -665,9 +665,14 @@ __END__
 
 DBD::ODBC - ODBC Driver for DBI
 
+=for html
+<a href="https://travis-ci.org/perl5-dbi/DBD-ODBC"><img src="https://travis-ci.org/perl5-dbi/DBD-ODBC.svg?branch=master"></a>
+<a href="http://badge.fury.io/pl/DBD-ODBC"><img src="https://badge.fury.io/pl/DBD-ODBC.svg" alt="CPAN version" height="18"></a>
+
 =head1 VERSION
 
 This documentation refers to DBD::ODBC version 1.51_4.
+
 
 =head1 WARNING
 
