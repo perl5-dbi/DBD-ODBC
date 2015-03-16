@@ -1,5 +1,7 @@
 # DBD::ODBC -- DBD module interfacing the ODBC databases.
 
+[![Build Status](https://travis-ci.org/perl5-dbi/DBD-ODBC.svg?branch=master)](https://travis-ci.org/perl5-dbi/DBD-ODBC)
+
 See [LICENSE-AND-COPYRIGHT}(https://metacpan.org/pod/DBD::ODBC#LICENSE-AND-COPYRIGHT)
 section in ODBC.pm for usage and distribution rights.
 
@@ -17,9 +19,13 @@ section in ODBC.pm for usage and distribution rights.
 # BUILDING:
 
   set-up these environment variables:
+
     DBI_DSN   The dbi data source, e.g. 'dbi:ODBC:YOUR_DSN_HERE'
+
     DBI_USER  The username to use to connect to the database
+
     DBI_PASS  The username to use to connect to the database
+
     ODBCHOME  (Unix only) The dir your driver manager is installed in
               or specify this via -o argument to Makefile.PL
 
@@ -38,13 +44,17 @@ section in ODBC.pm for usage and distribution rights.
   incomplete iODBC is often installed.
 
   perl Makefile.PL
+
   make                (or nmake/dmake, if VC++ on Win32)
+
   make test           (or nmake/dmake, if VC++ on Win32)
 
 # TESTING
 
   make test
+
   make test TEST_VERBOSE=1   (if any of the t/* tests fail)
+
   make install               (if the tests look okay)
 
   Note that the tests currently all pass when using the Microsoft SQL
@@ -106,14 +116,19 @@ section in ODBC.pm for usage and distribution rights.
   1. A complete log of a all steps of the build, e.g.:
 
     perl Makefile.PL           (do a make realclean first)
+
     make
+
     make test
+
     make test TEST_VERBOSE=1   (if any tests fail)
 
   2. Full details of which software you are using, including:
 
     Perl version (the output of perl -V)
+
     ODBC Driver and version
+
     ODBC Driver manager used and version
 
   It is important to check that you are using the latest version
