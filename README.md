@@ -2,6 +2,7 @@
 
 [![Build Status](https://travis-ci.org/perl5-dbi/DBD-ODBC.svg?branch=master)](https://travis-ci.org/perl5-dbi/DBD-ODBC)
 [![CPAN version](https://badge.fury.io/pl/DBD-ODBC.svg)](http://badge.fury.io/pl/DBD-ODBC)
+[![CPANTS](http://cpants.cpanauthors.org/dist/DBD-ODBC.png)](http://cpants.cpanauthors.org/dist/DBD-ODBC)
 
 See [LICENSE-AND-COPYRIGHT}(https://metacpan.org/pod/DBD::ODBC#LICENSE-AND-COPYRIGHT)
 section in ODBC.pm for usage and distribution rights.
