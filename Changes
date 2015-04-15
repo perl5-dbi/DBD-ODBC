@@ -5,13 +5,13 @@ use strict;
 
 DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
 
-1.xx 2015-xx-xx
+1.52 2015-04-15
 
   [MISCELLANEOUS]
 
   Changes to the test suite to make it run better with Postgres thanks
-  to  Greg Sabino Mullane.
-  
+  to Greg Sabino Mullane.
+
 1.51_4 2015-01-18
 
   [BUG FIXES]
