@@ -46,11 +46,11 @@ unless($dbh) {
 }
 $dbh->{RaiseError} = 0;
 
-$dbh->do(q/create table PERL_DBD_RT_101579 (method varchar(500), val numeric(9,2))/)
+$dbh->do(q/create table PERL_DBD_RT_101579 (a varchar(500), val numeric(9,2))/)
     or BAIL_OUT("Failed to create test table " . $dbh->errstr);
 
 my @vals = (8295.60, 181161.80, 6514.15);
-my $sth = $dbh->prepare(q/insert into PERL_DBD_RT_101579 (method, val) values(?,?)/);
+my $sth = $dbh->prepare(q/insert into PERL_DBD_RT_101579 (a, val) values(?,?)/);
 foreach my $val (@vals) {
     eval {
         $sth->execute('fred', $val);
