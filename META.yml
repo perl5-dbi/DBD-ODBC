@@ -9,7 +9,6 @@ author:
   - Jeff Urlwin
 license: perl
 distribution_type: module
-dynamic_config : 1
 requires:
     DBI: 1.609
     perl: 5.008

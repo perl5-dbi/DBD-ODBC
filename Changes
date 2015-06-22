@@ -5,6 +5,15 @@ use strict;
 
 DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
 
+1.53_1 YYYY-MM-DD
+
+  [MISCELLANEOUS]
+
+  Change column name in t/rt_101579.t as "method" is a reserved word
+  in. Teradata Thanks to Zhenyi Zhou.
+
+  Remove duplicate dynamic_config from META.yml.
+
 1.52 2015-04-15
 
   [MISCELLANEOUS]
@@ -29,7 +38,7 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
   [BUG FIXES]
 
   RT101579 - using bound input parameters for numeric columns (e.g.,
-  SQL_NUMERIC) only works the first time and will quite likey fail
+  SQL_NUMERIC) only works the first time and will quite likely fail
   with "string data, right truncation" on the second and subsequent
   calls to execute. Thanks to Laura Cox for finding.
 
@@ -39,7 +48,8 @@ DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
 
   The table_info method (ANSI version only) was incorrectly passing
   the table name for the type argument. I think this bug was
-  introduced last year.
+  introduced last year. Thanks to Nick Gorham for spotting and providing
+  a fix.
 
 1.51_1 2014-11-14
 
