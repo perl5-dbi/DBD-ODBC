@@ -2152,6 +2152,30 @@ Also, DBI exports some types which are not available in ODBC e.g.,
 SQL_BLOB. If you are unsure about ODBC types look at your ODBC header
 files or look up valid types in the ODBC specification.
 
+=head3 tables and table_info
+
+These are not really deviations from the DBI specification but a
+clarification of a DBI optional feature.
+
+DBD::ODBC supports wildcards (% and _) in the catalog, schema and type
+arguments. However, you should be aware that if the statement
+attribute SQL_ATTR_METADATA_ID is SQL_TRUE the values are interpreted
+as identifiers and the case is ignored. SQL_ATTR_METADATA_ID defaults
+to SQL_FALSE so normally the values are treated as patterns and the
+case is significant.
+
+SQLGetInfo for SQL_ACCESSIBLE_TABLES can affect what tables you can
+list.
+
+All the special cases listed by DBI (empty strings for all arguments
+but one which is '%') for catalog, schema and table type are supported
+by DBD::ODBC. However, using '%' for table type in a call to the
+tables method does not currently work with DBI up to 1.631 due to an
+issue in DBI.
+
+Although DBD::ODBC supports all the usage cases listed by DBI, your
+ODBC driver may not.
+
 =head2 Unicode
 
 The ODBC specification supports wide character versions (a postfix of
