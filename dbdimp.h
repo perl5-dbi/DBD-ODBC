@@ -276,8 +276,9 @@ struct phs_st {             /* scalar placeholder */
 #define dbd_db_FETCH_attrib	odbc_db_FETCH_attrib
 #define dbd_st_prepare		odbc_st_prepare
 #define dbd_st_prepare_sv       odbc_st_prepare_sv
-#define dbd_st_rows		odbc_st_rows
+/*#define dbd_st_rows		odbc_st_rows*/
 #define dbd_st_execute		odbc_st_execute
+#define dbd_st_execute_iv   odbc_st_execute_iv
 #define dbd_st_fetch		odbc_st_fetch
 #define dbd_st_finish		odbc_st_finish
 #define dbd_st_destroy		odbc_st_destroy

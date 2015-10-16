@@ -307,7 +307,8 @@ CODE:
 {
    /*STRLEN lna;*/
    /*char *pstmt = SvOK(stmt) ? SvPV(stmt,lna) : "";*/
-   ST(0) = sv_2mortal(newSViv( (IV)dbd_db_execdirect( dbh, stmt ) ) );
+
+   ST(0) = sv_2mortal(newSViv( dbd_db_execdirect( dbh, stmt ) ) );
 }
 
 void odbc_getdiagrec(dbh, record)

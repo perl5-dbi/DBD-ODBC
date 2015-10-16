@@ -132,6 +132,7 @@ int dbd_db_login6_sv(SV *dbh, imp_dbh_t *imp_dbh, SV *dbname,
 int dbd_db_login6(SV *dbh, imp_dbh_t *imp_dbh, char *dbname,
                   char *uid, char *pwd, SV *attr);
 int dbd_st_finish(SV *sth, imp_sth_t *imp_sth);
+IV dbd_st_execute_iv(SV *sth, imp_sth_t *imp_sth);
 
 /* for sanity/ease of use with potentially null strings */
 #define XXSAFECHAR(p) ((p) ? (p) : "(null)")
@@ -387,9 +388,14 @@ static int build_results(SV *sth,
       imp_sth->RowCount = -1;
       rc = SQLRowCount(imp_sth->hstmt, &imp_sth->RowCount);
       dbd_error(sth, rc, "build_results/SQLRowCount");
-      if (rc != SQL_SUCCESS) return -1;
+      if (rc != SQL_SUCCESS) {
+          DBIc_ROW_COUNT(imp_sth) = -1;
+          return -1;
+      }
+      DBIc_ROW_COUNT(imp_sth) = imp_sth->RowCount;
    } else {
       imp_sth->RowCount = 0;
+      DBIc_ROW_COUNT(imp_sth) = 0;
    }
 
    DBIc_ACTIVE_on(imp_sth); /* XXX should only set for select ?	*/
@@ -1670,6 +1676,13 @@ int dbd_st_tables(
 
     imp_sth->done_desc = 0;
 
+    if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 3))
+        PerlIO_printf(DBIc_LOGPIO(imp_sth), "dbd_st_tables(%s,%s,%s,%s)\n",
+                      SvOK(catalog) ? SvPV_nolen(catalog) : "undef",
+                      (schema && SvOK(schema)) ? SvPV_nolen(schema) : "undef",
+                      (table && SvOK(table)) ? SvPV_nolen(table) : "undef",
+                      (table_type && SvOK(table_type)) ? SvPV_nolen(table_type) : "undef");
+
     if ((dbh_active = check_connection_active(dbh)) == 0) return 0;
 
     rc = SQLAllocHandle(SQL_HANDLE_STMT, imp_dbh->hdbc, &imp_sth->hstmt);
@@ -2794,13 +2807,35 @@ static SQLRETURN bind_columns(
 int dbd_st_execute(
     SV *sth, imp_sth_t *imp_sth)
 {
+    IV ret;
+
+    if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 3))
+        TRACE1(imp_sth, "    +dbd_st_execute(%p)\n", sth);
+
+    ret = dbd_st_execute_iv(sth, imp_sth);
+    if (ret > INT_MAX) {
+        if (DBIc_WARN(imp_sth)) {
+            warn("SQLRowCount overflowed in execute - see RT 81911 - you need to upgrade your DBI to at least 1.633_92");
+        }
+        ret = INT_MAX;
+    }
+
+    if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 3))
+        TRACE2(imp_sth, "    -dbd_st_execute(%p)=%"IVdf"\n", sth, ret);
+
+    return (int)ret;
+}
+
+IV dbd_st_execute_iv(
+    SV *sth, imp_sth_t *imp_sth)
+{
     RETCODE rc;
     D_imp_dbh_from_sth;
     int outparams = 0;
     SQLLEN ret;
 
     if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 3))
-        TRACE1(imp_dbh, "    +dbd_st_execute(%p)\n", sth);
+        TRACE1(imp_dbh, "    +dbd_st_execute_iv(%p)\n", sth);
 
     if (SQL_NULL_HDBC == imp_dbh->hdbc) {
         DBIh_SET_ERR_CHAR(sth, (imp_xxh_t*)imp_sth, Nullch, 1,
@@ -2965,7 +3000,7 @@ int dbd_st_execute(
     if (!SQL_SUCCEEDED(rc) && rc != SQL_NO_DATA) {
         dbd_error(sth, rc, "st_execute/SQLExecute");
         if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 3))
-            TRACE1(imp_dbh, "    -dbd_st_execute(%p)=-2\n", sth);
+            TRACE1(imp_dbh, "    -dbd_st_execute_iv(%p)=-2\n", sth);
         return -2;
     }
 
@@ -2986,6 +3021,9 @@ int dbd_st_execute(
         if (!SQL_SUCCEEDED(rc2)) {
             dbd_error(sth, rc2, "st_execute/SQLRowCount");	/* XXX ? */
             imp_sth->RowCount = -1;
+            DBIc_ROW_COUNT(imp_sth) = -1;
+        } else {
+            DBIc_ROW_COUNT(imp_sth) = imp_sth->RowCount;
         }
 
         /* sanity check for strange circumstances and multiple types of
@@ -3011,6 +3049,7 @@ int dbd_st_execute(
                    "    SQL_NO_DATA...resetting done_desc!\n");
         imp_sth->done_desc = 0;
         imp_sth->RowCount = 0;
+        DBIc_ROW_COUNT(imp_sth) = 0;
         /* Strictly speaking a driver should only return SQL_NO_DATA
            when a searched insert/update/delete affects no rows and
            so it is pointless continuing below and calling SQLNumResultCols.
@@ -3079,10 +3118,10 @@ int dbd_st_execute(
         if (!dbd_describe(sth, imp_sth, 0)) {
             if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 3)) {
                 TRACE0(imp_sth,
-                       "    !!dbd_describe failed, dbd_st_execute #1...!\n");
+                       "    !!dbd_describe failed, dbd_st_execute_iv #1...!\n");
             }
             if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 3))
-                TRACE1(imp_dbh, "    -dbd_st_execute(%p)=-2\n", sth);
+                TRACE1(imp_dbh, "    -dbd_st_execute_iv(%p)=-2\n", sth);
             return -2; /* dbd_describe already called dbd_error()	*/
         }
     }
@@ -3125,21 +3164,14 @@ int dbd_st_execute(
      * Because you return -2 on errors so if you don't abs() it, a perfectly
      * valid return value will get flagged as an error...
      */
-    ret = (imp_sth->RowCount == -1 ? -1 : imp_sth->RowCount);
+    ret = (imp_sth->RowCount == -1 ? -1 : imp_sth->RowCount); /* TO_DO NONESENSE IT IS NOOP */
 
     if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 3))
-        TRACE2(imp_dbh, "    -dbd_st_execute(%p)=%"IVdf"\n", sth, (IV)ret);
+        TRACE2(imp_dbh, "    -dbd_st_execute_iv(%p)=%"IVdf"\n", sth, ret);
 
-    if (ret > INT_MAX) {
-        if (DBIc_WARN(imp_sth)) {
-            warn("SQLRowCount overflowed in execute - see RT 81911");
-        }
-        return INT_MAX;
-    }
 
     return ret;
 }
-
 
 
 
@@ -3474,10 +3506,16 @@ AV *dbd_st_fetch(SV *sth, imp_sth_t *imp_sth)
 
 
 
-int dbd_st_rows(SV *sth, imp_sth_t *imp_sth)
-{
-   return (int)imp_sth->RowCount;
-}
+/* /\* SHOULD BE ABLE TO DELETE BOTH OF THESE NOW AND dbd_st_rows macro in dbdimp.h *\/ */
+/* int dbd_st_rows(SV *sth, imp_sth_t *imp_sth) */
+/* { */
+/*    return (int)imp_sth->RowCount; */
+/* } */
+
+/* IV dbd_st_rows(SV *sth, imp_sth_t *imp_sth) */
+/* { */
+/*    return imp_sth->RowCount; */
+/* } */
 
 
 
@@ -7433,6 +7471,7 @@ IV odbc_st_execute_for_fetch(
         dbd_error(sth, rc, "odbc_st_execute_for_fetch/SQLRowCount");
         return -2;
     }
+    DBIc_ROW_COUNT(imp_sth) = imp_sth->RowCount;
 
     /* why does this break stuff  imp_sth->param_status_array = NULL; */
     if (err_seen) {

@@ -53,7 +53,7 @@ my $sth;
 $sth = $dbh->prepare("DELETE FROM $ODBCTEST::table_name");
 ok($sth, "delete prepared statement");
 $sth->execute();
-cmp_ok($sth->rows, '>=', 0, "Number of rows > 0");
+cmp_ok($sth->rows, '>=', 0, "Number of rows >= 0");
 cmp_ok($DBI::rows, '==', $sth->rows, "Number of rows from DBI matches sth");
 $sth->finish();
 $dbh->rollback();

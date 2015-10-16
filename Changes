@@ -5,7 +5,23 @@ use strict;
 
 DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
 
-1.53_1 YYYY-MM-DD
+1.53_1 2015-10-16
+
+  [BUG FIXES]
+
+  Strictly speaking this is a bug fix to DBI and not DBD::ODBC but DBI
+  now supports 64 bit row counts where an IV in perl is 64 bits. However, it
+  necessitated changes to DBD::ODBC to pick up the fix. odbc_rows (my workaround
+  since 2012) is still supported but should no longer be required so long as you
+  use this DBD::ODBC and DBI 1.633_92 or above.
+
+  [INTERNALS]
+
+  Removed dbd_st_rows and now setting DBIc_ROW_COUNT.
+
+  [DOCUMENTATION]
+
+  Add tables and table_info section to deviations from the DBI spec.
 
   [MISCELLANEOUS]
 
