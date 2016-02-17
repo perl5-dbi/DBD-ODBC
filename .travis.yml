@@ -1,4 +1,5 @@
 before_install:
+ - sudo apt-get update
  - sudo apt-get install -qq unixodbc unixodbc-dev
  - sudo apt-get install -qq libsqliteodbc
 env: DBI_DSN=dbi:ODBC:DRIVER=SQLite3
