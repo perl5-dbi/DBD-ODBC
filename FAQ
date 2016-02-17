@@ -1307,6 +1307,40 @@ were not truncated. We guessed his server did not support protocols
 9.0 or 10.0 and fall back to 6.0 where column names are restricted to
 30 characters.
 
+=head2 Why are my doubles truncated from MS Access DB?
+
+If you have a double column in your MS Access DB and the retrieved
+values are truncated you have probably hit a known (and fixed) bug in
+the MS Access ODBC driver. Typical truncation lookes like this:
+
+  8.93601020357839E-06 returned as E-6
+
+If you have the Microsoft Access 2010 accdb ODBC driver (v14) or older
+then try upgrading to the 2013 (v15) driver as my experiments showed
+that fixed the issue. Search for "Microsoft Access 2013
+redistributable engine" and download the appropriate version for your
+operating system.
+
+=head2 Why is my (long)binary data inserted into MS Access incorrect?
+
+A typical example of this is trying to insert binary data into a
+MS Access table using parameters and the data ends up full of null bytes.
+
+The MS Access ODBC driver does not support the ODBC API SQLDescribeParam
+so DBD::ODBC has no idea what parameter type to use when binding placeholders.
+By default, DBD::ODBC defaults in this situations to SQL_CHAR type. However,
+when you bind binary data as SQL_CHAR with the MS Access ODBC Driver the data
+stored in your DB will no longer be the data you expect as the driver translates
+your data bound as a string to binary. The way around this is to bind the parameter
+specifying the binary type e.g.,
+
+  $sth->bind_param(1, undef, SQL_LONGVARBINARY)
+
+or one of the other binary types. Note, that you don't actually have to pass the
+parameter into bind_param as parameter types are sticky so (as in this example) you
+can tell DBD::ODBC to use a different type in the bind_param call but still go on to
+pass the paramter into the execute method.
+
 =head1 AUTHOR
 
 Parts of this document were written by Tim Bunce,

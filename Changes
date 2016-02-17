@@ -5,6 +5,12 @@ use strict;
 
 DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
 
+1.53_2 2016-02-03
+
+  [MISCELLANEOUS]
+
+  Add new FAQs
+
 1.53_1 2015-10-16
 
   [BUG FIXES]
