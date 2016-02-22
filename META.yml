@@ -34,6 +34,15 @@ configure_requires:
   ExtUtils::MakeMaker: 0
 recommends:
   Test::Version: 1.002001
+provides:
+  DBD::ODBC:
+    file: ODBC.pm
+  DBD::ODBC::dr:
+    file: ODBC.pm
+  DBD::ODBC::db:
+    file: ODBC.pm
+  DBD::ODBC::st:
+    file: ODBC.pm
 dynamic_config: 1
 resources:
   homepage: http://search.cpan.org/dist/DBD-ODBC/
