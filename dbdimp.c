@@ -2544,13 +2544,13 @@ int dbd_describe(SV *sth, imp_sth_t *imp_sth, int more)
                              NULL, 0, NULL ,&fbh->ColLength);
         if (!SQL_SUCCEEDED(rc)) {
             /* See comment above under SQL_COLUMN_DISPLAY_SIZE */
-	    fbh->ColLength = imp_sth->odbc_column_display_size;
-	    if( DBIc_TRACE(imp_sth, DBD_TRACING, 0, 8) ) {
-	      TRACE1(imp_sth,
-		     "     describe/SQLColAttributes/SQL_COLUMN_LENGTH not "
-		     "supported, fallback on %ld\n", (long)fbh->ColLength);
-	    }
-	    rc = SQL_SUCCESS;
+            fbh->ColLength = imp_sth->odbc_column_display_size;
+            if( DBIc_TRACE(imp_sth, DBD_TRACING, 0, 8) ) {
+                TRACE1(imp_sth,
+                       "     describe/SQLColAttributes/SQL_COLUMN_LENGTH not "
+                       "supported, fallback on %ld\n", (long)fbh->ColLength);
+            }
+            rc = SQL_SUCCESS;
         } else if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 8)) {
             TRACE1(imp_sth, "     SQL_COLUMN_LENGTH = %ld\n",
                    (long)fbh->ColLength);
