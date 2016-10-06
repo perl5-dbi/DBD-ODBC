@@ -1,7 +1,7 @@
 #--- #YAML:1.0
 name: DBD-ODBC
 abstract: ODBC DBD for Perl DBI
-version: 1.54
+version: 1.56
 version_from: ODBC.pm
 author:
   - Martin J. Evans <mjevans@cpan.org>
@@ -34,15 +34,18 @@ configure_requires:
   ExtUtils::MakeMaker: 0
 recommends:
   Test::Version: 1.002001
-provides:
-  DBD::ODBC:
-    file: ODBC.pm
-  DBD::ODBC::dr:
-    file: ODBC.pm
-  DBD::ODBC::db:
-    file: ODBC.pm
-  DBD::ODBC::st:
-    file: ODBC.pm
+# add provides in 1.54 (initially) but without the version number the distrib won't index
+# without the provides the indexer extracts the version itself and with provides and
+# no version it assumes 0
+#provides:
+#  DBD::ODBC:
+#    file: ODBC.pm
+#  DBD::ODBC::dr:
+#    file: ODBC.pm
+#  DBD::ODBC::db:
+#    file: ODBC.pm
+#  DBD::ODBC::st:
+#    file: ODBC.pm
 dynamic_config: 1
 resources:
   homepage: http://search.cpan.org/dist/DBD-ODBC/
