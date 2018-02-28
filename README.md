@@ -31,6 +31,9 @@ section in ODBC.pm for usage and distribution rights.
     ODBCHOME  (Unix only) The dir your driver manager is installed in
               or specify this via -o argument to Makefile.PL
 
+    DBD_ODBC_UNICODE Any value here will set the default install to
+                     attempt to turn on UNICODE support.
+
   If you want UNICODE support on non-Windows platforms specify -u
   switch to Makefile.PL. If you don't want UNICODE support on Windows
   specify the -nou switch to Makefile.PL. On non-Windows platforms all
