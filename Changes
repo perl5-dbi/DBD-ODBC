@@ -5,6 +5,11 @@ use strict;
 
 DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
 
+1.57 2018-03-01
+
+  Merged pull request 6 from genio which allows Makefile.PL argument -u
+  to be set via the environment variable DBD_ODBC_UNICODE
+
 1.56 2016-10-06
 
   Full release of the 1.53 development series
