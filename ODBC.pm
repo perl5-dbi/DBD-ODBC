@@ -1251,6 +1251,12 @@ platforms the WITH_UNICODE macro is B<not> enabled by default and to enable
 you need to specify the -u argument to Makefile.PL. Please bear in mind
 that some ODBC drivers do not support SQL_Wxxx columns or parameters.
 
+You can also specify that you want UNICODE support by setting the
+C<DBD_ODBC_UNICODE> environment variable prior to install:
+
+  export DBD_ODBC_UNICODE=1
+  cpanm DBD::ODBC
+
 UNICODE support in ODBC Drivers differs considerably. Please read the
 README.unicode file for further details.
 
