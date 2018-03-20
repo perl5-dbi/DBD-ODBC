@@ -161,7 +161,7 @@ void odbc_getdiagfield(sth, record, identifier)
         } else if (info_ptr == &ret_type) {
             XPUSHs(sv_2mortal(newSViv(ret_type)));
         } else {
-            XPUSHs(sv_2mortal(newSVpv(buf, 0)));
+            XPUSHs(sv_2mortal(newSVpvn(buf, buf_len)));
         }
     } else if (rc == SQL_NO_DATA) {
       # no diags found
@@ -328,7 +328,7 @@ void odbc_getdiagrec(dbh, record)
     if (SQL_SUCCEEDED(rc)) {
         XPUSHs(sv_2mortal(newSVpv(state, 0)));
         XPUSHs(sv_2mortal(newSViv(native)));
-        XPUSHs(sv_2mortal(newSVpv(msg, 0)));
+        XPUSHs(sv_2mortal(newSVpvn(msg, msg_len)));
     } else if (rc == SQL_NO_DATA) {
       # no diags found
     } else {
@@ -392,7 +392,7 @@ void odbc_getdiagfield(dbh, record, identifier)
         } else if (info_ptr == &ret_type) {
             XPUSHs(sv_2mortal(newSViv(ret_type)));
         } else {
-            XPUSHs(sv_2mortal(newSVpv(buf, 0)));
+            XPUSHs(sv_2mortal(newSVpvn(buf, buf_len)));
         }
     } else if (rc == SQL_NO_DATA) {
       # no diags found
@@ -516,5 +516,3 @@ GetFunctions(dbh, func)
 
 
 MODULE = DBD::ODBC    PACKAGE = DBD::ODBC::db
-
-
