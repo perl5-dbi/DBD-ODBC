@@ -5,6 +5,12 @@ use strict;
 
 DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
 
+N.NN NNNN-NN-NN
+
+  [BUG FIXES]
+
+  Fix 12blob.t test by pali
+
 1.60 2018-10-31
 
   [BUG FIXES]
