@@ -706,8 +706,10 @@ int dbd_db_login6_sv(
        sv_catpv(dbname, ";");
        /*sv_catpvf(dbname, ";UID=%s;PWD=%s;",
 	 SvPV_nolen(uid), SvPV_nolen(pwd));*/
+       /*
        if (DBIc_TRACE(imp_dbh, CONNECTION_TRACING, 0, 0))
            TRACE1(imp_dbh, "Now using dbname = %s\n", SvPV_nolen(dbname));
+       */
    }
 
    if (DBIc_TRACE(imp_dbh, CONNECTION_TRACING, 0, 0))
@@ -758,9 +760,11 @@ int dbd_db_login6_sv(
 #endif
        if (SQL_SUCCEEDED(rc)) {
            imp_dbh->out_connect_string = sv_newwvn(wout_str, wout_str_len);
+           /*
            if (DBIc_TRACE(imp_dbh, CONNECTION_TRACING, 0, 0))
                TRACE1(imp_dbh, "Out connection string: %s\n",
                       SvPV_nolen(imp_dbh->out_connect_string));
+           */
        }
    }
 
