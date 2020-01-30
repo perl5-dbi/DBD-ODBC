@@ -2,21 +2,30 @@ before_install:
  - sudo apt-get update
  - sudo apt-get install -qq unixodbc unixodbc-dev
  - sudo apt-get install -qq libsqliteodbc
+ - if [ -z "$PERLBREW_PERL" ]; then eval $(curl https://travis-perl.github.io/init) --perl; fi
 env:
  global:
-   - DBI_DSN=dbi:ODBC:DRIVER=SQLite3
+   - DBI_DSN=dbi:ODBC:DRIVER=SQLite3 PERL_MM_USE_DEFAULT=1
  matrix:
    - DBD_ODBC_UNICODE=1
    - 
 language: perl
 perl:
-  - "5.22"
-  - "5.20"
-  - "5.18"
-  - "5.16"
-  - "5.14"
-  - "5.12"
+  - "5.8"
   - "5.10"
+  - "5.12"
+  - "5.14"
+  - "5.16"
+  - "5.18"
+  - "5.20"
+  - "5.22"
+  - "5.22-shrplib"
+  - "5.24"
+  - "5.24-shrplib"
+  - "5.26"
+  - "5.26-shrplib"
+  - "5.28"
+  - "5.30"
 notifications:
   email:
     recipents:
