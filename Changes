@@ -10,6 +10,11 @@ N.NN NNNN-NN-NN
   [BUG FIXES]
 
   Fix 12blob.t test by pali
+  Fix searching for ODBC libraries in system by pali (#15)
+
+  [MISCELLANEOUS]
+
+  Fix travis builds for older Perls by pali
 
 1.60 2018-10-31
 
