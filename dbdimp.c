@@ -465,7 +465,7 @@ SQLLEN dbd_db_execdirect(SV *dbh,
 
        sql_copy = sv_mortalcopy(statement);
 
-       SV_toWCHAR(sql_copy);
+       SV_toWCHAR(aTHX_ sql_copy);
 
        wsql = (SQLWCHAR *)SvPV(sql_copy, wsql_len);
 
@@ -723,7 +723,7 @@ int dbd_db_login6_sv(
              SvPV_nolen(dbname), neatsvpv(uid, 0));
 
    wconstr = sv_mortalcopy(dbname);
-   utf8sv_to_wcharsv(wconstr);
+   utf8sv_to_wcharsv(aTHX_ wconstr);
 
    /* The following is to work around a bug in SQLDriverConnectW in unixODBC
       which in at least 2.2.11 (and probably up to 2.2.13 official release
@@ -765,7 +765,8 @@ int dbd_db_login6_sv(
        }
 #endif
        if (SQL_SUCCEEDED(rc)) {
-           imp_dbh->out_connect_string = sv_newwvn(wout_str, wout_str_len);
+           imp_dbh->out_connect_string = sv_newwvn(aTHX_ wout_str,
+                                                   wout_str_len);
            /*
            if (DBIc_TRACE(imp_dbh, CONNECTION_TRACING, 0, 0))
                TRACE1(imp_dbh, "Out connection string: %s\n",
@@ -814,10 +815,10 @@ int dbd_db_login6_sv(
                   neatsvpv(dbname, 0), neatsvpv(uid, 0));
 
        wconstr = sv_mortalcopy(dbname);
-       utf8sv_to_wcharsv(wconstr);
+       utf8sv_to_wcharsv(aTHX_ wconstr);
        if (SvOK(uid)) {
            wuid = sv_mortalcopy(uid);
-           utf8sv_to_wcharsv(wuid);
+           utf8sv_to_wcharsv(aTHX_ wuid);
            wuidp = (SQLWCHAR *)SvPV_nolen(wuid);
            uid_len = SvCUR(wuid) / sizeof(SQLWCHAR);
        } else {
@@ -827,7 +828,7 @@ int dbd_db_login6_sv(
 
        if (SvOK(pwd)) {
            wpwd = sv_mortalcopy(pwd);
-           utf8sv_to_wcharsv(wpwd);
+           utf8sv_to_wcharsv(aTHX_ wpwd);
            wpwdp = (SQLWCHAR *)SvPV_nolen(wpwd);
            pwd_len = SvCUR(wpwd) / sizeof(SQLWCHAR);
        } else {
@@ -1019,7 +1020,8 @@ int dbd_db_login6(
                               &wout_str_len,
                               SQL_DRIVER_NOPROMPT);
        if (SQL_SUCCEEDED(rc)) {
-           imp_dbh->out_connect_string = sv_newwvn(wout_str, wout_str_len);
+           imp_dbh->out_connect_string = sv_newwvn(aTHX_ wout_str,
+                                                   wout_str_len);
            if (DBIc_TRACE(imp_dbh, CONNECTION_TRACING, 0, 0))
                TRACE1(imp_dbh, "Out connection string: %s\n",
                       SvPV_nolen(imp_dbh->out_connect_string));
@@ -1748,22 +1750,22 @@ int dbd_st_tables(
            /*printf("CATALOG OK %"IVdf" /%s/\n", SvCUR(catalog), SvPV_nolen(catalog));*/
 
            copy = sv_mortalcopy(catalog);
-           SV_toWCHAR(copy);
+           SV_toWCHAR(aTHX_ copy);
            wcatalog = (SQLWCHAR *)SvPV(copy, wlen);
        }
        if (SvOK(schema)) {
            copy = sv_mortalcopy(schema);
-           SV_toWCHAR(copy);
+           SV_toWCHAR(aTHX_ copy);
            wschema = (SQLWCHAR *)SvPV(copy, wlen);
        }
        if (SvOK(table)) {
            copy = sv_mortalcopy(table);
-           SV_toWCHAR(copy);
+           SV_toWCHAR(aTHX_ copy);
            wtable = (SQLWCHAR *)SvPV(copy, wlen);
        }
        if (SvOK(table_type)) {
            copy = sv_mortalcopy(table_type);
-           SV_toWCHAR(copy);
+           SV_toWCHAR(aTHX_ copy);
            wtype = (SQLWCHAR *)SvPV(copy, wlen);
        }
        /*
@@ -2206,7 +2208,7 @@ int odbc_st_prepare_sv(
 #else
            SvUTF8_on(sql_copy);
 #endif
-           SV_toWCHAR(sql_copy);
+           SV_toWCHAR(aTHX_ sql_copy);
 
            wsql = (SQLWCHAR *)SvPV(sql_copy, wsql_len);
 
@@ -3440,7 +3442,8 @@ AV *dbd_st_fetch(SV *sth, imp_sth_t *imp_sth)
                         TRACE2(imp_sth, "    Unicode ChopBlanks orig len=%ld, new len=%ld\n",
                                orig_len, fbh->datalen);
                 }
-                sv_setwvn(sv,(SQLWCHAR*)fbh->data,fbh->datalen/sizeof(SQLWCHAR));
+                sv_setwvn(aTHX_ sv, (SQLWCHAR*)fbh->data,
+                          fbh->datalen/sizeof(SQLWCHAR));
                 if (DBIc_TRACE(imp_sth, UNICODE_TRACING, 0, 0)) { /* odbcunicode */
                     /* unsigned char dlog[256]; */
                     /* unsigned char *src; */
@@ -3894,7 +3897,7 @@ static int rebind_param(
         /* Convert the sv in place to UTF-16 encoded characters
            NOTE: the SV_toWCHAR may modify SvPV(phs->sv */
         if (SvOK(phs->sv)) {
-            SV_toWCHAR(phs->sv);
+            SV_toWCHAR(aTHX_ phs->sv);
             /* get new buffer and length */
             phs->sv_buf = SvPV(phs->sv, value_len);
         } else {                                 /* it is undef */
@@ -5427,7 +5430,7 @@ SV *dbd_st_FETCH_attrib(SV *sth, imp_sth_t *imp_sth, SV *keysv)
              }
 #ifdef WITH_UNICODE
              av_store(av, i,
-                      sv_newwvn((SQLWCHAR *)imp_sth->fbh[i].ColName,
+                      sv_newwvn(aTHX_ (SQLWCHAR *)imp_sth->fbh[i].ColName,
                                 imp_sth->fbh[i].ColNameLen));
 #else
              av_store(av, i, newSVpv(imp_sth->fbh[i].ColName, 0));
@@ -6389,22 +6392,22 @@ int odbc_db_columns(
 
        if (SvOK(catalog)) {
            copy = sv_mortalcopy(catalog);
-           SV_toWCHAR(copy);
+           SV_toWCHAR(aTHX_ copy);
            wcatalog = (SQLWCHAR *)SvPV(copy, wlen);
        }
        if (SvOK(schema)) {
            copy = sv_mortalcopy(schema);
-           SV_toWCHAR(copy);
+           SV_toWCHAR(aTHX_ copy);
            wschema = (SQLWCHAR *)SvPV(copy, wlen);
        }
        if (SvOK(table)) {
            copy = sv_mortalcopy(table);
-           SV_toWCHAR(copy);
+           SV_toWCHAR(aTHX_ copy);
            wtable = (SQLWCHAR *)SvPV(copy, wlen);
        }
        if (SvOK(column)) {
            copy = sv_mortalcopy(column);
-           SV_toWCHAR(copy);
+           SV_toWCHAR(aTHX_ copy);
            wcolumn = (SQLWCHAR *)SvPV(copy, wlen);
        }
        rc = SQLColumnsW(imp_sth->hstmt,
@@ -7342,7 +7345,7 @@ IV odbc_st_execute_for_fetch(
             }
             else {
 #if defined(WITH_UNICODE)
-                SV_toWCHAR(sv);
+                SV_toWCHAR(aTHX_ sv);
                 sv_val = SvPV(sv, sv_len);
                 memcpy((char *)(phs->param_array_buf + (row * maxlen[p-1] * sizeof(SQLWCHAR))),
                        sv_val, sv_len);
