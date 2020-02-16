@@ -5,6 +5,7 @@
 #
 use Test::More;
 use strict;
+#use Data::Dumper;
 $| = 1;
 
 my $has_test_nowarnings = 1;
@@ -62,7 +63,11 @@ my ($type_name, $type);
 while (my $row = shift @{$type_info_all}) {
     #diag("$row->[$map->{TYPE_NAME}],$row->[$map->{DATA_TYPE}], $row->[$map->{COLUMN_SIZE}]");
     next if (($row->[$map->{DATA_TYPE}] != SQL_WLONGVARCHAR) && ($row->[$map->{DATA_TYPE}] != SQL_LONGVARCHAR));
-    # POstgres driver does not have COLUMN_SIZE but its text data type is big enough
+    # Postgres driver does not have COLUMN_SIZE but its text data type is big enough
+    # Postgres has no COLUMN_SIZE - it uses the old PRECISION
+    # In Postgres the PRECISION on text column type is 8190 - it is wrong, it is up to 1GB
+    #print Dumper($map);
+    #print Dumper($row);
     if ($row->[$map->{TYPE_NAME}] eq 'text' || $row->[$map->{COLUMN_SIZE}] > 60000) {
         #diag("$row->[$map->{TYPE_NAME}] $row->[$map->{DATA_TYPE}] $row->[$map->{COLUMN_SIZE}]");
         ($type_name, $type) = ($row->[$map->{TYPE_NAME}],
