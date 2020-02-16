@@ -96,6 +96,10 @@ if ($dbh->get_info($GetInfoType{SQL_SCHEMA_USAGE}) != 0) {
     # test type_info() - returns tables
     my $s = $dbh->table_info(undef, undef, 'PERL_DBD_DROP_ME');
     my $r = $s->fetchall_arrayref;
+    if (scalar(@$r) == 0) {
+        $s = $dbh->table_info(undef, undef, 'perl_dbd_drop_me');
+        $r = $s->fetchall_arrayref;
+    }
     ok(scalar(@$r) > 0, 'table found');
 
     if ($r && scalar(@$r)) {    # assuming we get something back
