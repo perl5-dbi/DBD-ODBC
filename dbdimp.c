@@ -4444,6 +4444,9 @@ int dbd_bind_ph(
    char *name;
    char namebuf[30];
    phs_t *phs;
+   STRLEN binary_len;
+   char *binary;
+
    D_imp_dbh_from_sth;
    SQLSMALLINT sql_type;
 
@@ -4542,6 +4545,12 @@ int dbd_bind_ph(
        if (phs->sv == &PL_sv_undef)             /* (first time bind) */
            phs->sv = newSV(0);
        sv_setsv(phs->sv, newvalue);
+
+       if (sql_type == SQL_VARBINARY || sql_type == SQL_LONGVARBINARY) {
+           binary = SvPVbyte(newvalue, binary_len);
+           sv_setpvn(phs->sv, binary, binary_len);
+       }
+
        if (SvAMAGIC(phs->sv)) /* if it has any magic force to string */
                sv_pvn_force(phs->sv, &PL_na);
    } else if (newvalue != phs->sv) {
@@ -7710,6 +7719,10 @@ static void check_for_unicode_param(
         } else {
             phs->sql_type = phs->described_sql_type;
         }
+    }
+
+    if (DBIc_TRACE(imp_sth, DBD_TRACING, 0, 5)) {
+        TRACE1(imp_sth, "    Changed to %s\n", S_SqlTypeToString(phs->sql_type));
     }
 }
 
