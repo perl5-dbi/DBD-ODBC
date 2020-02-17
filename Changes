@@ -5,6 +5,19 @@ use strict;
 
 DBD::ODBC::Changes - Log of significant changes to the DBD::ODBC
 
+1.62_1 2020-02-16
+
+  [BUG FIXES]
+
+  Fix for issue 18. This is a significant change to the way binary columns are
+  bound as DBD::ODBC was pushing the bytes in a scalar PV instead of the code
+  points. If you bind input parameters as SQL_VARBINARY you will want to check
+  this carefully. NOTE: the change does not yet affect in/out bound parameters.
+
+  [ENHANCEMENTS]
+
+  A few changes to tests to support Postgres ODBC driver issues.
+
 1.61 2020-01-30
 
   [BUG FIXES]
