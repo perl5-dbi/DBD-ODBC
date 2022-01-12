@@ -2584,13 +2584,6 @@ you think should be added then go to L<http://annocpan.org> and submit
 them there. I get an email for every comment added and will review
 each one and apply any changes to the documentation.
 
-=item Review DBD::ODBC
-
-Add your review of DBD::ODBC on L<http://cpanratings.perl.org>.
-
-If you are a member on ohloh then add your review or register your
-use of DBD::ODBC at L<http://www.ohloh.net/projects/perl_dbd_odbc>.
-
 =item submit test cases
 
 Most DBDs are built against a single client library for the database.
@@ -2653,12 +2646,6 @@ Level 2
 
 These are in need of sorting and annotating. Some are relevant only
 to ODBC developers.
-
-You can find DBD::ODBC on ohloh now at:
-
-L<http://www.ohloh.net/projects/perl_dbd_odbc>
-
-If you use ohloh and DBD::ODBC please say you use it and rate it.
 
 There is a good search engine for the various Perl DBI lists at the
 following URLS:
