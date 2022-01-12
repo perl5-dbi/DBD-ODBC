@@ -2577,13 +2577,6 @@ schema required and the versions of software you are using.
 If you are unsure whether you have found a bug report it anyway or
 post it to the dbi-users mailing list.
 
-=item pod comments and corrections
-
-If you find inaccuracies in the DBD::ODBC pod or have a comment which
-you think should be added then go to L<http://annocpan.org> and submit
-them there. I get an email for every comment added and will review
-each one and apply any changes to the documentation.
-
 =item submit test cases
 
 Most DBDs are built against a single client library for the database.
