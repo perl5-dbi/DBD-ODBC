@@ -1131,7 +1131,8 @@ sub find_unixodbc
     # add found odbc home if not added already
     push @dirs, "$home/lib" if !defined($opt_o) && !defined($ENV{ODBCHOME});
     # for debian/ubuntu 12 thanks to Maestro(Geoff Darling, mitsi)  for finding:
-    push @dirs, "/usr/lib/i386-linux-gnu/";
+    chomp(my $arch = qx(uname -m));
+    push @dirs, "/usr/lib/$arch-linux-gnu/";
 
     for my $d(@dirs) {
         my @found;
