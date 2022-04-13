@@ -1,0 +1,28 @@
+name: build
+
+on:
+  push:
+    branches:
+      - "*"
+  pull_request:
+    branches:
+      - "*"
+  workflow_dispatch:
+
+jobs:
+  build-job:
+    name: Build Latest SQLite3
+    runs-on: ubuntu-latest
+    container:
+      image: perldocker/perl-tester:latest
+    env:
+      DBI_DSN: dbi:ODBC:DRIVER=SQLite3
+      PERL_MM_USE_DEFAULT: 1
+      DBD_ODBC_UNICODE: 1
+    steps:
+      - uses: actions/checkout@v2
+      - run: apt-get update -y
+      - run: apt-get install -y unixodbc unixodbc-dev libsqliteodbc
+      - run: perl -V
+      - run: cpanm DBI Test::Output Test::Kwalitee
+      - run: perl Makefile.PL && make && make test
