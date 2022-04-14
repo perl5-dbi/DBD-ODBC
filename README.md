@@ -1,6 +1,6 @@
 # DBD::ODBC -- DBD module interfacing the ODBC databases.
 
-[![Build Status](https://travis-ci.org/perl5-dbi/DBD-ODBC.svg?branch=master)](https://travis-ci.org/perl5-dbi/DBD-ODBC)
+[![build](https://github.com/perl5-dbi/DBD-ODBC/actions/workflows/action.yml/badge.svg?branch=master)](https://github.com/whindsx/DBD-ODBC/actions)
 [![CPAN version](https://badge.fury.io/pl/DBD-ODBC.svg)](http://badge.fury.io/pl/DBD-ODBC)
 [![CPANTS](http://cpants.cpanauthors.org/dist/DBD-ODBC.png)](http://cpants.cpanauthors.org/dist/DBD-ODBC)
 
