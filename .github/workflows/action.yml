@@ -20,7 +20,7 @@ jobs:
       PERL_MM_USE_DEFAULT: 1
       DBD_ODBC_UNICODE: 1
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - run: apt-get update -y
       - run: apt-get install -y unixodbc unixodbc-dev libsqliteodbc
       - run: perl -V
