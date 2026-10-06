@@ -1,0 +1,159 @@
+name: build
+
+on:
+  push:
+    branches:
+      - "**"
+  pull_request:
+    branches:
+      - "**"
+  workflow_dispatch:
+
+jobs:
+  build-job:
+    name: Perl ${{ matrix.perl }} / DBI ${{ matrix.dbi }} / SQLite3
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Keep the existing DBI floor and exercise the first casting API.
+          # Perl 5.14 removed aliases still used by these DBI releases.
+          - perl: "5.12"
+            dbi: "1.609"
+          - perl: "5.12"
+            dbi: "1.611"
+          - perl: "5.16"
+            dbi: "1.627"
+          - perl: "5.36"
+            dbi: "1.627"
+          - perl: "5.36"
+            dbi: "1.641"
+          # Exercise both sides of the DBIXS_REVISION regression boundary.
+          - perl: "5.38"
+            dbi: "1.646"
+          # Cover a newer fixed DBI on a newer stable Perl.
+          - perl: "5.40"
+            dbi: "1.648"
+          - perl: "5.42"
+            dbi: "1.647"
+          - perl: "latest"
+            dbi: "latest"
+    env:
+      DBI_DSN: dbi:ODBC:DRIVER=SQLite3
+      PERL_MM_USE_DEFAULT: 1
+      DBD_ODBC_UNICODE: 1
+      AUTHOR_TESTING: 1
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shogo82148/actions-setup-perl@v1
+        with:
+          perl-version: ${{ matrix.perl }}
+      - run: sudo apt-get update -y
+      - run: sudo apt-get install -y unixodbc unixodbc-dev libsqliteodbc
+      - run: perl -V
+      - name: Install DBI ${{ matrix.dbi }} and test dependencies
+        run: |
+          if [ "${{ matrix.dbi }}" = latest ]; then
+            cpanm --notest DBI
+          else
+            # Old DBI distributions have test-suite failures on current
+            # runners. DBD::ODBC's suite is the compatibility test here.
+            cpanm --verbose --notest "DBI@${{ matrix.dbi }}"
+          fi
+          cpanm --notest Test::Output Test::Pod Test::Pod::Coverage Test::Kwalitee Test::Version
+      - name: Verify DBI version
+        env:
+          EXPECTED_DBI_VERSION: ${{ matrix.dbi }}
+        run: |
+          perl -MDBI -e 'print "DBI $DBI::VERSION\n"; die "Unexpected DBI version\n" if $ENV{EXPECTED_DBI_VERSION} ne "latest" && $DBI::VERSION != $ENV{EXPECTED_DBI_VERSION};'
+      - run: perl Makefile.PL && make && make test
+
+  sqlserver-job:
+    name: Perl ${{ matrix.perl }} / DBI ${{ matrix.dbi }} / SQL Server 2022
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        include:
+          # Keep the existing DBI floor and exercise the first casting API.
+          # Perl 5.14 removed aliases still used by these DBI releases.
+          - perl: "5.12"
+            dbi: "1.609"
+          - perl: "5.12"
+            dbi: "1.611"
+          - perl: "5.16"
+            dbi: "1.627"
+          - perl: "5.36"
+            dbi: "1.627"
+          - perl: "5.36"
+            dbi: "1.641"
+          - perl: "5.38"
+            dbi: "1.646"
+          - perl: "5.40"
+            dbi: "1.648"
+          - perl: "5.42"
+            dbi: "1.647"
+          - perl: "latest"
+            dbi: "latest"
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: "Y"
+          MSSQL_PID: Developer
+          MSSQL_SA_PASSWORD: DBD0dbc_Strong_Pass!
+        ports:
+          - 1433:1433
+    env:
+      DBI_DSN: dbi:ODBC:DRIVER={ODBC Driver 18 for SQL Server};SERVER=localhost,1433;DATABASE=tempdb;Encrypt=No;MARS_Connection=Yes
+      DBI_USER: sa
+      DBI_PASS: DBD0dbc_Strong_Pass!
+      PERL_MM_USE_DEFAULT: 1
+      DBD_ODBC_UNICODE: 1
+      AUTHOR_TESTING: 1
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shogo82148/actions-setup-perl@v1
+        with:
+          perl-version: ${{ matrix.perl }}
+      - name: Install unixODBC and Microsoft ODBC Driver 18
+        run: |
+          source /etc/os-release
+          curl -sSL "https://packages.microsoft.com/config/ubuntu/${VERSION_ID}/packages-microsoft-prod.deb" \
+            -o /tmp/packages-microsoft-prod.deb
+          sudo dpkg -i /tmp/packages-microsoft-prod.deb
+          sudo apt-get update -y
+          sudo env ACCEPT_EULA=Y apt-get install -y unixodbc-dev msodbcsql18 mssql-tools18
+      - name: Wait for SQL Server
+        run: |
+          for attempt in $(seq 1 60); do
+            if /opt/mssql-tools18/bin/sqlcmd -C -S localhost -U "$DBI_USER" -P "$DBI_PASS" \
+              -Q "SELECT 1" >/dev/null 2>&1; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "SQL Server did not become ready"
+          docker ps -a
+          container_id=$(docker ps -aq --filter ancestor=mcr.microsoft.com/mssql/server:2022-latest | head -1)
+          if [ -n "$container_id" ]; then
+            docker logs "$container_id"
+          fi
+          exit 1
+      - run: perl -V
+      - name: Install DBI ${{ matrix.dbi }} and test dependencies
+        run: |
+          if [ "${{ matrix.dbi }}" = latest ]; then
+            cpanm --notest DBI
+          else
+            cpanm --verbose --notest "DBI@${{ matrix.dbi }}"
+          fi
+          cpanm --notest Test::Output Test::Pod Test::Pod::Coverage Test::Kwalitee Test::Version
+      - name: Verify DBI version
+        env:
+          EXPECTED_DBI_VERSION: ${{ matrix.dbi }}
+        run: |
+          perl -MDBI -e 'print "DBI $DBI::VERSION\n"; die "Unexpected DBI version\n" if $ENV{EXPECTED_DBI_VERSION} ne "latest" && $DBI::VERSION != $ENV{EXPECTED_DBI_VERSION};'
+      - run: perl Makefile.PL && make && make test
