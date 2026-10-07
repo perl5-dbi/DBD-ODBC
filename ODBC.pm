@@ -666,7 +666,7 @@ __END__
 DBD::ODBC - ODBC Driver for DBI
 
 =for html
-<a href="https://travis-ci.org/perl5-dbi/DBD-ODBC"><img src="https://travis-ci.org/perl5-dbi/DBD-ODBC.svg?branch=master"></a>
+<a href="https://github.com/perl5-dbi/DBD-ODBC/actions"><img src="https://github.com/perl5-dbi/DBD-ODBC/actions/workflows/action.yml/badge.svg"></a>
 <a href="http://badge.fury.io/pl/DBD-ODBC"><img src="https://badge.fury.io/pl/DBD-ODBC.svg" alt="CPAN version" height="18"></a>
 
 =head1 VERSION
