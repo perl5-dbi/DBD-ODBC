@@ -107,7 +107,7 @@ jobs:
         ports:
           - 1433:1433
     env:
-      DBI_DSN: dbi:ODBC:DRIVER={ODBC Driver 18 for SQL Server};SERVER=localhost,1433;DATABASE=tempdb;Encrypt=No;MARS_Connection=Yes
+      DBI_DSN: dbi:ODBC:DRIVER={ODBC Driver 18 for SQL Server};SERVER=localhost,1433;DATABASE=tempdb;Encrypt=No
       DBI_USER: sa
       DBI_PASS: DBD0dbc_Strong_Pass!
       PERL_MM_USE_DEFAULT: 1
