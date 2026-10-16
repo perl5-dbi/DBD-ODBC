@@ -8,6 +8,7 @@ use open ':std', ':encoding(utf8)';
 use Test::More;
 use strict;
 use Data::Dumper;
+use POSIX qw(setlocale LC_CTYPE);
 
 $| = 1;
 
@@ -137,6 +138,7 @@ sub show_it {
     my $r = $h->selectall_arrayref(q/select len(a), a from PERL_DBD_TABLE1 order by b asc/);
 
     diag( Dumper($r));
+    is(scalar @$r, scalar @$expected_db_length, "expected row count");
     foreach my $row(@$r) {
         is($row->[0], shift @{$expected_db_length}, "db character length") or
             diag("dsc: " . data_string_desc($row->[0]));
@@ -148,9 +150,11 @@ sub show_it {
     }
 
     if ($hex) {
+        my $b = 0;
         foreach my $hex_val(@$hex) {
-            $r = $h->selectrow_arrayref(q/select count(*) from PERL_DBD_TABLE1 where cast(a as varbinary(100)) = / . $hex_val);
-            is($r->[0], 1, "hex comparison $hex_val");
+            ++$b;
+            $r = $h->selectrow_arrayref(q/select count(*) from PERL_DBD_TABLE1 where b = ? and cast(a as varbinary(100)) = / . $hex_val, undef, $b);
+            is($r->[0], 1, "hex comparison $hex_val for row $b");
         }
     }
     $h->do(q/delete from PERL_DBD_TABLE1/);
@@ -181,6 +185,15 @@ sub execute {
 
     ok($s->execute(@strings), "execute");
 }
+
+# Microsoft ODBC Driver 17+ selects its narrow-character encoding at connect.
+# CI supplies a CP1252 locale for this test without changing the other tests.
+if (defined $ENV{DBD_ODBC_TEST_LOCALE}) {
+    my $locale = $ENV{DBD_ODBC_TEST_LOCALE};
+    BAIL_OUT("Cannot set LC_CTYPE to '$locale'")
+        unless length($locale) && defined setlocale(LC_CTYPE, $locale);
+}
+diag "Client LC_CTYPE: ", setlocale(LC_CTYPE);
 
 $dbh = DBI->connect();
 unless($dbh) {
@@ -250,7 +263,7 @@ diag "Inserting a unicode followed by codepage chrs:\n";
 $s = $dbh->prepare($sql); # redo to ensure no sticky params
 execute($s, 1, $unicode);
 execute($s, 2, $codepage);
-show_it($dbh, [2,2], [2,2], ['0x80a3', '0x80a3']);
+show_it($dbh, [2,2], [2,2], ['0x80a3', '0xa380']);
 
 # inserting a mixture of unicode chrs and codepage chrs per row in same insert
 # codepage first - checks we rebind the 2nd parameter SQL_WCHAR
