@@ -1572,6 +1572,27 @@ void dbd_preparse(imp_sth_t *imp_sth, char *statement)
                      style = STYLE_NORMAL;
                  } else if (isDIGIT(*src)) {                 /* ':1' */
                      char *p = name;
+                     size_t num_len = 0;
+                     const char *num_start = src;
+
+                     /* Reject over-long numeric placeholders before calling atoi().
+                      * On platforms where sizeof(int)==4 (x86_64 Linux/Windows),
+                      * strings longer than 5 digits overflow 32-bit atoi() via
+                      * signed wraparound, producing a small positive value that
+                      * silently aliases a different parameter index.  DBI 1.653
+                      * applies the same digit-length guard at its own preparse
+                      * layer, but DBD::ODBC's own preparse runs on the original
+                      * SQL string independently and needs this check here too.
+                      * See: https://github.com/perl5-dbi/DBD-ODBC/issues/28
+                      *      GHSA-cq86-7qhq-7mg9 (perl5-dbi/dbi)
+                      */
+                     while (isDIGIT(*(num_start + num_len)))
+                         num_len++;
+                     if (num_len > 5)
+                         croak("Numeric placeholder ':%.*s' exceeds 5 digits; "
+                               "possible atoi() overflow on 32-bit int platforms",
+                               (int)num_len, num_start);
+
                      *dest++ = '?';
                      idx = atoi(src);
                      while(isDIGIT(*src))
@@ -3328,7 +3349,7 @@ AV *dbd_st_fetch(SV *sth, imp_sth_t *imp_sth)
             else {
                 /*
                  * SQLMoreResults not supported, just finish.
-                 * per bug found by Jarkko Hyöty [hyoty@medialab.sonera.fi]
+                 * per bug found by Jarkko HyÃ¶ty [hyoty@medialab.sonera.fi]
                  * No more results
                  */
                 imp_sth->moreResults = 0;
