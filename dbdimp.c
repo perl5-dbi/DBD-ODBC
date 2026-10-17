@@ -3798,6 +3798,12 @@ static void get_param_type(
 #if defined(WITH_UNICODE)
    /* for Unicode string types, change value_type to SQL_C_WCHAR*/
    switch (phs->sql_type) {
+     case SQL_CHAR:
+     case SQL_VARCHAR:
+     case SQL_LONGVARCHAR:
+       /* A previous Unicode value must not leave a narrow parameter wide. */
+       phs->value_type = SQL_C_CHAR;
+       break;
      case SQL_WCHAR:
      case SQL_WVARCHAR:
      case SQL_WLONGVARCHAR:
