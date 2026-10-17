@@ -132,8 +132,10 @@ sub ords {
 # given a perl expected length and a db expected length check them
 # given a hex string of bytes the data should look like when cast to a
 # binary check the inserted data matches what we expect.
+# Optional codepage row numbers identify hex checks requiring a client locale.
 sub show_it {
-    my ($h, $expected_perl_length, $expected_db_length, $hex) = @_;
+    my ($h, $expected_perl_length, $expected_db_length, $hex, $codepage_rows) = @_;
+    my %codepage_rows = map { $_ => 1 } @{ $codepage_rows || [] };
 
     my $r = $h->selectall_arrayref(q/select len(a), a from PERL_DBD_TABLE1 order by b asc/);
 
@@ -153,8 +155,12 @@ sub show_it {
         my $b = 0;
         foreach my $hex_val(@$hex) {
             ++$b;
-            $r = $h->selectrow_arrayref(q/select count(*) from PERL_DBD_TABLE1 where b = ? and cast(a as varbinary(100)) = / . $hex_val, undef, $b);
-            is($r->[0], 1, "hex comparison $hex_val for row $b");
+            SKIP: {
+                skip "CP1252 byte comparison requires DBD_ODBC_TEST_LOCALE", 1
+                    if $codepage_rows{$b} && !defined $ENV{DBD_ODBC_TEST_LOCALE};
+                $r = $h->selectrow_arrayref(q/select count(*) from PERL_DBD_TABLE1 where b = ? and cast(a as varbinary(100)) = / . $hex_val, undef, $b);
+                is($r->[0], 1, "hex comparison $hex_val for row $b");
+            }
         }
     }
     $h->do(q/delete from PERL_DBD_TABLE1/);
@@ -255,7 +261,7 @@ my $codepage;
 diag "Inserting a codepage/bytes string:\n";
 $s = $dbh->prepare($sql); # redo to ensure no sticky params
 execute($s, 1, $codepage);
-show_it($dbh, [2], [2], ['0xa380']);
+show_it($dbh, [2], [2], ['0xa380'], [1]);
 
 # inserting a mixture of unicode chrs and codepage chrs per row in same insert
 # unicode first - checks we rebind the 2nd parameter as SQL_CHAR
@@ -263,7 +269,7 @@ diag "Inserting a unicode followed by codepage chrs:\n";
 $s = $dbh->prepare($sql); # redo to ensure no sticky params
 execute($s, 1, $unicode);
 execute($s, 2, $codepage);
-show_it($dbh, [2,2], [2,2], ['0x80a3', '0xa380']);
+show_it($dbh, [2,2], [2,2], ['0x80a3', '0xa380'], [2]);
 
 # inserting a mixture of unicode chrs and codepage chrs per row in same insert
 # codepage first - checks we rebind the 2nd parameter SQL_WCHAR
@@ -271,7 +277,7 @@ diag "Inserting codepage chrs followed by unicode:\n";
 $s = $dbh->prepare($sql); # redo to ensure no sticky params
 execute($s, 1, $codepage);
 execute($s, 2, $unicode);
-show_it($dbh, [2,2], [2,2], ['0xa380', '0x80a3']);
+show_it($dbh, [2,2], [2,2], ['0xa380', '0x80a3'], [1]);
 
 Test::NoWarnings::had_no_warnings() if ($has_test_nowarnings);
 done_testing();
