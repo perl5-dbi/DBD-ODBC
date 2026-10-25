@@ -249,6 +249,7 @@ struct phs_st {             /* scalar placeholder */
     /* Remaining values passed to SQLBindParameter that we record to detect
        if we need to rebind due to changed args */
     UCHAR *bp_value_ptr;       /* ptr to actual value */
+    SQLSMALLINT bp_value_type; /* C type from the last successful bind */
     SQLSMALLINT bp_d_digits;   /* decimal digits */
     SQLULEN bp_column_size;
     SQLLEN bp_buffer_length;

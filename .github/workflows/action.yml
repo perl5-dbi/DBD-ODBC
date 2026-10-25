@@ -125,7 +125,9 @@ jobs:
             -o /tmp/packages-microsoft-prod.deb
           sudo dpkg -i /tmp/packages-microsoft-prod.deb
           sudo apt-get update -y
-          sudo env ACCEPT_EULA=Y apt-get install -y unixodbc-dev msodbcsql18 mssql-tools18
+          sudo env ACCEPT_EULA=Y apt-get install -y unixodbc-dev msodbcsql18 mssql-tools18 locales
+      - name: Create CP1252 locale for the varchar codepage test
+        run: sudo localedef -i en_US -f CP1252 en_US.CP1252
       - name: Wait for SQL Server
         run: |
           for attempt in $(seq 1 60); do
@@ -157,3 +159,5 @@ jobs:
         run: |
           perl -MDBI -e 'print "DBI $DBI::VERSION\n"; die "Unexpected DBI version\n" if $ENV{EXPECTED_DBI_VERSION} ne "latest" && $DBI::VERSION != $ENV{EXPECTED_DBI_VERSION};'
       - run: perl Makefile.PL && make && make test
+        env:
+          DBD_ODBC_TEST_LOCALE: en_US.CP1252

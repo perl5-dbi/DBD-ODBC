@@ -3798,6 +3798,12 @@ static void get_param_type(
 #if defined(WITH_UNICODE)
    /* for Unicode string types, change value_type to SQL_C_WCHAR*/
    switch (phs->sql_type) {
+     case SQL_CHAR:
+     case SQL_VARCHAR:
+     case SQL_LONGVARCHAR:
+       /* A previous Unicode value must not leave a narrow parameter wide. */
+       phs->value_type = SQL_C_CHAR;
+       break;
      case SQL_WCHAR:
      case SQL_WVARCHAR:
      case SQL_WLONGVARCHAR:
@@ -4272,7 +4278,7 @@ static int rebind_param(
         (!phs->bp_value_ptr) ||                 /* not bound before */
         ((param_io_type == SQL_PARAM_INPUT) &&    /* input parameter */
          ((value_ptr != phs->bp_value_ptr) ||
-          (value_type != phs->value_type) ||
+          (value_type != phs->bp_value_type) ||
           (column_size != phs->bp_column_size) ||
           (d_digits != phs->bp_d_digits) ||
           (buffer_length != phs->bp_buffer_length)))) {
@@ -4313,6 +4319,7 @@ static int rebind_param(
             return 0;
         }
         phs->bp_value_ptr = value_ptr;
+        phs->bp_value_type = value_type;
         phs->value_type = value_type;
         phs->bp_column_size = column_size;
         phs->bp_d_digits = d_digits;
